@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexDial CRM</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --sidebar-width: 220px;
+      --header-height: 54px;
+      --bg: #f0f2f5;
+      --sidebar-bg: #1e2330;
+      --sidebar-text: #b0b8d1;
+      --sidebar-hover: #2a3047;
+      --sidebar-active: #3b82f6;
+      --card-bg: #ffffff;
+      --col-bg: #eaecf0;
+      --col-width: 272px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── TOP NAV ── */
+    .crm-topnav {
+      height: var(--header-height);
+      background: #fff;
+      border-bottom: 1px solid #dee2e6;
+      display: flex; align-items: center; padding: 0 16px;
+      gap: 12px; flex-shrink: 0; z-index: 100;
+    }
+    .crm-topnav .brand { font-weight: 700; font-size: 18px; color: #1e2330; text-decoration: none; }
+    .crm-topnav .brand i { color: #3b82f6; margin-right: 6px; }
+    .crm-topnav .nav-links { display: flex; gap: 4px; }
+    .crm-topnav .nav-links a { padding: 6px 12px; border-radius: 6px; color: #555; text-decoration: none; font-size: 13px; }
+    .crm-topnav .nav-links a:hover { background: #f0f2f5; }
+    .crm-topnav .nav-links a.active { background: #e8f0fe; color: #3b82f6; font-weight: 600; }
+    .crm-topnav .spacer { flex: 1; }
+    .notif-btn { position: relative; background: none; border: none; cursor: pointer; padding: 8px; border-radius: 8px; color: #555; }
+    .notif-btn:hover { background: #f0f2f5; }
+    .notif-badge { position: absolute; top: 4px; right: 4px; background: #ef4444; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; display: none; }
+    .notif-badge.show { display: flex; }
+    .user-avatar { width: 32px; height: 32px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* ── MAIN LAYOUT ── */
+    .crm-body { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .crm-sidebar {
+      width: var(--sidebar-width); background: var(--sidebar-bg);
+      display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-section-label {
+      padding: 16px 14px 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      color: #5a6480; text-transform: uppercase;
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; cursor: pointer;
+      color: var(--sidebar-text); font-size: 13px;
+      border-radius: 6px; margin: 1px 8px;
+      text-decoration: none;
+    }
+    .sidebar-item:hover { background: var(--sidebar-hover); color: #fff; }
+    .sidebar-item.active { background: var(--sidebar-active); color: #fff; }
+    .sidebar-item .pipeline-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sidebar-item .badge-count {
+      margin-left: auto; background: rgba(255,255,255,.15);
+      border-radius: 10px; padding: 1px 7px; font-size: 11px;
+    }
+    .sidebar-add-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; margin: 4px 8px;
+      color: #5a6480; font-size: 12px; cursor: pointer;
+      border-radius: 6px;
+    }
+    .sidebar-add-btn:hover { background: var(--sidebar-hover); color: #9ba8c5; }
+    .sidebar-footer { margin-top: auto; padding: 12px 8px; border-top: 1px solid #2a3047; }
+
+    /* ── BOARD AREA ── */
+    .crm-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .board-header {
+      padding: 12px 20px; background: #fff; border-bottom: 1px solid #dee2e6;
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    }
+    .board-header h5 { margin: 0; font-weight: 700; font-size: 16px; }
+    .board-header .btn-sm { font-size: 12px; }
+    .board-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    .board-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; padding: 16px 20px; display: flex; gap: 12px; align-items: flex-start; }
+
+    /* ── KANBAN COLUMN ── */
+    .kanban-col {
+      width: var(--col-width); flex-shrink: 0;
+      background: var(--col-bg); border-radius: 10px;
+      display: flex; flex-direction: column; max-height: calc(100vh - var(--header-height) - 54px - 60px);
+    }
+    .col-header {
+      padding: 10px 12px; display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: #333;
+    }
+    .col-header .col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .col-header .col-count { margin-left: auto; background: rgba(0,0,0,.1); border-radius: 10px; padding: 1px 7px; font-size: 11px; }
+    .col-header .col-menu-btn { background: none; border: none; cursor: pointer; color: #888; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+    .col-header .col-menu-btn:hover { background: rgba(0,0,0,.08); }
+    .col-cards { flex: 1; overflow-y: auto; padding: 0 8px 8px; min-height: 60px; }
+    .col-footer { padding: 8px; border-top: 1px solid rgba(0,0,0,.06); }
+    .add-card-btn { width: 100%; background: none; border: none; color: #888; font-size: 12px; padding: 6px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .add-card-btn:hover { background: rgba(0,0,0,.06); color: #444; }
+
+    /* ── DEAL CARD ── */
+    .deal-card {
+      background: #fff; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08); cursor: grab; position: relative;
+      border-left: 3px solid transparent;
+    }
+    .deal-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+    .deal-card.sortable-ghost { opacity: .4; }
+    .deal-card.sortable-chosen { cursor: grabbing; }
+    .deal-card .deal-title { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deal-card .deal-lead { font-size: 11px; color: #666; }
+    .deal-card .deal-phone { font-size: 11px; color: #888; }
+    .deal-card .deal-value { font-size: 12px; font-weight: 700; color: #059669; margin-top: 6px; }
+    .deal-card .deal-notes { font-size: 11px; color: #888; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+    .deal-card .deal-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
+    .deal-card:hover .deal-actions { display: flex; }
+    .deal-card .deal-actions button { background: none; border: none; cursor: pointer; font-size: 12px; color: #888; padding: 2px 5px; border-radius: 4px; }
+    .deal-card .deal-actions button:hover { background: #f0f2f5; color: #333; }
+
+    /* ── EMPTY BOARD ── */
+    .empty-board { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #aaa; }
+    .empty-board i { font-size: 48px; margin-bottom: 12px; }
+    .empty-board p { font-size: 15px; }
+
+    /* ── MODALS ── */
+    .modal-header { background: #f8f9fa; border-radius: 8px 8px 0 0; }
+
+    /* ── NOTIFICATIONS PANEL ── */
+    .notif-panel {
+      position: fixed; top: var(--header-height); right: 0;
+      width: 340px; background: #fff; border-left: 1px solid #dee2e6;
+      height: calc(100vh - var(--header-height)); overflow-y: auto;
+      z-index: 200; transform: translateX(100%); transition: transform .25s;
+      box-shadow: -4px 0 16px rgba(0,0,0,.1);
+    }
+    .notif-panel.open { transform: translateX(0); }
+    .notif-panel-header { padding: 14px 16px; border-bottom: 1px solid #dee2e6; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .notif-item { padding: 12px 16px; border-bottom: 1px solid #f0f2f5; font-size: 13px; cursor: pointer; }
+    .notif-item:hover { background: #f8f9fa; }
+    .notif-item.unread { background: #eff6ff; }
+    .notif-item .notif-time { font-size: 11px; color: #999; margin-top: 4px; }
+
+    /* ── RULES PANEL ── */
+    .rule-item { padding: 10px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+    .rule-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="crm-topnav">
+  <a href="/" class="brand"><i class="fas fa-phone-alt"></i>NexDial</a>
+  <div class="nav-links">
+    <a href="/">Dashboard</a>
+    <a href="/crm" class="active"><i class="fas fa-th-large me-1"></i>CRM</a>
+  </div>
+  <div class="spacer"></div>
+  <button class="notif-btn" onclick="toggleNotifPanel()" title="Notificações">
+    <i class="fas fa-bell fa-lg"></i>
+    <span class="notif-badge" id="notifBadge">0</span>
+  </button>
+  <div class="user-avatar" title="Usuário" id="userInitial">U</div>
+</nav>
+
+<!-- BODY -->
+<div class="crm-body">
+
+  <!-- SIDEBAR -->
+  <div class="crm-sidebar">
+    <div class="sidebar-section-label">Pipelines</div>
+    <div id="pipelineList"></div>
+    <div class="sidebar-add-btn" onclick="openCreatePipelineModal()">
+      <i class="fas fa-plus"></i> Novo pipeline
+    </div>
+    <div class="sidebar-add-btn" onclick="createDefaultPipeline()" id="btnCreateDefault" title="Cria a pipeline 'Comercial' com todas as etapas padrão">
+      <i class="fas fa-magic"></i> Pipeline padrão
+    </div>
+    <div class="sidebar-footer">
+      <a href="/" class="sidebar-item"><i class="fas fa-home fa-fw"></i> Dashboard</a>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="crm-main">
+    <!-- Board header -->
+    <div class="board-header" id="boardHeader" style="display:none">
+      <h5 id="boardTitle">Pipeline</h5>
+      <span class="badge bg-secondary" id="boardDealsCount">0 deals</span>
+      <div class="board-actions">
+        <button class="btn btn-sm btn-outline-danger" onclick="clearAllLeads()" title="Apagar todos os leads">
+          <i class="fas fa-trash-alt me-1"></i>Apagar Leads
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="openRulesModal()">
+          <i class="fas fa-exchange-alt me-1"></i>Regras
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="openAddStageModal()">
+          <i class="fas fa-plus me-1"></i>Etapa
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="openCreateDealModal()">
+          <i class="fas fa-plus me-1"></i>Deal
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-board" id="emptyBoard">
+      <i class="fas fa-project-diagram"></i>
+      <p>Selecione um pipeline na barra lateral<br>ou crie um novo.</p>
+      <button class="btn btn-primary" onclick="openCreatePipelineModal()">
+        <i class="fas fa-plus me-1"></i>Criar pipeline
+      </button>
+    </div>
+
+    <!-- Kanban -->
+    <div class="board-scroll" id="boardScroll" style="display:none"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-panel-header">
+    <i class="fas fa-bell"></i> Notificações
+    <button class="btn btn-sm btn-link ms-auto" onclick="markAllRead()">Marcar todas lidas</button>
+  </div>
+  <div id="notifList"><p class="text-center text-muted py-4" style="font-size:13px">Nenhuma notificação</p></div>
+</div>
+
+<!-- ======================== MODALS ======================== -->
+
+<!-- Create Pipeline -->
+<div class="modal fade" id="createPipelineModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Novo Pipeline</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Nome</label>
+          <input type="text" class="form-control form-control-sm" id="newPipelineName" placeholder="Ex: Vendas B2B">
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Cor</label>
+          <input type="color" class="form-control form-control-sm form-control-color" id="newPipelineColor" value="#6366f1">
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="newPipelineDefault">
+          <label class="form-check-label form-label-sm">Pipeline padrão</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm btn-primary" onclick="submitCreatePipeline()">Criar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Stage -->
+<div class="modal fade" id="addStageModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Nova Etapa</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Nome</label>
+          <input type="text" class="form-control form-control-sm" id="newStageName" placeholder="Ex: Qualificação">
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Cor</label>
+          <input type="color" class="form-control form-control-sm form-control-color" id="newStageColor" value="#6366f1">
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col">
+            <label class="form-label form-label-sm">Probabilidade (%)</label>
+            <input type="number" class="form-control form-control-sm" id="newStageProb" value="0" min="0" max="100">
+          </div>
+        </div>
+        <div class="d-flex gap-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="newStageWon">
+            <label class="form-check-label form-label-sm">Ganho</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="newStageLost">
+            <label class="form-check-label form-label-sm">Perdido</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm btn-primary" onclick="submitAddStage()">Criar Etapa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Deal -->
+<div class="modal fade" id="createDealModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Novo Deal</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Título</label>
+          <input type="text" class="form-control form-control-sm" id="newDealTitle" placeholder="Ex: Proposta empresa X">
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Etapa</label>
+          <select class="form-select form-select-sm" id="newDealStage"></select>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col">
+            <label class="form-label form-label-sm">Valor (R$)</label>
+            <input type="number" class="form-control form-control-sm" id="newDealValue" placeholder="0.00" step="0.01">
+          </div>
+          <div class="col">
+            <label class="form-label form-label-sm">Probabilidade (%)</label>
+            <input type="number" class="form-control form-control-sm" id="newDealProb" value="0" min="0" max="100">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Lead</label>
+          <input type="text" class="form-control form-control-sm" id="dealLeadSearch" placeholder="Buscar lead por nome ou telefone..." oninput="searchLeads(this.value)">
+          <div id="leadSearchResults" class="list-group mt-1" style="max-height:160px;overflow-y:auto;display:none"></div>
+          <input type="hidden" id="newDealLeadId">
+          <small class="text-muted" id="selectedLeadInfo"></small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm btn-primary" onclick="submitCreateDeal()">Criar Deal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stage Context Menu (automations) -->
+<div class="modal fade" id="stageMenuModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="stageMenuTitle">Etapa</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3" id="stageMenuTabs">
+          <li class="nav-item"><a class="nav-link active" href="#" onclick="showStageTab('automations', event)">Automações</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" onclick="showStageTab('settings', event)">Configurações</a></li>
+        </ul>
+
+        <!-- Automations Tab -->
+        <div id="stageTabAutomations">
+          <div id="automationsList"></div>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="openAddAutomationForm()">
+            <i class="fas fa-plus me-1"></i>Adicionar automação
+          </button>
+          <div id="addAutomationForm" style="display:none" class="border rounded p-3 mt-3">
+            <div class="row g-2 mb-2">
+              <div class="col-md-6">
+                <label class="form-label form-label-sm">Tipo de automação</label>
+                <select class="form-select form-select-sm" id="newAutoType" onchange="renderAutoConfig()">
+                  <option value="notify_agent">Notificar operador</option>
+                  <option value="create_task">Criar tarefa</option>
+                  <option value="send_whatsapp">Enviar WhatsApp</option>
+                  <option value="update_deal">Atualizar deal</option>
+                </select>
+              </div>
+            </div>
+            <div id="autoConfigArea" class="mb-2"></div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-primary" onclick="submitAddAutomation()">Salvar</button>
+              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('addAutomationForm').style.display='none'">Cancelar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="stageTabSettings" style="display:none">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Nome da etapa</label>
+              <input type="text" class="form-control form-control-sm" id="editStageName">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label form-label-sm">Cor</label>
+              <input type="color" class="form-control form-control-sm form-control-color" id="editStageColor">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label form-label-sm">Probabilidade (%)</label>
+              <input type="number" class="form-control form-control-sm" id="editStageProb" min="0" max="100">
+            </div>
+            <div class="col-12 d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editStageWon">
+                <label class="form-check-label form-label-sm">Etapa de ganho</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editStageLost">
+                <label class="form-check-label form-label-sm">Etapa de perda</label>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-sm btn-primary" onclick="submitUpdateStage()">Salvar</button>
+            <button class="btn btn-sm btn-outline-danger ms-auto" onclick="confirmDeleteStage()">Excluir etapa</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transition Rules Modal -->
+<div class="modal fade" id="rulesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Regras de Transição de Pipeline</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="rulesList"></div>
+        <hr>
+        <h6 class="mb-3">Nova Regra</h6>
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">Nome</label>
+            <input type="text" class="form-control form-control-sm" id="newRuleName" placeholder="Ex: Mover pós-venda">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">Gatilho</label>
+            <select class="form-select form-select-sm" id="newRuleTrigger">
+              <option value="no_answer_limit">Sem resposta (limite)</option>
+              <option value="stage_time_exceeded">Tempo excessivo na etapa</option>
+              <option value="deal_idle">Deal parado (dias)</option>
+              <option value="lead_status_changed">Status do lead alterado</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">Pipeline destino</label>
+            <select class="form-select form-select-sm" id="newRuleTargetPipeline" onchange="loadTargetStages()"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">Etapa destino</label>
+            <select class="form-select form-select-sm" id="newRuleTargetStage"></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label form-label-sm">Prioridade</label>
+            <input type="number" class="form-control form-control-sm" id="newRulePriority" value="0">
+          </div>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="submitCreateRule()">Criar Regra</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deal Detail Modal -->
+<div class="modal fade" id="dealDetailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="dealDetailTitle">Deal</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="dealDetailBody">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">Título</label>
+            <input type="text" class="form-control form-control-sm" id="editDealTitle">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label form-label-sm">Valor (R$)</label>
+            <input type="number" class="form-control form-control-sm" id="editDealValue" step="0.01">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label form-label-sm">Probabilidade (%)</label>
+            <input type="number" class="form-control form-control-sm" id="editDealProb" min="0" max="100">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">Status</label>
+            <select class="form-select form-select-sm" id="editDealStatus">
+              <option value="open">Aberto</option>
+              <option value="won">Ganho</option>
+              <option value="lost">Perdido</option>
+              <option value="frozen">Congelado</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">Previsão de fechamento</label>
+            <input type="date" class="form-control form-control-sm" id="editDealCloseDate">
+          </div>
+        </div>
+        <hr>
+        <div id="dealLeadInfo" class="p-3 bg-light rounded mb-3" style="font-size:13px"></div>
+        
+        <div class="mb-3">
+            <h6 style="font-size:14px; margin-bottom:12px; font-weight:700;">Histórico de Atividades</h6>
+            <div id="dealActivityList" style="max-height:300px; overflow-y:auto; padding-right:5px;">
+                <p class="text-muted" style="font-size:12px; font-style:italic;">Nenhuma atividade registrada.</p>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-success" onclick="markDealWon()">Marcar Ganho</button>
+          <button class="btn btn-sm btn-danger" onclick="markDealLost()">Marcar Perdido</button>
+          <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="openTransferDealModal()">Transferir pipeline</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-sm btn-primary" onclick="submitUpdateDeal()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer Deal Modal -->
+<div class="modal fade" id="transferDealModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Transferir Deal</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Pipeline destino</label>
+          <select class="form-select form-select-sm" id="transferPipelineSelect" onchange="loadTransferStages()"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Etapa destino</label>
+          <select class="form-select form-select-sm" id="transferStageSelect"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label form-label-sm">Motivo (opcional)</label>
+          <input type="text" class="form-control form-control-sm" id="transferReason">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm btn-primary" onclick="submitTransferDeal()">Transferir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// ============================================================
+// AUTH
+// ============================================================
+function getToken() {
+  return localStorage.getItem('nexdial_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+}
+async function authFetch(url, opts = {}) {
+  const token = getToken();
+  opts.headers = { ...(opts.headers || {}), 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+  const res = await fetch(url, opts);
+  if (res.status === 401) { window.location.href = '/login-page'; }
+  return res;
+}
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `alert alert-${type} alert-dismissible fade show`;
+  t.style.cssText = 'position:fixed;top:60px;right:16px;z-index:9999;min-width:260px;font-size:13px';
+  t.innerHTML = msg + `<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+async function clearAllLeads() {
+  if (!confirm('Tem certeza que deseja APAGAR TODOS OS LEADS E DEALS?\nEsta ação não pode ser desfeita!')) return;
+  try {
+    const resp = await authFetch('/api/clear-all-leads', { method: 'DELETE' });
+    const data = await resp.json().catch(() => ({}));
+    if (resp.ok) {
+      toast('Todos os leads e deals foram excluídos.');
+      loadPipelines();
+      location.reload();
+    } else {
+      toast(data.error || 'Erro ao apagar leads.', 'danger');
+    }
+  } catch (err) {
+    console.error(err);
+    toast('Erro ao apagar leads.', 'danger');
+  }
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let allPipelines = [];    // [{id, name, color, stages:[...], ...}]
+let currentPipeline = null;
+let currentBoard = null;  // [{stage, deals:[]}]
+let currentStage = null;  // stage being edited
+let currentDeal  = null;  // deal being edited
+let sortableInstances = [];
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadPipelines(true);  // true = auto-select default/first pipeline
+  await loadNotifications();
+  // poll notifications every 30s
+  setInterval(loadNotifications, 30000);
+});
+
+// ============================================================
+// PIPELINES
+// ============================================================
+async function loadPipelines(autoSelect = false) {
+  try {
+    const res = await authFetch('/api/crm/pipelines');
+    if (!res.ok) return;
+    allPipelines = await res.json();
+    renderSidebar();
+    // Auto-select: re-select current pipeline if still present, else select default/first
+    if (autoSelect || !currentPipeline) {
+      const toSelect = allPipelines.find(p => p.is_default && !p.is_archived)
+                    || allPipelines.find(p => !p.is_archived);
+      if (toSelect) selectPipeline(toSelect.id);
+    }
+  } catch(e) { console.error(e); }
+}
+
+function renderSidebar() {
+  const el = document.getElementById('pipelineList');
+  if (!allPipelines.length) {
+    el.innerHTML = '<div style="padding:8px 14px;color:#5a6480;font-size:12px">Nenhum pipeline</div>';
+    return;
+  }
+  el.innerHTML = allPipelines.filter(p => !p.is_archived).map(p => `
+    <div class="sidebar-item ${currentPipeline && currentPipeline.id === p.id ? 'active' : ''}"
+         style="position:relative; display:flex; align-items:center; gap:8px;"
+         onmouseenter="this.querySelector('.pipe-del').style.display='flex'"
+         onmouseleave="this.querySelector('.pipe-del').style.display='none'">
+      <span onclick="selectPipeline(${p.id})" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;">
+        <span class="pipeline-dot" style="background:${p.color};flex-shrink:0"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(p.name)}</span>
+      </span>
+      <span class="badge-count" onclick="selectPipeline(${p.id})" style="cursor:pointer;">${p.deals_open || 0}</span>
+      <button class="pipe-del" onclick="deletePipeline(${p.id},'${escH(p.name)}')"
+        style="display:none;align-items:center;justify-content:center;background:rgba(239,68,68,.15);border:none;color:#ef4444;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:11px;flex-shrink:0;"
+        title="Excluir pipeline">&times;</button>
+    </div>
+  `).join('');
+}
+
+async function createDefaultPipeline() {
+  const btn = document.getElementById('btnCreateDefault');
+  if (btn) btn.style.opacity = '0.5';
+  try {
+    const res = await authFetch('/api/crm/create-default-pipeline', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error || 'Erro ao criar pipeline padrão', 'danger'); return; }
+    if (data.created) {
+      toast('Pipeline "Comercial" criado com sucesso!', 'success');
+      await loadPipelines();
+      if (data.pipeline_id) await selectPipeline(data.pipeline_id);
+    } else {
+      toast('Pipeline "Comercial" já existe — clique nele na lista ao lado', 'info');
+      await loadPipelines();
+    }
+  } catch(e) { toast('Erro ao criar pipeline padrão', 'danger'); }
+  finally { if (btn) btn.style.opacity = '1'; }
+}
+
+async function deletePipeline(id, name) {
+  if (!confirm(`Excluir pipeline "${name}"?\n\nIsso só funciona se não houver deals abertos.`)) return;
+  try {
+    const res = await authFetch(`/api/crm/pipelines/${id}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error || 'Erro ao excluir pipeline', 'danger'); return; }
+    toast('Pipeline excluído');
+    if (currentPipeline && currentPipeline.id === id) {
+      currentPipeline = null;
+      document.getElementById('boardHeader').style.display = 'none';
+      document.getElementById('boardScroll').style.display = 'none';
+      document.getElementById('emptyBoard').style.display = 'flex';
+    }
+    await loadPipelines();
+  } catch(e) { toast('Erro ao excluir pipeline', 'danger'); }
+}
+
+async function selectPipeline(id) {
+  currentPipeline = allPipelines.find(p => p.id === id) || null;
+  renderSidebar();
+  if (!currentPipeline) return;
+  document.getElementById('emptyBoard').style.display = 'none';
+  document.getElementById('boardHeader').style.display = 'flex';
+  document.getElementById('boardScroll').style.display = 'flex';
+  document.getElementById('boardTitle').textContent = currentPipeline.name;
+  await loadBoard(id);
+}
+
+async function loadBoard(pipelineId) {
+  try {
+    const res = await authFetch(`/api/crm/pipeline/${pipelineId}/deals`);
+    if (!res.ok) { toast('Erro ao carregar board', 'danger'); return; }
+    const data = await res.json();
+    currentBoard = data.board;
+    const total = currentBoard.reduce((s, col) => s + col.deals.length, 0);
+    document.getElementById('boardDealsCount').textContent = `${total} deals`;
+    renderBoard();
+  } catch(e) { toast('Erro ao carregar board', 'danger'); }
+}
+
+function renderBoard() {
+  // Destroy previous sortables
+  sortableInstances.forEach(s => s.destroy());
+  sortableInstances = [];
+
+  const container = document.getElementById('boardScroll');
+  if (!currentBoard || !currentBoard.length) {
+    container.innerHTML = '<div class="text-muted" style="font-size:14px;margin:auto">Nenhuma etapa. Crie uma etapa para começar.</div>';
+    return;
+  }
+  container.innerHTML = currentBoard.map(col => `
+    <div class="kanban-col" data-stage-id="${col.id}">
+      <div class="col-header">
+        <span class="col-dot" style="background:${col.color}"></span>
+        <span>${escH(col.name)}</span>
+        ${col.is_won ? '<span class="badge bg-success ms-1" style="font-size:9px">Ganho</span>' : ''}
+        ${col.is_lost ? '<span class="badge bg-danger ms-1" style="font-size:9px">Perdido</span>' : ''}
+        <span class="col-count">${col.deals.length}</span>
+        <button class="col-menu-btn" onclick="openStageMenu(${col.id}, event)" title="Opções da etapa">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+      </div>
+      <div class="col-cards" id="stage-cards-${col.id}">
+        ${col.deals.map(d => renderDealCard(d)).join('')}
+      </div>
+      <div class="col-footer">
+        <button class="add-card-btn" onclick="openCreateDealModalForStage(${col.id})">
+          <i class="fas fa-plus"></i> Adicionar deal
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  // Init SortableJS on each column
+  currentBoard.forEach(col => {
+    const el = document.getElementById(`stage-cards-${col.id}`);
+    if (!el) return;
+    const s = Sortable.create(el, {
+      group: 'deals',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: handleDragEnd,
+    });
+    sortableInstances.push(s);
+  });
+}
+
+function renderDealCard(d) {
+  const value = d.value ? `R$ ${Number(d.value).toLocaleString('pt-BR', {minimumFractionDigits:2})}` : '';
+  const leadName = d.lead ? escH(d.lead.name || '') : '';
+  const phone = d.lead ? (d.lead.phone || '') : '';
+  const rawNotes = d.lead?.notes || '';
+  const notesSnippet = rawNotes ? escH(rawNotes.split('\n').pop().trim().slice(0, 80)) : '';
+  const recordingIcon = d.has_recording ? `<span title="Possui gravação" class="ms-1" style="color:#059669"><i class="fas fa-tape"></i></span>` : '';
+
+  return `
+    <div class="deal-card" data-deal-id="${d.id}" ondblclick="openDealDetail(${d.id})">
+      <div class="deal-actions">
+        <button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>
+        <button onclick="quickMarkWon(${d.id})" title="Marcar ganho" style="color:#059669"><i class="fas fa-check"></i></button>
+        <button onclick="quickMarkLost(${d.id})" title="Marcar perdido" style="color:#dc2626"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="deal-title">
+        ${escH(d.title)}
+        ${recordingIcon}
+      </div>
+      ${leadName ? `<div class="deal-lead text-truncate"><i class="fas fa-user-circle fa-xs me-1"></i>${leadName}</div>` : ''}
+      ${notesSnippet ? `<div class="deal-notes" title="${escH(rawNotes)}"><i class="fas fa-sticky-note fa-xs me-1"></i>${notesSnippet}</div>` : ''}
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <div class="deal-value">${value || ''}</div>
+        <div style="font-size:10px; color:#999;">${d.probability || 0}%</div>
+      </div>
+    </div>
+  `;
+}
+
+async function handleDragEnd(evt) {
+  const dealId = parseInt(evt.item.dataset.dealId);
+  const newStageId = parseInt(evt.to.closest('.kanban-col').dataset.stageId);
+  // find old stage from board state
+  const deal = findDealInBoard(dealId);
+  if (!deal || deal.stage_id === newStageId) return;
+
+  try {
+    const res = await authFetch(`/api/crm/deals/${dealId}/stage`, {
+      method: 'PUT', body: JSON.stringify({ stage_id: newStageId, triggered_by: 'agent' }),
+    });
+    if (!res.ok) {
+      toast('Erro ao mover deal', 'danger');
+      await loadBoard(currentPipeline.id); // revert
+      return;
+    }
+    // update local state
+    deal.stage_id = newStageId;
+    updateColCounts();
+  } catch(e) {
+    toast('Erro ao mover deal', 'danger');
+  }
+}
+
+function findDealInBoard(dealId) {
+  if (!currentBoard) return null;
+  for (const col of currentBoard) {
+    const d = col.deals.find(x => x.id === dealId);
+    if (d) return d;
+  }
+  return null;
+}
+
+function updateColCounts() {
+  if (!currentBoard) return;
+  currentBoard.forEach(col => {
+    const cards = document.querySelectorAll(`#stage-cards-${col.id} .deal-card`);
+    const countEl = document.querySelector(`.kanban-col[data-stage-id="${col.id}"] .col-count`);
+    if (countEl) countEl.textContent = cards.length;
+  });
+}
+
+// ============================================================
+// CREATE PIPELINE
+// ============================================================
+function openCreatePipelineModal() {
+  document.getElementById('newPipelineName').value = '';
+  document.getElementById('newPipelineColor').value = '#6366f1';
+  document.getElementById('newPipelineDefault').checked = false;
+  new bootstrap.Modal(document.getElementById('createPipelineModal')).show();
+}
+async function submitCreatePipeline() {
+  const name = document.getElementById('newPipelineName').value.trim();
+  if (!name) return toast('Informe um nome', 'warning');
+  const res = await authFetch('/api/crm/pipelines', {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      color: document.getElementById('newPipelineColor').value,
+      is_default: document.getElementById('newPipelineDefault').checked,
+    }),
+  });
+  bootstrap.Modal.getInstance(document.getElementById('createPipelineModal')).hide();
+  if (res.ok) {
+    await loadPipelines();
+    const p = await res.json();
+    selectPipeline(p.id);
+    toast('Pipeline criado!');
+  } else {
+    const err = await res.json().catch(() => ({}));
+    toast(err.error || 'Erro ao criar pipeline', 'danger');
+  }
+}
+
+// ============================================================
+// ADD STAGE
+// ============================================================
+function openAddStageModal() {
+  if (!currentPipeline) return;
+  document.getElementById('newStageName').value = '';
+  document.getElementById('newStageColor').value = '#6366f1';
+  document.getElementById('newStageProb').value = 0;
+  document.getElementById('newStageWon').checked = false;
+  document.getElementById('newStageLost').checked = false;
+  new bootstrap.Modal(document.getElementById('addStageModal')).show();
+}
+async function submitAddStage() {
+  const name = document.getElementById('newStageName').value.trim();
+  if (!name) return toast('Informe um nome', 'warning');
+  const res = await authFetch(`/api/crm/pipelines/${currentPipeline.id}/stages`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      color: document.getElementById('newStageColor').value,
+      default_probability: parseInt(document.getElementById('newStageProb').value) || 0,
+      is_won: document.getElementById('newStageWon').checked,
+      is_lost: document.getElementById('newStageLost').checked,
+    }),
+  });
+  bootstrap.Modal.getInstance(document.getElementById('addStageModal')).hide();
+  if (res.ok) { await loadPipelines(); await loadBoard(currentPipeline.id); toast('Etapa criada!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+// ============================================================
+// STAGE MENU (automations + settings)
+// ============================================================
+let _stageMenuId = null;
+
+function openStageMenu(stageId, event) {
+  event.stopPropagation();
+  _stageMenuId = stageId;
+  const stage = currentBoard.find(c => c.id === stageId);
+  if (!stage) return;
+  currentStage = stage;
+  document.getElementById('stageMenuTitle').textContent = stage.name;
+  // Fill settings fields
+  document.getElementById('editStageName').value = stage.name;
+  document.getElementById('editStageColor').value = stage.color || '#6366f1';
+  document.getElementById('editStageProb').value = stage.default_probability || 0;
+  document.getElementById('editStageWon').checked = !!stage.is_won;
+  document.getElementById('editStageLost').checked = !!stage.is_lost;
+  showStageTab('automations', null);
+  loadAutomations(stageId);
+  new bootstrap.Modal(document.getElementById('stageMenuModal')).show();
+}
+
+function showStageTab(tab, event) {
+  if (event) event.preventDefault();
+  document.getElementById('stageTabAutomations').style.display = tab === 'automations' ? '' : 'none';
+  document.getElementById('stageTabSettings').style.display = tab === 'settings' ? '' : 'none';
+  document.querySelectorAll('#stageMenuTabs .nav-link').forEach((a, i) => {
+    a.classList.toggle('active', (i === 0 && tab === 'automations') || (i === 1 && tab === 'settings'));
+  });
+}
+
+async function submitUpdateStage() {
+  if (!currentStage) return;
+  const res = await authFetch(`/api/crm/stages/${currentStage.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      name: document.getElementById('editStageName').value.trim(),
+      color: document.getElementById('editStageColor').value,
+      default_probability: parseInt(document.getElementById('editStageProb').value) || 0,
+      is_won: document.getElementById('editStageWon').checked,
+      is_lost: document.getElementById('editStageLost').checked,
+    }),
+  });
+  if (res.ok) { bootstrap.Modal.getInstance(document.getElementById('stageMenuModal')).hide(); await loadPipelines(); await loadBoard(currentPipeline.id); toast('Etapa atualizada!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+async function confirmDeleteStage() {
+  if (!currentStage) return;
+  if (!confirm(`Excluir etapa "${currentStage.name}"? Não pode ter deals.`)) return;
+  const res = await authFetch(`/api/crm/stages/${currentStage.id}`, { method: 'DELETE' });
+  if (res.ok) { bootstrap.Modal.getInstance(document.getElementById('stageMenuModal')).hide(); await loadPipelines(); await loadBoard(currentPipeline.id); toast('Etapa excluída!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+// ============================================================
+// AUTOMATIONS
+// ============================================================
+async function loadAutomations(stageId) {
+  const el = document.getElementById('automationsList');
+  el.innerHTML = '<div class="text-muted" style="font-size:12px">Carregando...</div>';
+  try {
+    const res = await authFetch(`/api/crm/stages/${stageId}/automations`);
+    if (!res.ok) { el.innerHTML = '<div class="text-muted" style="font-size:12px">Erro ao carregar</div>'; return; }
+    const items = await res.json();
+    if (!items.length) { el.innerHTML = '<div class="text-muted" style="font-size:12px">Nenhuma automação configurada.</div>'; return; }
+    el.innerHTML = items.map(a => `
+      <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded">
+        <span class="badge bg-${a.is_active ? 'primary' : 'secondary'}">${escH(a.type)}</span>
+        <small class="text-muted">${a.config && a.config.message ? escH(a.config.message.substring(0,40)) : ''}</small>
+        <button class="btn btn-xs btn-outline-danger ms-auto" onclick="deleteAutomation(${a.id})" style="font-size:11px;padding:2px 6px">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="text-muted" style="font-size:12px">Erro</div>'; }
+}
+
+function openAddAutomationForm() {
+  document.getElementById('addAutomationForm').style.display = '';
+  renderAutoConfig();
+}
+
+function renderAutoConfig() {
+  const type = document.getElementById('newAutoType').value;
+  const area = document.getElementById('autoConfigArea');
+  const configs = {
+    notify_agent: `<input type="text" class="form-control form-control-sm" id="autoConfigMsg" placeholder="Mensagem de notificação">`,
+    create_task: `<input type="text" class="form-control form-control-sm" id="autoConfigMsg" placeholder="Título da tarefa">`,
+    send_whatsapp: `<input type="text" class="form-control form-control-sm" id="autoConfigMsg" placeholder="Mensagem WhatsApp (suporte {{name}}, {{phone}})">`,
+    change_agent: `<input type="number" class="form-control form-control-sm" id="autoConfigAgent" placeholder="ID do operador destino">`,
+    update_lead_status: `<input type="text" class="form-control form-control-sm" id="autoConfigStatus" placeholder="Novo status do lead">`,
+    move_pipeline: `<input type="number" class="form-control form-control-sm" id="autoConfigPipeline" placeholder="ID do pipeline destino">`,
+  };
+  area.innerHTML = configs[type] || '';
+}
+
+async function submitAddAutomation() {
+  if (!currentStage) return;
+  const type = document.getElementById('newAutoType').value;
+  let config = {};
+  if (['notify_agent', 'create_task', 'send_whatsapp'].includes(type))
+    config.message = (document.getElementById('autoConfigMsg') || {}).value || '';
+
+  const res = await authFetch(`/api/crm/stages/${currentStage.id}/automations`, {
+    method: 'POST',
+    body: JSON.stringify({ type, config }),
+  });
+  if (res.ok) { document.getElementById('addAutomationForm').style.display = 'none'; loadAutomations(currentStage.id); toast('Automação criada!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+async function deleteAutomation(id) {
+  if (!confirm('Excluir automação?')) return;
+  const res = await authFetch(`/api/crm/automations/${id}`, { method: 'DELETE' });
+  if (res.ok) { loadAutomations(currentStage.id); toast('Automação excluída!'); }
+  else toast('Erro', 'danger');
+}
+
+// ============================================================
+// DEALS - CREATE
+// ============================================================
+let _createDealForStageId = null;
+
+function openCreateDealModal() {
+  _createDealForStageId = null;
+  _openCreateDealModal();
+}
+function openCreateDealModalForStage(stageId) {
+  _createDealForStageId = stageId;
+  _openCreateDealModal();
+}
+function _openCreateDealModal() {
+  if (!currentPipeline) return;
+  document.getElementById('newDealTitle').value = '';
+  document.getElementById('newDealValue').value = '';
+  document.getElementById('newDealProb').value = 0;
+  document.getElementById('newDealLeadId').value = '';
+  document.getElementById('dealLeadSearch').value = '';
+  document.getElementById('selectedLeadInfo').textContent = '';
+  document.getElementById('leadSearchResults').style.display = 'none';
+  // Populate stages
+  const sel = document.getElementById('newDealStage');
+  sel.innerHTML = (currentPipeline.stages || currentBoard || []).map(s =>
+    `<option value="${s.id}" ${s.id === _createDealForStageId ? 'selected' : ''}>${escH(s.name)}</option>`
+  ).join('');
+  new bootstrap.Modal(document.getElementById('createDealModal')).show();
+}
+
+let _searchTimer = null;
+function searchLeads(q) {
+  clearTimeout(_searchTimer);
+  if (q.length < 2) { document.getElementById('leadSearchResults').style.display = 'none'; return; }
+  _searchTimer = setTimeout(async () => {
+    try {
+      const res = await authFetch(`/api/leads?search=${encodeURIComponent(q)}&limit=10`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const leads = Array.isArray(data) ? data : (data.leads || data.items || []);
+      const el = document.getElementById('leadSearchResults');
+      if (!leads.length) { el.style.display = 'none'; return; }
+      el.innerHTML = leads.map(l =>
+        `<button type="button" class="list-group-item list-group-item-action py-1" style="font-size:12px"
+          onclick="selectLead(${l.id}, '${escAttr(l.name)}', '${escAttr(l.numero_1 || '')}')">
+          <strong>${escH(l.name)}</strong> <span class="text-muted">${escH(l.numero_1||'')}</span>
+        </button>`
+      ).join('');
+      el.style.display = '';
+    } catch(e) {}
+  }, 350);
+}
+
+function selectLead(id, name, phone) {
+  document.getElementById('newDealLeadId').value = id;
+  document.getElementById('dealLeadSearch').value = name;
+  document.getElementById('selectedLeadInfo').textContent = phone;
+  document.getElementById('leadSearchResults').style.display = 'none';
+}
+
+async function submitCreateDeal() {
+  const title = document.getElementById('newDealTitle').value.trim();
+  const stageId = parseInt(document.getElementById('newDealStage').value);
+  const leadId = parseInt(document.getElementById('newDealLeadId').value);
+  const value = parseFloat(document.getElementById('newDealValue').value) || null;
+  const prob = parseInt(document.getElementById('newDealProb').value) || 0;
+
+  if (!title) return toast('Informe um título', 'warning');
+  if (!leadId) return toast('Selecione um lead', 'warning');
+
+  const res = await authFetch('/api/crm/deals', {
+    method: 'POST',
+    body: JSON.stringify({
+      title, stage_id: stageId, pipeline_id: currentPipeline.id,
+      lead_id: leadId, value, probability: prob,
+    }),
+  });
+  bootstrap.Modal.getInstance(document.getElementById('createDealModal')).hide();
+  if (res.ok) { await loadBoard(currentPipeline.id); await loadPipelines(); toast('Deal criado!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro ao criar deal', 'danger'); }
+}
+
+// ============================================================
+// DEAL DETAIL / EDIT
+// ============================================================
+async function openDealDetail(dealId) {
+  const deal = findDealInBoard(dealId);
+  if (!deal) return;
+  currentDeal = deal;
+  document.getElementById('dealDetailTitle').textContent = deal.title;
+  document.getElementById('editDealTitle').value = deal.title;
+  document.getElementById('editDealValue').value = deal.value || '';
+  document.getElementById('editDealProb').value = deal.probability || 0;
+  document.getElementById('editDealStatus').value = deal.status || 'open';
+  document.getElementById('editDealCloseDate').value = deal.expected_close_date ? deal.expected_close_date.slice(0,10) : '';
+
+  const leadEl = document.getElementById('dealLeadInfo');
+  const l = deal.lead;
+  leadEl.innerHTML = l ? `
+    <div class="d-flex gap-3 flex-wrap">
+      <div><strong>Lead:</strong> ${escH(l.name||'')}</div>
+      <div><strong>Telefone:</strong> ${escH(l.phone||'')}</div>
+      <div><strong>Empresa:</strong> ${escH(l.company||'')}</div>
+      <div><strong>Email:</strong> ${escH(l.email||'')}</div>
+      <div><strong>Status:</strong> <span class="badge bg-secondary">${escH(l.status||'')}</span></div>
+    </div>
+  ` : '<span class="text-muted">Lead não encontrado</span>';
+
+  loadDealActivities(dealId);
+  new bootstrap.Modal(document.getElementById('dealDetailModal')).show();
+}
+
+async function loadDealActivities(dealId) {
+  const el = document.getElementById('dealActivityList');
+  el.innerHTML = '<p class="text-muted" style="font-size:12px">Carregando histórico...</p>';
+  try {
+    const res = await authFetch(`/api/crm/deals/${dealId}/activities`);
+    if (!res.ok) throw new Error();
+    const activities = await res.json();
+    if (!activities.length) {
+      el.innerHTML = '<p class="text-muted" style="font-size:12px; font-style:italic;">Nenhuma atividade registrada.</p>';
+      return;
+    }
+    el.innerHTML = activities.map(a => {
+        const date = formatRelTime(a.created_at);
+        let icon = '<i class="fas fa-info-circle text-info"></i>';
+        let content = a.content;
+        
+        if (a.type === 'call') icon = '<i class="fas fa-phone-alt text-success"></i>';
+        if (a.type === 'stage_change') icon = '<i class="fas fa-exchange-alt text-warning"></i>';
+        if (a.type === 'note') icon = '<i class="fas fa-sticky-note text-primary"></i>';
+        
+        const recordingUrl = a.metadata_json?.recording_url;
+        let recordingHtml = '';
+        if (recordingUrl) {
+            recordingHtml = `
+                <div class="mt-2">
+                    <audio controls style="height:32px; width:100%;">
+                        <source src="${recordingUrl}" type="audio/mpeg">
+                        Seu navegador não suporta áudio.
+                    </audio>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="d-flex gap-2 mb-3 align-items-start border-bottom pb-2">
+                <div style="font-size:16px;">${icon}</div>
+                <div style="flex:1;">
+                    <div style="font-size:13px; color:#222;">${escH(content)}</div>
+                    ${recordingHtml}
+                    <div style="font-size:11px; color:#999; margin-top:2px;">${date}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<p class="text-danger" style="font-size:12px">Erro ao carregar atividades.</p>';
+  }
+}
+
+async function submitUpdateDeal() {
+  if (!currentDeal) return;
+  const res = await authFetch(`/api/crm/deals/${currentDeal.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      title: document.getElementById('editDealTitle').value.trim(),
+      value: parseFloat(document.getElementById('editDealValue').value) || null,
+      probability: parseInt(document.getElementById('editDealProb').value) || 0,
+      status: document.getElementById('editDealStatus').value,
+      expected_close_date: document.getElementById('editDealCloseDate').value || null,
+    }),
+  });
+  bootstrap.Modal.getInstance(document.getElementById('dealDetailModal')).hide();
+  if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal atualizado!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+async function quickMarkWon(dealId) {
+  const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'won' }) });
+  if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como ganho!', 'success'); }
+}
+async function quickMarkLost(dealId) {
+  const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'lost' }) });
+  if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como perdido', 'warning'); }
+}
+async function markDealWon() {
+  if (!currentDeal) return;
+  document.getElementById('editDealStatus').value = 'won';
+  await submitUpdateDeal();
+}
+async function markDealLost() {
+  if (!currentDeal) return;
+  document.getElementById('editDealStatus').value = 'lost';
+  await submitUpdateDeal();
+}
+
+// ============================================================
+// TRANSFER DEAL
+// ============================================================
+function openTransferDealModal() {
+  // Populate pipeline list
+  const sel = document.getElementById('transferPipelineSelect');
+  sel.innerHTML = allPipelines.filter(p => !p.is_archived && p.id !== currentPipeline.id).map(p =>
+    `<option value="${p.id}">${escH(p.name)}</option>`
+  ).join('');
+  if (!sel.options.length) { toast('Não há outros pipelines disponíveis', 'warning'); return; }
+  loadTransferStages();
+  // hide deal detail first
+  const dm = bootstrap.Modal.getInstance(document.getElementById('dealDetailModal'));
+  if (dm) dm.hide();
+  setTimeout(() => new bootstrap.Modal(document.getElementById('transferDealModal')).show(), 200);
+}
+
+function loadTransferStages() {
+  const pipelineId = parseInt(document.getElementById('transferPipelineSelect').value);
+  const p = allPipelines.find(x => x.id === pipelineId);
+  const sel = document.getElementById('transferStageSelect');
+  sel.innerHTML = (p && p.stages ? p.stages : []).map(s =>
+    `<option value="${s.id}">${escH(s.name)}</option>`
+  ).join('');
+}
+
+async function submitTransferDeal() {
+  if (!currentDeal) return;
+  const pipeline_id = parseInt(document.getElementById('transferPipelineSelect').value);
+  const stage_id = parseInt(document.getElementById('transferStageSelect').value);
+  const reason = document.getElementById('transferReason').value.trim();
+  const res = await authFetch(`/api/crm/deals/${currentDeal.id}/transfer`, {
+    method: 'PUT',
+    body: JSON.stringify({ pipeline_id, stage_id, reason }),
+  });
+  bootstrap.Modal.getInstance(document.getElementById('transferDealModal')).hide();
+  if (res.ok) { await loadBoard(currentPipeline.id); await loadPipelines(); toast('Deal transferido!'); }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro ao transferir', 'danger'); }
+}
+
+// ============================================================
+// TRANSITION RULES
+// ============================================================
+async function openRulesModal() {
+  if (!currentPipeline) return;
+  await loadRules();
+  // Populate target pipeline select
+  const sel = document.getElementById('newRuleTargetPipeline');
+  sel.innerHTML = allPipelines.filter(p => !p.is_archived).map(p =>
+    `<option value="${p.id}">${escH(p.name)}</option>`
+  ).join('');
+  loadTargetStages();
+  new bootstrap.Modal(document.getElementById('rulesModal')).show();
+}
+
+async function loadRules() {
+  const el = document.getElementById('rulesList');
+  el.innerHTML = '<div class="text-muted" style="font-size:12px">Carregando...</div>';
+  try {
+    const res = await authFetch(`/api/crm/pipelines/${currentPipeline.id}/rules`);
+    if (!res.ok) { el.innerHTML = ''; return; }
+    const rules = await res.json();
+    if (!rules.length) { el.innerHTML = '<p class="text-muted" style="font-size:13px">Nenhuma regra configurada.</p>'; return; }
+    el.innerHTML = rules.map(r => {
+      const targetP = allPipelines.find(p => p.id === r.target_pipeline_id);
+      return `
+        <div class="rule-item d-flex align-items-center gap-2">
+          <span class="rule-badge ${r.is_active ? 'bg-success text-white' : 'bg-secondary text-white'}">${r.is_active?'ATIVA':'INATIVA'}</span>
+          <strong style="font-size:13px">${escH(r.name)}</strong>
+          <span class="text-muted" style="font-size:12px">gatilho: ${escH(r.trigger)}</span>
+          <span class="text-muted ms-auto" style="font-size:12px">→ ${escH(targetP ? targetP.name : r.target_pipeline_id)}</span>
+          <button class="btn btn-xs btn-outline-secondary" onclick="toggleRule(${r.id})" style="font-size:11px;padding:2px 8px">${r.is_active?'Pausar':'Ativar'}</button>
+          <button class="btn btn-xs btn-outline-danger" onclick="deleteRule(${r.id})" style="font-size:11px;padding:2px 6px"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
+    }).join('');
+  } catch(e) { el.innerHTML = ''; }
+}
+
+function loadTargetStages() {
+  const pipelineId = parseInt(document.getElementById('newRuleTargetPipeline').value);
+  const p = allPipelines.find(x => x.id === pipelineId);
+  const sel = document.getElementById('newRuleTargetStage');
+  sel.innerHTML = (p && p.stages ? p.stages : []).map(s =>
+    `<option value="${s.id}">${escH(s.name)}</option>`
+  ).join('');
+}
+
+async function submitCreateRule() {
+  const name = document.getElementById('newRuleName').value.trim();
+  const trigger = document.getElementById('newRuleTrigger').value;
+  const target_pipeline_id = parseInt(document.getElementById('newRuleTargetPipeline').value);
+  const target_stage_id = parseInt(document.getElementById('newRuleTargetStage').value);
+  const priority = parseInt(document.getElementById('newRulePriority').value) || 0;
+  if (!name) return toast('Informe um nome', 'warning');
+  const res = await authFetch(`/api/crm/pipelines/${currentPipeline.id}/rules`, {
+    method: 'POST',
+    body: JSON.stringify({ name, trigger, target_pipeline_id, target_stage_id, priority }),
+  });
+  if (res.ok) { await loadRules(); toast('Regra criada!'); document.getElementById('newRuleName').value = ''; }
+  else { const e = await res.json().catch(()=>({})); toast(e.error||'Erro', 'danger'); }
+}
+
+async function toggleRule(id) {
+  const res = await authFetch(`/api/crm/rules/${id}/toggle`, { method: 'POST' });
+  if (res.ok) { await loadRules(); }
+}
+
+async function deleteRule(id) {
+  if (!confirm('Excluir regra?')) return;
+  const res = await authFetch(`/api/crm/rules/${id}`, { method: 'DELETE' });
+  if (res.ok) { await loadRules(); toast('Regra excluída!'); }
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+async function loadNotifications() {
+  try {
+    const res = await authFetch('/api/crm/notifications?limit=20');
+    if (!res.ok) return;
+    const data = await res.json();
+    // API returns {notifications: [...], unread_count, total}
+    const items = data.notifications || data.items || (Array.isArray(data) ? data : []);
+    const unread = data.unread_count !== undefined ? data.unread_count : items.filter(n => !n.is_read).length;
+    const badge = document.getElementById('notifBadge');
+    badge.textContent = unread;
+    badge.classList.toggle('show', unread > 0);
+
+    const el = document.getElementById('notifList');
+    if (!items.length) { el.innerHTML = '<p class="text-center text-muted py-4" style="font-size:13px">Nenhuma notificação</p>'; return; }
+    el.innerHTML = items.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markRead(${n.id})">
+        <div>${escH(n.message || n.title || '')}</div>
+        <div class="notif-time">${formatRelTime(n.created_at)}</div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function markRead(id) {
+  await authFetch(`/api/crm/notifications/${id}/read`, { method: 'POST' });
+  await loadNotifications();
+}
+
+async function markAllRead() {
+  await authFetch('/api/crm/notifications/read-all', { method: 'POST' });
+  await loadNotifications();
+}
+
+function toggleNotifPanel() {
+  document.getElementById('notifPanel').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notifPanel');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !e.target.closest('.notif-btn')) {
+    panel.classList.remove('open');
+  }
+});
+
+// ============================================================
+// UTILS
+// ============================================================
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s||'').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+function formatRelTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'agora';
+  if (diff < 3600) return `${Math.floor(diff/60)}min atrás`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h atrás`;
+  return `${Math.floor(diff/86400)}d atrás`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+import logging
+from datetime import datetime
+
+from flask import Blueprint, jsonify, request
+
+from app.extensions import db
+from app.models.call import Call
+
+twilio_bp = Blueprint("twilio", __name__, url_prefix="/api/twilio")
+logger = logging.getLogger(__name__)
+
+
+# Mapeamento de status Twilio → nome da etapa da pipeline
+_CALL_STATUS_TO_STAGE = {
+    "ringing":     "Em Contato",
+    "in-progress": "Em Contato",
+    "answered":    "Em Contato",
+    "no-answer":   "Não Atendeu",
+    "busy":        "Caixa Postal",
+    "failed":      "Inválido",
+}
+
+
+def _auto_move_deal_by_call_status(call, call_status):
+    """
+    Tenta mover o deal do lead para a etapa correspondente ao status da chamada.
+    Silencioso — jamais lança exceção para não travar o webhook do Twilio.
+    """
+    stage_name = _CALL_STATUS_TO_STAGE.get(call_status)
+    if not stage_name or not call.lead_id:
+        return
+
+    # GUARD: Se a chamada já foi atendida (answered_at), não permitimos regredir para "Não Atendeu" ou "Inválido"
+    # Isso evita webhooks atrasados de "status: failed" ou "no-answer" (após AMD ou silêncio) 
+    # de limparem um lead que já está em conversa ou popup.
+    if getattr(call, "answered_at", None) and call_status in ("no-answer", "failed", "busy"):
+        return
+
+    try:
+        from app.models.deal import Deal
+        from app.models.pipeline import PipelineStage
+
+        # Pega o deal aberto mais recente do lead
+        deal = (
+            Deal.query
+            .filter_by(lead_id=call.lead_id, company_id=call.company_id, status="open")
+            .order_by(Deal.created_at.desc())
+            .first()
+        )
+        if not deal:
+            return
+
+        # Encontra a etapa pelo nome dentro da pipeline do deal
+        target_stage = (
+            PipelineStage.query
+            .filter_by(pipeline_id=deal.pipeline_id, name=stage_name)
+            .first()
+        )
+        if not target_stage:
+            return
+
+        # Não regride etapas já avançadas (evita sobreescrever classificação manual)
+        if deal.stage_id == target_stage.id:
+            return
+
+        from app.services.crm_service import move_to_stage
+        move_to_stage(deal, target_stage, triggered_by="system")
+        db.session.commit()
+
+        logger.info(
+            "_auto_move_deal_by_call_status: deal_id=%s lead_id=%s status=%s → etapa=%s",
+            deal.id, call.lead_id, call_status, stage_name,
+        )
+    except Exception:
+        logger.exception(
+            "_auto_move_deal_by_call_status: erro silenciado para lead_id=%s status=%s",
+            call.lead_id, call_status,
+        )
+
+
+def _get_value(name, default=None):
+    return (
+        request.values.get(name)
+        or request.form.get(name)
+        or request.args.get(name)
+        or default
+    )
+
+
+def _parse_datetime(value):
+    if not value:
+        return None
+
+    formats = [
+        "%a, %d %b %Y %H:%M:%S %z",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except Exception:
+            continue
+
+    return None
+
+
+@twilio_bp.route("/status", methods=["POST"])
+def status_callback():
+    print("=== /api/twilio/status chamado ===")
+    print("Request values:", dict(request.values))
+
+    call_sid = _get_value("CallSid")
+    call_status = (_get_value("CallStatus") or "").lower().strip()
+    call_duration = _get_value("CallDuration")
+    answered_by = _get_value("AnsweredBy")
+    from_number = _get_value("From")
+    to_number = _get_value("To")
+    timestamp_raw = _get_value("Timestamp")
+
+    if not call_sid:
+        return jsonify({"error": "CallSid não informado"}), 400
+
+    call = Call.query.filter_by(call_sid=call_sid).first()
+
+    if not call:
+        print(f"[status_callback] Call não encontrada ainda para sid={call_sid}. Ignorando criação incompleta.")
+        return jsonify({
+            "message": "call ainda não persistida",
+            "call_sid": call_sid
+        }), 200
+
+    if to_number:
+        call.phone_dialed = to_number
+
+    if call_status:
+        call.status = call_status
+
+    if hasattr(call, "from_number") and from_number:
+        call.from_number = from_number
+
+    if hasattr(call, "to_number") and to_number:
+        call.to_number = to_number
+
+    if hasattr(call, "answered_by") and answered_by:
+        call.answered_by = answered_by
+
+    event_time = _parse_datetime(timestamp_raw) or datetime.utcnow()
+
+    if call_status in ["in-progress", "answered", "in_progress"]:
+        if not getattr(call, "answered_at", None):
+            call.answered_at = event_time
+
+    if call_status in ["completed", "busy", "failed", "no-answer", "canceled", "no_answer"]:
+        if not getattr(call, "ended_at", None):
+            call.ended_at = event_time
+
+    if call_duration:
+        try:
+            call.duration_seconds = int(call_duration)
+        except (TypeError, ValueError):
+            pass
+
+    if call_status == "completed" and not getattr(call, "ended_at", None):
+        call.ended_at = datetime.utcnow()
+
+    if call_status in ["ringing", "queued"] and not getattr(call, "created_at", None):
+        call.created_at = datetime.utcnow()
+
+    db.session.commit()
+
+    # Automação: move o deal da pipeline conforme o status da chamada
+    _auto_move_deal_by_call_status(call, call_status)
+
+    # ── AVANÇO AUTOMÁTICO DO DISCADOR ───────────────────────────────────────
+    # Este handler é chamado pelo Twilio para TODOS os status callbacks.
+    # Quando o status é terminal, o discador deve avançar para o próximo lead.
+    # CRÍTICO: sem isso, o discador fica preso em 'waiting_webhook' para sempre.
+    _TERMINAL = {"completed", "failed", "no-answer", "busy", "canceled", "no_answer"}
+    if call_status in _TERMINAL and call and call.campaign_id:
+        try:
+            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS, resume_auto_dialer_for_campaign
+            sess = AUTO_DIALER_SESSIONS.get(call.campaign_id)
+            if sess and sess.get("status") in ("running", "waiting_webhook", "dialing"):
+                logger.info(
+                    "[STATUS→DIALER] %s — chamando próximo lead | campaign=%s lead=%s",
+                    call_status, call.campaign_id, call.lead_id,
+                )
+                resume_auto_dialer_for_campaign(call.campaign_id, call.company_id)
+        except Exception as _exc:
+            logger.error("[STATUS→DIALER] Erro ao retomar discador: %s", _exc)
+
+    return jsonify({
+        "message": "status atualizado",
+        "call_sid": call_sid,
+        "status": call.status,
+        "duration_seconds": getattr(call, "duration_seconds", None)
+    }), 200
+
+
+@twilio_bp.route("/ping", methods=["GET", "POST"])
+def ping():
+    print("=== /api/twilio/ping ===")
+    print("method:", request.method)
+    print("args:", dict(request.args))
+    print("form:", dict(request.form))
+    return jsonify({"ok": True, "message": "pong"}), 200

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - NexDial</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .box {
+            background: #111827;
+            padding: 30px;
+            border-radius: 15px;
+            width: 340px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: #7c3aed;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #6d28d9;
+        }
+
+        .link {
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .link a {
+            color: #7c3aed;
+            text-decoration: none;
+        }
+
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .success {
+            color: #22c55e;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="box">
+        <h2>Criar conta</h2>
+
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+
+        <input type="text" id="name" placeholder="Nome">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Senha">
+        <input type="text" id="company" placeholder="Nome da empresa">
+
+        <button onclick="register()">Cadastrar</button>
+
+        <div class="link">
+            <a href="/login-page">Já tenho conta</a>
+        </div>
+    </div>
+
+    <script>
+        async function register() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const company = document.getElementById('company').value;
+
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            errorDiv.innerText = '';
+            successDiv.innerText = '';
+
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        company_name: company
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorDiv.innerText = data.error || 'Erro no cadastro';
+                    return;
+                }
+
+                successDiv.innerText = 'Conta criada com sucesso!';
+
+                setTimeout(() => {
+                    window.location.href = '/login-page';
+                }, 1500);
+
+            } catch (err) {
+                errorDiv.innerText = 'Erro ao conectar com o servidor';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Ambiente Python
+venv/
+env/
+*.pyc
+__pycache__/
+*.egg-info/
+.Python
+
+# Variáveis de ambiente
+.env
+.env.local
+.env*.local
+
+# Banco de dados
+*.db
+nexdial.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Twilio credentials
+twilio_*.txt
+credentials.txt
+
+# Dist
+dist/
+build/
+*.egg-info/
+
+# Node (se usar)
+node_modules/

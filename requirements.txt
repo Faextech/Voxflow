@@ -1,0 +1,33 @@
+# Framework Web
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-CORS==4.0.0
+
+# Banco de Dados (SQLite para desenvolvimento)
+SQLAlchemy==2.0.48
+
+# Autenticação e Segurança
+PyJWT==2.10.1
+bcrypt==4.1.2
+python-dotenv==1.0.0
+
+# Twilio
+twilio==8.10.0
+
+# Produção
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+# Validação
+email-validator==2.1.0
+python-dateutil==2.8.2
+
+# Logging e Monitoring
+python-json-logger==2.0.7
+
+# Segurança adicional
+cryptography==41.0.7
+requests==2.31.0
+
+# Utilities
+click==8.1.7

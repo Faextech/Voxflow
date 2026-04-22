@@ -1,0 +1,20 @@
+{
+  "name": "nexdial",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@twilio/voice-sdk": "^2.18.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

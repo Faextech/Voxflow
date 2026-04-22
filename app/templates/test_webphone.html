@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste Webphone NexDial</title>
+  <script src="{{ url_for('static', filename='vendor/twilio.min.js') }}"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#111827; color:#fff; padding:20px; }
+    button,input { padding:10px; margin:6px 0; border-radius:8px; border:none; }
+    button { background:#7c3aed; color:#fff; cursor:pointer; }
+    #log { white-space:pre-wrap; background:#1f2937; padding:12px; border-radius:10px; min-height:220px; }
+  </style>
+</head>
+<body>
+  <h1>Teste Webphone</h1>
+
+  <label>ID do operador</label><br>
+  <input id="agentId" value="1"><br>
+
+  <button onclick="loadToken()">Carregar token</button>
+  <button onclick="startDevice()">Iniciar device</button>
+
+  <h3>Status</h3>
+  <div id="status">Aguardando...</div>
+
+  <h3>Logs</h3>
+  <div id="log"></div>
+
+  <script>
+    let token = null;
+    let device = null;
+
+    function log(msg) {
+      const el = document.getElementById("log");
+      const time = new Date().toLocaleTimeString("pt-BR");
+      el.textContent = `[${time}] ${msg}\n` + el.textContent;
+      console.log(msg);
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg;
+    }
+
+    async function prepareAudio() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          window.__ctx = window.__ctx || new AudioCtx();
+          if (window.__ctx.state === "suspended") {
+            await window.__ctx.resume();
+          }
+        }
+        log("Áudio liberado.");
+        return true;
+      } catch (e) {
+        log("Erro ao liberar áudio: " + (e.message || e));
+        return false;
+      }
+    }
+
+    async function loadToken() {
+      const agentId = document.getElementById("agentId").value;
+      const res = await fetch(`/api/webphone/token/${agentId}`);
+      const data = await res.json();
+      token = data.token;
+      log("Token carregado.");
+      log("Identity: " + data.identity);
+    }
+
+    async function startDevice() {
+      try {
+        const ok = await prepareAudio();
+        if (!ok) return;
+
+        if (!token) {
+          await loadToken();
+        }
+
+        if (device) {
+          log("Device já existe.");
+          return;
+        }
+
+        device = new Twilio.Device(token, {
+          logLevel: 1,
+          codecPreferences: ["opus", "pcmu"]
+        });
+
+        device.on("registering", () => {
+          setStatus("Registrando...");
+          log("Registrando device...");
+        });
+
+        device.on("registered", () => {
+          setStatus("Registrado");
+          log("Device registrado.");
+        });
+
+        device.on("unregistered", () => {
+          setStatus("Não registrado");
+          log("Device desregistrado.");
+        });
+
+        device.on("error", (err) => {
+          setStatus("Erro");
+          log("Erro no device: " + (err.message || JSON.stringify(err)));
+        });
+
+        device.on("incoming", (call) => {
+          setStatus("Chamada recebida");
+          log("🔥 CHAMADA RECEBIDA NO BROWSER 🔥");
+          console.log(call);
+
+          call.on("accept", () => log("Call accepted"));
+          call.on("disconnect", () => log("Call disconnected"));
+          call.on("cancel", () => log("Call canceled"));
+          call.on("reject", () => log("Call rejected"));
+          call.on("error", (e) => log("Call error: " + (e.message || JSON.stringify(e))));
+
+          call.accept();
+          log("accept() executado.");
+        });
+
+        await device.register();
+      } catch (e) {
+        log("Erro ao iniciar device: " + (e.message || e));
+      }
+    }
+  </script>
+</body>
+</html>
