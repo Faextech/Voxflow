@@ -4,8 +4,8 @@ from app.services.twilio_service import TwilioService, normalize_phone_br
 
 
 class DialerService:
-    def __init__(self):
-        self.twilio = TwilioService.from_env()
+    def __init__(self, user_email: str = None):
+        self.twilio = TwilioService.from_env(current_user_email=user_email)
 
     def get_next_pending_lead(self, company_id=None, campaign_id=None):
         query = Lead.query.filter_by(status='new')
