@@ -1,620 +1,792 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexDial — Acelere suas Vendas com Discagem Automática</title>
-    <meta name="description" content="Sua equipe faz 3x mais ligações com o NexDial. Discador automático, CRM integrado e relatórios em tempo real.">
+    <title>NexDial | Acelere Suas Vendas com Discagem Automática</title>
+    <meta name="description" content="Automatize sua operação de vendas e deixe sua equipe focada em fechar negócios. Discador automático, CRM e Dashboard em tempo real.">
+    <meta property="og:title" content="NexDial | Acelere Suas Vendas com Discagem Automática">
+    <meta property="og:description" content="Automatize sua operação de vendas e deixe sua equipe focada em fechar negócios.">
     
-    <!-- Google Fonts: Inter -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: '#1a1f5e',
-                        secondary: '#2d3a8c',
-                        accent: '#00c853',
-                        orange_cta: '#ff6b35',
-                        light_bg: '#f8f9fa'
-                    },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                     },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#16a34a',
+                            600: '#15803d',
+                        },
+                        navy: {
+                            800: '#1e3a8a',
+                            900: '#0f1f5c',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'glow': '0 0 20px rgba(22, 163, 74, 0.4)',
+                    }
                 }
             }
         }
     </script>
 
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        [x-cloak] { display: none !important; }
-        .scroll-reveal {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.6s ease-out;
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .scroll-reveal.visible {
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #0f1f5c 0%, #1e3a8a 100%);
+        }
+
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .fade-up.visible {
             opacity: 1;
             transform: translateY(0);
         }
-        .hero-gradient {
-            background: linear-gradient(135deg, #1a1f5e 0%, #2d3a8c 100%);
+
+        /* Mockup CSS */
+        .mockup-bar { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            animation: pulse 2s infinite;
         }
-        .step-line::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 100%;
-            width: 100%;
-            height: 2px;
-            background: #e5e7eb;
-            z-index: -1;
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
-        @media (max-width: 768px) {
-            .step-line::after { display: none; }
+        .typing-effect {
+            overflow: hidden; white-space: nowrap; border-right: 2px solid white;
+            animation: typing 2s steps(20, end) infinite alternate;
         }
+        @keyframes typing { from { width: 0 } to { width: 100% } }
     </style>
 </head>
-<body class="font-sans text-gray-900 bg-white">
+<body class="text-slate-800 bg-white">
 
-    <!-- 1. HEADER FIXO -->
-    <header x-data="{ open: false, scrolled: false }" 
-            @scroll.window="scrolled = (window.pageYOffset > 20)"
-            :class="{ 'bg-white shadow-md py-3': scrolled, 'bg-transparent py-5': !scrolled && !open, 'bg-white': open }"
-            class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-        <div class="container mx-auto px-6 flex justify-between items-center">
-            <!-- Logo -->
-            <a href="/" class="text-2xl font-extrabold tracking-tight" :class="scrolled || open ? 'text-primary' : 'text-white'">
-                Nex<span class="text-accent">Dial</span>
-            </a>
-
-            <!-- Desktop Menu -->
-            <nav class="hidden md:flex items-center space-x-8">
-                <a href="#features" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">Funcionalidades</a>
-                <a href="#pricing" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">Planos</a>
-                <a href="#faq" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">FAQ</a>
-                <div class="flex items-center space-x-4">
-                    <a href="/login-page" class="px-4 py-2 border rounded-lg font-semibold transition-all" 
-                       :class="scrolled ? 'border-primary text-primary hover:bg-primary hover:text-white' : 'border-white/30 text-white hover:bg-white/10'">
-                        Login
-                    </a>
-                    <a href="/register-page" class="px-5 py-2.5 bg-accent text-white rounded-lg font-bold shadow-lg shadow-accent/20 hover:scale-105 transition-transform">
-                        Testar Grátis
-                    </a>
+    <!-- ① HEADER FIXO -->
+    <header x-data="{ mobileMenuOpen: false }" class="fixed w-full top-0 z-50 glass-header transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <i data-lucide="phone-call" class="h-7 w-7 text-navy-800 mr-2"></i>
+                    <span class="font-extrabold text-2xl text-navy-900 tracking-tight">NexDial</span>
                 </div>
-            </nav>
+                
+                <!-- Desktop Menu -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#funcionalidades" class="text-slate-600 hover:text-navy-800 font-medium transition-colors">Funcionalidades</a>
+                    <a href="#como-funciona" class="text-slate-600 hover:text-navy-800 font-medium transition-colors">Como funciona</a>
+                    <a href="#planos" class="text-slate-600 hover:text-navy-800 font-medium transition-colors">Planos</a>
+                    <a href="#depoimentos" class="text-slate-600 hover:text-navy-800 font-medium transition-colors">Depoimentos</a>
+                </nav>
 
-            <!-- Mobile Toggle -->
-            <button @click="open = !open" class="md:hidden p-2" :class="scrolled || open ? 'text-primary' : 'text-white'">
-                <i data-lucide="menu" x-show="!open"></i>
-                <i data-lucide="x" x-show="open"></i>
-            </button>
+                <!-- CTA Desktop -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="https://wa.me/5500000000000" target="_blank" class="text-slate-700 font-medium hover:text-navy-800 px-3 py-2 border border-slate-300 rounded-lg hover:border-slate-400 transition-all">Falar com consultor</a>
+                    <a href="/login" class="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-all hover:shadow-glow">Começar agora</a>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-600 hover:text-navy-900 focus:outline-none">
+                        <i data-lucide="menu" class="h-6 w-6" x-show="!mobileMenuOpen"></i>
+                        <i data-lucide="x" class="h-6 w-6" x-show="mobileMenuOpen" style="display: none;"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Mobile Menu -->
-        <div x-show="open" x-cloak x-transition class="md:hidden bg-white border-t border-gray-100 px-6 py-8 space-y-6 flex flex-col items-center">
-            <a @click="open = false" href="#features" class="text-lg font-semibold text-gray-800">Funcionalidades</a>
-            <a @click="open = false" href="#pricing" class="text-lg font-semibold text-gray-800">Planos</a>
-            <a @click="open = false" href="#faq" class="text-lg font-semibold text-gray-800">FAQ</a>
-            <hr class="w-full border-gray-100">
-            <a href="/login-page" class="text-lg font-bold text-primary">Login</a>
-            <a href="/register-page" class="w-full py-4 bg-accent text-white text-center rounded-xl font-bold text-lg shadow-xl shadow-accent/20">
-                Criar Conta Grátis
-            </a>
+        <div x-show="mobileMenuOpen" x-transition class="md:hidden bg-white border-b border-slate-100 shadow-xl absolute w-full" style="display: none;">
+            <div class="px-4 pt-2 pb-6 space-y-1">
+                <a href="#funcionalidades" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Funcionalidades</a>
+                <a href="#como-funciona" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Como funciona</a>
+                <a href="#planos" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Planos</a>
+                <a href="#depoimentos" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Depoimentos</a>
+                <div class="pt-4 flex flex-col space-y-3 px-3">
+                    <a href="https://wa.me/5500000000000" target="_blank" class="text-center text-slate-700 font-medium px-4 py-3 border border-slate-300 rounded-lg">Falar com consultor</a>
+                    <a href="/login" class="text-center bg-brand-500 text-white font-semibold px-4 py-3 rounded-lg">Começar agora</a>
+                </div>
+            </div>
         </div>
     </header>
 
-    <!-- 2. HERO SECTION -->
-    <section class="hero-gradient pt-32 pb-20 md:pt-48 md:pb-32 text-white overflow-hidden">
-        <div class="container mx-auto px-6">
-            <div class="flex flex-col md:flex-row items-center">
-                <!-- Content -->
-                <div class="md:w-1/2 mb-16 md:mb-0 text-center md:text-left z-10">
-                    <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-accent font-bold text-sm mb-6 animate-pulse">
-                        🚀 Novo: Discagem automática com IA
-                    </span>
-                    <h1 class="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
-                        Sua equipe faz 3x mais ligações. <br>
-                        <span class="text-accent italic">No mesmo tempo.</span>
+    <!-- ② HERO -->
+    <section class="hero-gradient pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
+                <!-- Hero Content -->
+                <div class="lg:col-span-6 text-center lg:text-left fade-up">
+                    <div class="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-sm font-medium mb-6">
+                        <span class="text-brand-500 mr-2 text-lg leading-none">✦</span> Novo — Discagem automática com IA
+                    </div>
+                    <h1 class="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 leading-[1.1]">
+                        Sua equipe vende mais. <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-green-300">Sem esforço manual.</span>
                     </h1>
-                    <p class="text-lg md:text-xl text-white/80 mb-10 max-w-xl leading-relaxed">
-                        NexDial conecta sua equipe de vendas automaticamente com leads qualificados. Sem espera. Sem esforço manual. Só resultado.
+                    <p class="text-xl text-indigo-100 opacity-90 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                        Automatize sua operação de vendas e deixe sua equipe focada no que realmente importa: fechar negócios e aumentar a receita.
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                        <a href="/register-page" class="px-8 py-4 bg-accent text-white rounded-xl font-bold text-lg shadow-2xl shadow-accent/30 hover:scale-105 transition-transform flex items-center justify-center gap-2">
-                            Começar agora — grátis
-                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
+                        <a href="https://wa.me/5500000000000" target="_blank" class="inline-flex justify-center items-center px-8 py-4 border border-transparent text-lg font-semibold rounded-xl text-white bg-brand-500 hover:bg-brand-600 shadow-glow transition-all hover:-translate-y-1">
+                            Quero uma demonstração
                         </a>
-                        <a href="#features" class="px-8 py-4 bg-transparent border border-white/30 text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-colors">
-                            Ver demonstração
+                        <a href="#como-funciona" class="inline-flex justify-center items-center px-8 py-4 border border-white/30 text-lg font-semibold rounded-xl text-white hover:bg-white/10 transition-all">
+                            Ver como funciona ↓
                         </a>
                     </div>
+                    
                     <!-- Stats -->
-                    <div class="mt-12 flex flex-wrap justify-center md:justify-start gap-8 opacity-70">
-                        <div class="flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5"></i> <span class="font-semibold">+200 empresas</span></div>
-                        <div class="flex items-center gap-2"><i data-lucide="phone-call" class="w-5 h-5"></i> <span class="font-semibold">+1M ligações/mês</span></div>
-                        <div class="flex items-center gap-2"><i data-lucide="star" class="w-5 h-5 fill-accent text-accent"></i> <span class="font-semibold">4.9/5 avaliação</span></div>
+                    <div class="flex items-center justify-center lg:justify-start gap-6 text-white border-t border-white/20 pt-8">
+                        <div>
+                            <div class="text-2xl font-bold">200+</div>
+                            <div class="text-sm text-indigo-200">Empresas</div>
+                        </div>
+                        <div class="w-px h-10 bg-white/20"></div>
+                        <div>
+                            <div class="text-2xl font-bold">1M+</div>
+                            <div class="text-sm text-indigo-200">Ligações/mês</div>
+                        </div>
+                        <div class="w-px h-10 bg-white/20"></div>
+                        <div>
+                            <div class="text-2xl font-bold flex items-center">4.9 <i data-lucide="star" class="h-5 w-5 fill-current text-yellow-400 ml-1"></i></div>
+                            <div class="text-sm text-indigo-200">Avaliação</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Dashboard Mockup -->
-                <div class="md:w-1/2 relative">
-                    <div class="relative z-20 rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-[#0f172a] transform md:rotate-3 hover:rotate-0 transition-transform duration-500">
-                        <!-- Dashboard Header -->
-                        <div class="bg-gray-800/50 p-3 flex items-center space-x-2 border-b border-white/5">
-                            <div class="flex space-x-1">
-                                <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                                <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
-                                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                <!-- Hero Mockup -->
+                <div class="lg:col-span-6 mt-16 lg:mt-0 fade-up hidden md:block">
+                    <div class="bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden relative transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                        <!-- Mac Window Controls -->
+                        <div class="bg-slate-800 px-4 py-3 flex items-center border-b border-slate-700">
+                            <div class="flex gap-2">
+                                <div class="mockup-bar bg-red-500"></div>
+                                <div class="mockup-bar bg-yellow-500"></div>
+                                <div class="mockup-bar bg-green-500"></div>
                             </div>
-                            <div class="bg-white/5 rounded px-2 py-0.5 text-[10px] text-white/30 flex-grow text-center">app.nexdial.com/dashboard</div>
+                            <div class="mx-auto text-xs text-slate-400 font-mono">app.nexdial.com.br</div>
                         </div>
                         <!-- Mockup Content -->
-                        <div class="p-6 grid grid-cols-3 gap-4">
-                            <div class="col-span-3 h-12 bg-white/5 rounded-lg flex items-center px-4 justify-between">
-                                <div class="w-24 h-2 bg-white/10 rounded"></div>
-                                <div class="w-10 h-6 bg-accent/20 rounded"></div>
+                        <div class="p-6">
+                            <!-- Top metrics -->
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                                    <div class="text-slate-400 text-xs mb-1 uppercase tracking-wider">Ligações Hoje</div>
+                                    <div class="text-white font-bold text-2xl">1.432</div>
+                                </div>
+                                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                                    <div class="text-slate-400 text-xs mb-1 uppercase tracking-wider">Taxa de Contato</div>
+                                    <div class="text-brand-500 font-bold text-2xl">42%</div>
+                                </div>
+                                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                                    <div>
+                                        <div class="text-slate-400 text-xs mb-1 uppercase tracking-wider">Em Espera</div>
+                                        <div class="text-white font-bold text-2xl">8</div>
+                                    </div>
+                                    <div class="pulse-dot"></div>
+                                </div>
                             </div>
-                            <div class="h-24 bg-primary/40 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
-                                <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center"><i data-lucide="phone" class="w-4 h-4 text-accent"></i></div>
-                                <div class="w-12 h-2 bg-white/20 rounded"></div>
+                            
+                            <!-- Call incoming simulation -->
+                            <div class="bg-gradient-to-r from-brand-600 to-brand-500 rounded-xl p-5 mb-6 text-white shadow-lg relative overflow-hidden">
+                                <div class="absolute right-0 top-0 opacity-10">
+                                    <i data-lucide="phone" class="h-32 w-32 -mt-4 -mr-4"></i>
+                                </div>
+                                <div class="flex items-center gap-4 relative z-10">
+                                    <div class="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                                        <i data-lucide="user" class="h-6 w-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-green-100 font-medium">Chamada Atendida</div>
+                                        <div class="font-bold text-xl typing-effect">João Silva — TechCorp</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="h-24 bg-white/5 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
-                                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center"><i data-lucide="users" class="w-4 h-4 text-blue-400"></i></div>
-                                <div class="w-12 h-2 bg-white/20 rounded"></div>
-                            </div>
-                            <div class="h-24 bg-white/5 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
-                                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center"><i data-lucide="bar-chart-3" class="w-4 h-4 text-purple-400"></i></div>
-                                <div class="w-12 h-2 bg-white/20 rounded"></div>
-                            </div>
-                            <div class="col-span-3 h-32 bg-white/5 rounded-xl border border-white/5 p-4 space-y-3">
-                                <div class="flex justify-between items-center"><div class="w-32 h-3 bg-white/10 rounded"></div><div class="w-12 h-3 bg-accent/40 rounded"></div></div>
-                                <div class="w-full h-1 bg-white/5 rounded"><div class="w-2/3 h-full bg-accent rounded"></div></div>
-                                <div class="flex justify-between items-center"><div class="w-24 h-3 bg-white/10 rounded"></div><div class="w-10 h-3 bg-white/10 rounded"></div></div>
-                                <div class="w-full h-1 bg-white/5 rounded"><div class="w-1/3 h-full bg-blue-400 rounded"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Decor Orbs -->
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-accent/20 rounded-full blur-[100px] z-0"></div>
-                    <div class="absolute bottom-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] z-0"></div>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- 3. LOGOS CLIENTES -->
-    <section class="py-12 bg-white overflow-hidden border-b border-gray-100">
-        <div class="container mx-auto px-6">
-            <p class="text-center text-sm font-bold uppercase tracking-widest text-gray-400 mb-8">Empresas que já vendem mais com NexDial</p>
-            <div class="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 01</span>
-                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 02</span>
-                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 03</span>
-                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 04</span>
-                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 05</span>
-                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 06</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- 4. PROBLEMA → SOLUÇÃO -->
-    <section class="py-24 bg-white scroll-reveal">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-20">
-                <h2 class="text-3xl md:text-5xl font-extrabold text-primary mb-6">Chega de discar na mão</h2>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Sua equipe merece focar em fechar negócios, não em ouvir tom de ocupado ou digitar números.</p>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-10">
-                <!-- Card 1 -->
-                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
-                    <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="clock" class="text-red-500 w-8 h-8"></i></div>
-                    <div class="space-y-4">
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">❌</span>
-                            <p class="text-gray-500 font-medium">Vendedor perde 40% do dia discando números manualmente.</p>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">✅</span>
-                            <p class="text-primary font-bold text-lg">Discagem automática contínua e sem espera.</p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Card 2 -->
-                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
-                    <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="calendar-off" class="text-orange-500 w-8 h-8"></i></div>
-                    <div class="space-y-4">
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">❌</span>
-                            <p class="text-gray-500 font-medium">Leads esfriando sem o follow-up no momento certo.</p>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">✅</span>
-                            <p class="text-primary font-bold text-lg">Fila inteligente de callbacks automáticos.</p>
-                        </div>
-                    </div>
-                </div>
-                <!-- Card 3 -->
-                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
-                    <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="eye-off" class="text-blue-500 w-8 h-8"></i></div>
-                    <div class="space-y-4">
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">❌</span>
-                            <p class="text-gray-500 font-medium">Falta de dados sobre a produtividade real do time.</p>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <span class="text-xl">✅</span>
-                            <p class="text-primary font-bold text-lg">Dashboard em tempo real com métricas completas.</p>
+                            <!-- List -->
+                            <div class="bg-slate-800 rounded-xl border border-slate-700">
+                                <div class="px-4 py-3 border-b border-slate-700 flex justify-between text-xs text-slate-400 font-semibold uppercase">
+                                    <span>Operador</span>
+                                    <span>Status</span>
+                                </div>
+                                <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+                                    <div class="flex items-center gap-3 text-white"><div class="h-6 w-6 rounded-full bg-blue-500 text-xs flex items-center justify-center">AM</div> Aline M.</div>
+                                    <span class="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-md flex items-center gap-1"><div class="pulse-dot w-1.5 h-1.5"></div> Em chamada</span>
+                                </div>
+                                <div class="px-4 py-3 flex justify-between items-center">
+                                    <div class="flex items-center gap-3 text-white"><div class="h-6 w-6 rounded-full bg-purple-500 text-xs flex items-center justify-center">CR</div> Carlos R.</div>
+                                    <span class="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-md">Pausado</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        
+        <!-- Decorative SVG bottom -->
+        <div class="absolute bottom-0 left-0 right-0 z-0">
+            <svg viewBox="0 0 1440 120" class="w-full h-auto text-white fill-current" preserveAspectRatio="none">
+                <path d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
+            </svg>
+        </div>
     </section>
 
-    <!-- 5. FUNCIONALIDADES -->
-    <section id="features" class="py-24 bg-light_bg scroll-reveal">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-5xl font-extrabold text-primary mb-6">Tudo que seu time de vendas precisa</h2>
+    <!-- ③ SOCIAL PROOF -->
+    <section class="py-10 bg-white border-b border-slate-100 fade-up">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-6">Empresas que confiam no NexDial</p>
+            <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                <div class="text-2xl font-black text-slate-800 hover:text-navy-800 transition-colors cursor-default">Sankhya</div>
+                <div class="text-2xl font-black text-slate-800 hover:text-brand-500 transition-colors cursor-default">Olist</div>
+                <div class="text-2xl font-black text-slate-800 hover:text-blue-600 transition-colors cursor-default">TomTicket</div>
+                <div class="text-2xl font-black text-slate-800 hover:text-purple-600 transition-colors cursor-default">RD Station</div>
+                <div class="text-2xl font-black text-slate-800 hover:text-red-500 transition-colors cursor-default">Vtex</div>
+                <div class="text-2xl font-black text-slate-800 hover:text-orange-500 transition-colors cursor-default">Resultados</div>
             </div>
-            
+        </div>
+    </section>
+
+    <!-- ④ DOR → SOLUÇÃO -->
+    <section class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900 mb-4">Sua equipe está perdendo tempo</h2>
+                <p class="text-lg text-slate-600">O processo manual de discagem custa horas do dia dos seus vendedores. Nós resolvemos isso.</p>
+            </div>
+
             <div class="grid md:grid-cols-3 gap-8">
-                <!-- F1 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="phone-forwarded" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Auto Dialer</h3>
-                    <p class="text-gray-600">Discagem automática contínua. O sistema só passa a ligação para o vendedor quando o lead atende.</p>
+                <div class="bg-white rounded-2xl p-8 shadow-soft border-l-4 border-red-500 fade-up hover:-translate-y-2 transition-transform">
+                    <div class="w-14 h-14 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="timer" class="h-7 w-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">40% do dia discando manualmente</h3>
+                    <p class="text-slate-500 mb-4">Ouvindo caixa postal, número inexistente e chamadas não atendidas.</p>
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="text-brand-600 font-semibold flex items-center">
+                            <i data-lucide="check-circle-2" class="h-5 w-5 mr-2"></i> Discagem automática contínua
+                        </div>
+                    </div>
                 </div>
-                <!-- F2 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="layout-dashboard" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Dashboard ao Vivo</h3>
-                    <p class="text-gray-600">Monitore cada ligação em tempo real. Saiba quem está em linha e quem está vendendo agora.</p>
+
+                <div class="bg-white rounded-2xl p-8 shadow-soft border-l-4 border-blue-500 fade-up hover:-translate-y-2 transition-transform" style="transition-delay: 100ms">
+                    <div class="w-14 h-14 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="phone-off" class="h-7 w-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Leads sem follow-up esfriando</h3>
+                    <p class="text-slate-500 mb-4">Vendedores esquecem de retornar as ligações ou perdem o timing ideal.</p>
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="text-brand-600 font-semibold flex items-center">
+                            <i data-lucide="check-circle-2" class="h-5 w-5 mr-2"></i> Fila inteligente de retorno
+                        </div>
+                    </div>
                 </div>
-                <!-- F3 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="target" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Gestão de Leads</h3>
-                    <p class="text-gray-600">CRM integrado com pipeline visual para organizar suas oportunidades de ponta a ponta.</p>
-                </div>
-                <!-- F4 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="refresh-cw" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Callback Automático</h3>
-                    <p class="text-gray-600">Nunca perca um lead que não atendeu. O sistema reagenda o retorno automaticamente na fila.</p>
-                </div>
-                <!-- F5 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="monitor" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Softphone Web</h3>
-                    <p class="text-gray-600">Ligue direto do navegador. Sem hardware, sem cabos, 100% cloud com alta qualidade.</p>
-                </div>
-                <!-- F6 -->
-                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
-                    <i data-lucide="trending-up" class="text-accent mb-4 w-10 h-10"></i>
-                    <h3 class="text-xl font-bold text-primary mb-3">Relatórios Premium</h3>
-                    <p class="text-gray-600">Métricas completas de conversão, tempo de fala e produtividade por operador.</p>
+
+                <div class="bg-white rounded-2xl p-8 shadow-soft border-l-4 border-purple-500 fade-up hover:-translate-y-2 transition-transform" style="transition-delay: 200ms">
+                    <div class="w-14 h-14 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="eye-off" class="h-7 w-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Sem visibilidade da operação</h3>
+                    <p class="text-slate-500 mb-4">Gestores não sabem quem está produzindo ou por que as vendas caíram.</p>
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="text-brand-600 font-semibold flex items-center">
+                            <i data-lucide="check-circle-2" class="h-5 w-5 mr-2"></i> Dashboard ao vivo
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 6. COMO FUNCIONA -->
-    <section class="py-24 bg-white scroll-reveal">
-        <div class="container mx-auto px-6">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-20">Em 3 passos você já está ligando</h2>
-            
-            <div class="grid md:grid-cols-3 gap-16 md:gap-4 relative">
-                <div class="text-center flex flex-col items-center">
-                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10 step-line">1</div>
-                    <h3 class="text-2xl font-bold text-primary mb-4">Importe seus leads</h3>
-                    <p class="text-gray-600">Suba sua lista em CSV ou conecte via API com seu CRM favorito em segundos.</p>
-                </div>
-                <div class="text-center flex flex-col items-center">
-                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10 step-line">2</div>
-                    <h3 class="text-2xl font-bold text-primary mb-4">Configure sua campanha</h3>
-                    <p class="text-gray-600">Defina o script, os horários permitidos e as prioridades de discagem.</p>
-                </div>
-                <div class="text-center flex flex-col items-center">
-                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10">3</div>
-                    <h3 class="text-2xl font-bold text-primary mb-4">Venda muito mais</h3>
-                    <p class="text-gray-600">Sua equipe só recebe chamadas com pessoas na linha. Máxima eficiência de tempo.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 7. PLANOS E PREÇOS -->
-    <section id="pricing" class="py-24 hero-gradient text-white scroll-reveal">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-20">
-                <h2 class="text-3xl md:text-5xl font-extrabold mb-6">Planos que crescem com você</h2>
-                <p class="text-xl text-white/70">Pague apenas pelo que usar, sem taxas de adesão ou fidelidade.</p>
+    <!-- ⑤ FUNCIONALIDADES -->
+    <section id="funcionalidades" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900 mb-4">Tudo que sua operação precisa</h2>
+                <p class="text-lg text-slate-600">Uma plataforma unificada. Do primeiro contato ao fechamento do negócio.</p>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                <!-- Starter -->
-                <div class="bg-white/5 border border-white/10 p-10 rounded-3xl backdrop-blur-sm">
-                    <h3 class="text-2xl font-bold mb-2">Starter</h3>
-                    <div class="flex items-baseline gap-1 mb-8">
-                        <span class="text-sm font-semibold">R$</span>
-                        <span class="text-5xl font-black text-accent">0,35</span>
-                        <span class="text-sm text-white/50">/min</span>
-                    </div>
-                    <ul class="space-y-4 mb-10 text-white/80 font-medium">
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Até 5 operadores</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Auto dialer básico</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Dashboard padrão</li>
-                        <li class="flex gap-2 text-white/30"><i data-lucide="x-circle" class="w-5 h-5"></i> Relatórios Avançados</li>
-                    </ul>
-                    <a href="/register-page" class="block w-full py-4 text-center border border-white/20 rounded-xl font-bold hover:bg-white/10 transition-colors">Começar agora</a>
-                </div>
-
-                <!-- Pro -->
-                <div class="bg-white p-10 rounded-3xl text-primary transform scale-105 shadow-2xl relative z-10 border-t-8 border-accent">
-                    <span class="absolute top-0 right-10 -translate-y-1/2 px-4 py-1 bg-accent text-white text-xs font-black uppercase tracking-tighter rounded-full">Mais Popular ⭐</span>
-                    <h3 class="text-2xl font-bold mb-2">Pro</h3>
-                    <div class="flex items-baseline gap-1 mb-8">
-                        <span class="text-sm font-semibold">R$</span>
-                        <span class="text-5xl font-black text-primary">0,29</span>
-                        <span class="text-sm text-gray-400">/min</span>
-                    </div>
-                    <ul class="space-y-4 mb-10 text-gray-600 font-medium">
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Até 20 operadores</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Auto dialer avançado</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> CRM & Pipeline</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Suporte prioritário</li>
-                    </ul>
-                    <a href="/register-page" class="block w-full py-4 text-center bg-primary text-white rounded-xl font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">Falar com vendas</a>
-                </div>
-
-                <!-- Enterprise -->
-                <div class="bg-white/5 border border-white/10 p-10 rounded-3xl backdrop-blur-sm">
-                    <h3 class="text-2xl font-bold mb-2 text-white/90">Enterprise</h3>
-                    <div class="flex items-baseline gap-1 mb-8">
-                        <span class="text-sm font-semibold">R$</span>
-                        <span class="text-5xl font-black text-white/90">0,25</span>
-                        <span class="text-sm text-white/50">/min</span>
-                    </div>
-                    <ul class="space-y-4 mb-10 text-white/80 font-medium">
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Operadores ilimitados</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> API & Integrações</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Gerente de Conta</li>
-                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> SLA Garantido</li>
-                    </ul>
-                    <a href="/register-page" class="block w-full py-4 text-center border border-white/20 rounded-xl font-bold hover:bg-white/10 transition-colors">Falar com vendas</a>
-                </div>
-            </div>
-
-            <div class="mt-16 text-center text-white/60 font-medium text-lg">
-                <p>💳 Pague só o que usar. Sem mensalidade fixa. Sem fidelidade.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- 8. DEPOIMENTOS -->
-    <section class="py-24 bg-white scroll-reveal">
-        <div class="container mx-auto px-6">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-20">Quem usa, recomenda</h2>
             <div class="grid md:grid-cols-3 gap-8">
-                <!-- T1 -->
-                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
-                    <div class="flex text-accent mb-6">
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                <!-- Feature 1 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="phone-forwarded" class="h-6 w-6"></i>
                     </div>
-                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"Triplicamos o volume de contatos no primeiro mês. O time adorou e não quer saber de outra coisa."</p>
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center font-bold">CM</div>
-                        <div>
-                            <p class="font-bold text-primary">Carlos M.</p>
-                            <p class="text-sm text-gray-500">Gerente Comercial, TechVendas</p>
-                        </div>
-                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Discagem Automática</h3>
+                    <p class="text-slate-600">Filtra caixas postais e ocupados, conectando o operador apenas quando o cliente atende.</p>
                 </div>
-                <!-- T2 -->
-                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
-                    <div class="flex text-accent mb-6">
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+
+                <!-- Feature 2 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up" style="transition-delay: 50ms">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="layout-dashboard" class="h-6 w-6"></i>
                     </div>
-                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"O sistema de callback é o que nos salvou. Paramos de queimar lead e a produtividade dobrou."</p>
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold">AL</div>
-                        <div>
-                            <p class="font-bold text-primary">Ana Luiza</p>
-                            <p class="text-sm text-gray-500">SDR, Logistix</p>
-                        </div>
-                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Dashboard em Tempo Real</h3>
+                    <p class="text-slate-600">Monitore todos os operadores, ligações ativas e métricas vitais em uma única tela.</p>
                 </div>
-                <!-- T3 -->
-                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
-                    <div class="flex text-accent mb-6">
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
-                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+
+                <!-- Feature 3 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up" style="transition-delay: 100ms">
+                    <div class="w-12 h-12 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="users" class="h-6 w-6"></i>
                     </div>
-                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"Implementação em 10 minutos. No mesmo dia já estávamos operando com força total."</p>
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-orange_cta text-white rounded-full flex items-center justify-center font-bold">RP</div>
-                        <div>
-                            <p class="font-bold text-primary">Roberto P.</p>
-                            <p class="text-sm text-gray-500">Founder, FastSaaS</p>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Gestão de Leads</h3>
+                    <p class="text-slate-600">Importação fácil, funil de vendas integrado e histórico completo de cada contato.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up" style="transition-delay: 150ms">
+                    <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="rotate-ccw" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Retorno Automático</h3>
+                    <p class="text-slate-600">O sistema agenda retornos automaticamente e joga o lead na fila no momento exato.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up" style="transition-delay: 200ms">
+                    <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="laptop" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Softphone no Navegador</h3>
+                    <p class="text-slate-600">Sem instalar nada. A ligação acontece pelo próprio navegador com alta qualidade de áudio.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="group p-8 rounded-2xl border border-slate-200 hover:border-brand-500 hover:shadow-xl transition-all bg-white fade-up" style="transition-delay: 250ms">
+                    <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="trending-up" class="h-6 w-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-3">Relatórios Detalhados</h3>
+                    <p class="text-slate-600">Meça o desempenho de cada campanha, conversões e produtividade individual da equipe.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ⑥ COMO FUNCIONA -->
+    <section id="como-funciona" class="py-24 bg-slate-50 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900 mb-4">Do zero ao resultado em 3 passos</h2>
+                <p class="text-lg text-slate-600">Implementação rápida para você começar a vender no mesmo dia.</p>
+            </div>
+
+            <div class="relative max-w-4xl mx-auto">
+                <!-- Linha conectora (Desktop) -->
+                <div class="hidden md:block absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2 z-0"></div>
+                <div class="hidden md:block absolute top-1/2 left-0 w-1/2 h-1 bg-brand-500 -translate-y-1/2 z-0 transition-all duration-1000 ease-in-out"></div>
+
+                <div class="grid md:grid-cols-3 gap-12 relative z-10">
+                    <!-- Step 1 -->
+                    <div class="text-center fade-up">
+                        <div class="w-20 h-20 mx-auto bg-white rounded-full border-4 border-brand-500 flex items-center justify-center shadow-lg mb-6 relative">
+                            <span class="absolute -top-3 -right-3 w-8 h-8 bg-brand-500 text-white font-bold rounded-full flex items-center justify-center border-2 border-white">1</span>
+                            <i data-lucide="upload" class="h-8 w-8 text-brand-600"></i>
                         </div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">Importe seus contatos</h3>
+                        <p class="text-slate-600 text-sm">Suba sua planilha de leads em segundos e crie a base de prospects.</p>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="text-center fade-up" style="transition-delay: 100ms">
+                        <div class="w-20 h-20 mx-auto bg-white rounded-full border-4 border-brand-500 flex items-center justify-center shadow-lg mb-6 relative">
+                            <span class="absolute -top-3 -right-3 w-8 h-8 bg-brand-500 text-white font-bold rounded-full flex items-center justify-center border-2 border-white">2</span>
+                            <i data-lucide="settings" class="h-8 w-8 text-brand-600"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">Configure sua campanha</h3>
+                        <p class="text-slate-600 text-sm">Defina os operadores e inicie a discagem automática no clique de um botão.</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="text-center fade-up" style="transition-delay: 200ms">
+                        <div class="w-20 h-20 mx-auto bg-white rounded-full border-4 border-slate-200 flex items-center justify-center shadow-lg mb-6 relative transition-colors duration-500 hover:border-brand-500">
+                            <span class="absolute -top-3 -right-3 w-8 h-8 bg-slate-300 text-slate-700 font-bold rounded-full flex items-center justify-center border-2 border-white">3</span>
+                            <i data-lucide="trending-up" class="h-8 w-8 text-slate-400"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">Acompanhe os resultados</h3>
+                        <p class="text-slate-600 text-sm">Veja as conversões entrarem no CRM e avalie o desempenho no dashboard.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 9. FAQ ACCORDION -->
-    <section id="faq" class="py-24 bg-light_bg scroll-reveal" x-data="{ selected: null }">
-        <div class="container mx-auto px-6 max-w-3xl">
-            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-16">Perguntas frequentes</h2>
+    <!-- ⑦ PLANOS -->
+    <section id="planos" class="py-24 bg-white" x-data="{ planoAnual: false }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-12 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900 mb-4">Planos claros. Sem surpresas.</h2>
+                <p class="text-lg text-slate-600 mb-8">Mensalidade fixa. Cancele quando quiser.</p>
+                
+                <!-- Toggle Mensal/Anual -->
+                <div class="flex items-center justify-center gap-4">
+                    <span :class="planoAnual ? 'text-slate-500' : 'text-slate-900 font-semibold'">Mensal</span>
+                    <button @click="planoAnual = !planoAnual" class="relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none" :class="planoAnual ? 'bg-brand-500' : 'bg-slate-300'">
+                        <span class="inline-block h-5 w-5 transform rounded-full bg-white transition-transform" :class="planoAnual ? 'translate-x-8' : 'translate-x-1'"></span>
+                    </button>
+                    <span :class="planoAnual ? 'text-slate-900 font-semibold' : 'text-slate-500'">Anual <span class="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full ml-1">15% off</span></span>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
+                <!-- STARTER -->
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm fade-up">
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Starter</h3>
+                    <p class="text-slate-500 text-sm mb-6">Para pequenas equipes começando a estruturar a operação.</p>
+                    <div class="mb-8">
+                        <span class="text-4xl font-extrabold text-navy-900">R$ <span x-text="planoAnual ? '507' : '597'"></span></span><span class="text-slate-500">/mês</span>
+                    </div>
+                    <ul class="space-y-4 mb-8">
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-brand-500 mr-3 shrink-0"></i> Até 5 operadores</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-brand-500 mr-3 shrink-0"></i> Discagem automática</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-brand-500 mr-3 shrink-0"></i> Dashboard básico</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-brand-500 mr-3 shrink-0"></i> Gestão de leads</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-brand-500 mr-3 shrink-0"></i> Suporte por chat</li>
+                    </ul>
+                    <a href="https://wa.me/5500000000000" target="_blank" class="block w-full py-3 px-4 border-2 border-brand-500 text-brand-600 font-bold rounded-xl text-center hover:bg-brand-50 transition-colors">Falar com consultor</a>
+                </div>
+
+                <!-- PRO (Destaque) -->
+                <div class="bg-navy-900 rounded-3xl p-8 border border-brand-500 shadow-2xl transform lg:scale-105 relative z-10 fade-up">
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <span class="bg-brand-500 text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full">Mais popular</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Pro</h3>
+                    <p class="text-indigo-200 text-sm mb-6">A solução completa para escalar suas vendas com força total.</p>
+                    <div class="mb-8">
+                        <span class="text-4xl font-extrabold text-white">R$ <span x-text="planoAnual ? '1.102' : '1.297'"></span></span><span class="text-indigo-200">/mês</span>
+                    </div>
+                    <ul class="space-y-4 mb-8">
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> Até 20 operadores</li>
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> Discagem avançada</li>
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> CRM com pipeline</li>
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> Relatórios por operador</li>
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> Retorno automático</li>
+                        <li class="flex items-center text-indigo-50"><i data-lucide="check" class="h-5 w-5 text-brand-400 mr-3 shrink-0"></i> Suporte prioritário</li>
+                    </ul>
+                    <a href="https://wa.me/5500000000000" target="_blank" class="block w-full py-3 px-4 bg-brand-500 text-white font-bold rounded-xl text-center hover:bg-brand-600 transition-colors shadow-glow">Falar com consultor</a>
+                </div>
+
+                <!-- ENTERPRISE -->
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm fade-up">
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Enterprise</h3>
+                    <p class="text-slate-500 text-sm mb-6">Operações gigantes que precisam de integrações exclusivas.</p>
+                    <div class="mb-8">
+                        <span class="text-4xl font-extrabold text-navy-900">Personalizado</span>
+                    </div>
+                    <ul class="space-y-4 mb-8">
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-slate-400 mr-3 shrink-0"></i> Operadores ilimitados</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-slate-400 mr-3 shrink-0"></i> Multi-campanhas</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-slate-400 mr-3 shrink-0"></i> API e integrações personalizadas</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-slate-400 mr-3 shrink-0"></i> Gerente dedicado (CSM)</li>
+                        <li class="flex items-center text-slate-600"><i data-lucide="check" class="h-5 w-5 text-slate-400 mr-3 shrink-0"></i> SLA garantido</li>
+                    </ul>
+                    <a href="https://wa.me/5500000000000" target="_blank" class="block w-full py-3 px-4 border border-slate-300 text-slate-700 font-bold rounded-xl text-center hover:bg-slate-50 transition-colors">Falar com consultor</a>
+                </div>
+            </div>
             
-            <div class="space-y-4">
-                <!-- Q1 -->
-                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                    <button @click="selected !== 1 ? selected = 1 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
-                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Como funciona a cobrança por minuto?</span>
-                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 1 ? 'rotate-180' : ''"></i>
-                    </button>
-                    <div x-show="selected === 1" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
-                        Nós trabalhamos no modelo pré-pago. Você carrega créditos em sua conta e o valor é descontado em tempo real por cada minuto de ligação efetuada. Não há taxas de manutenção.
+            <div class="mt-12 text-center flex flex-wrap justify-center gap-6 text-sm font-medium text-slate-500">
+                <span class="flex items-center"><i data-lucide="check" class="h-4 w-4 text-brand-500 mr-1.5"></i> Sem fidelidade</span>
+                <span class="flex items-center"><i data-lucide="check" class="h-4 w-4 text-brand-500 mr-1.5"></i> Cancele quando quiser</span>
+                <span class="flex items-center"><i data-lucide="check" class="h-4 w-4 text-brand-500 mr-1.5"></i> Ativação em 24h</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ⑧ DEPOIMENTOS -->
+    <section id="depoimentos" class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900 mb-4">Quem usa, recomenda</h2>
+                <p class="text-lg text-slate-600">Junte-se às empresas que já transformaram suas operações de vendas.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-2xl shadow-soft border-t-4 border-brand-500 fade-up relative">
+                    <div class="text-brand-500 mb-4"><i data-lucide="quote" class="h-10 w-10 opacity-20 absolute top-6 right-6"></i></div>
+                    <div class="flex text-yellow-400 mb-4">
+                        <i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i>
+                    </div>
+                    <p class="text-slate-700 italic mb-8 font-medium text-lg leading-relaxed">"Triplicamos o volume de contatos no primeiro mês sem contratar ninguém. A automação mudou nosso jogo."</p>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 font-bold flex items-center justify-center rounded-full mr-4 text-lg">CM</div>
+                        <div>
+                            <h4 class="font-bold text-navy-900">Carlos M.</h4>
+                            <p class="text-xs text-slate-500">Gerente Comercial, TechVendas</p>
+                        </div>
                     </div>
                 </div>
-                <!-- Q2 -->
-                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                    <button @click="selected !== 2 ? selected = 2 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
-                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Preciso instalar algum software?</span>
-                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 2 ? 'rotate-180' : ''"></i>
-                    </button>
-                    <div x-show="selected === 2" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
-                        Não! O NexDial é 100% web. Sua equipe só precisa de um navegador (Chrome ou Edge) e um headset para começar a vender.
+
+                <div class="bg-white p-8 rounded-2xl shadow-soft border-t-4 border-blue-500 fade-up relative" style="transition-delay: 100ms">
+                    <div class="text-blue-500 mb-4"><i data-lucide="quote" class="h-10 w-10 opacity-20 absolute top-6 right-6"></i></div>
+                    <div class="flex text-yellow-400 mb-4">
+                        <i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i>
+                    </div>
+                    <p class="text-slate-700 italic mb-8 font-medium text-lg leading-relaxed">"Minha equipe parou de perder tempo e focou no que importa: fechar. A clareza do dashboard é excelente."</p>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-purple-100 text-purple-600 font-bold flex items-center justify-center rounded-full mr-4 text-lg">AL</div>
+                        <div>
+                            <h4 class="font-bold text-navy-900">Ana L.</h4>
+                            <p class="text-xs text-slate-500">Diretora de Vendas, Grupo Alfa</p>
+                        </div>
                     </div>
                 </div>
-                <!-- Q3 -->
-                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                    <button @click="selected !== 3 ? selected = 3 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
-                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Posso importar minha lista de leads?</span>
-                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 3 ? 'rotate-180' : ''"></i>
-                    </button>
-                    <div x-show="selected === 3" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
-                        Sim, você pode importar listas em formato CSV ou Excel (.xlsx) diretamente no nosso painel administrativo. O sistema normaliza os números automaticamente para você.
+
+                <div class="bg-white p-8 rounded-2xl shadow-soft border-t-4 border-purple-500 fade-up relative" style="transition-delay: 200ms">
+                    <div class="text-purple-500 mb-4"><i data-lucide="quote" class="h-10 w-10 opacity-20 absolute top-6 right-6"></i></div>
+                    <div class="flex text-yellow-400 mb-4">
+                        <i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i><i data-lucide="star" class="h-5 w-5 fill-current"></i>
                     </div>
-                </div>
-                <!-- Q4 -->
-                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                    <button @click="selected !== 4 ? selected = 4 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
-                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Tem período de teste gratuito?</span>
-                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 4 ? 'rotate-180' : ''"></i>
-                    </button>
-                    <div x-show="selected === 4" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
-                        Sim! Ao criar sua conta, você recebe um bônus inicial para testar o sistema com seu time sem compromisso.
+                    <p class="text-slate-700 italic mb-8 font-medium text-lg leading-relaxed">"Setup rápido, suporte incrível. Recomendo sem hesitar para qualquer operação de televendas moderna."</p>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 font-bold flex items-center justify-center rounded-full mr-4 text-lg">RS</div>
+                        <div>
+                            <h4 class="font-bold text-navy-900">Rafael S.</h4>
+                            <p class="text-xs text-slate-500">CEO, VendeMais</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- 10. CTA FINAL -->
-    <section class="py-24 hero-gradient relative overflow-hidden scroll-reveal">
-        <div class="container mx-auto px-6 text-center relative z-10">
-            <h2 class="text-4xl md:text-6xl font-extrabold text-white mb-6">Pronto para vender mais?</h2>
-            <p class="text-xl text-white/70 mb-12 max-w-xl mx-auto font-medium">Comece hoje. Sem cartão de crédito. Sem burocracia. Setup em 5 minutos.</p>
-            <a href="/register-page" class="inline-flex px-12 py-5 bg-accent text-white rounded-2xl font-bold text-2xl shadow-2xl shadow-accent/40 hover:scale-110 transition-transform flex items-center justify-center gap-3">
-                Criar minha conta grátis
-                <i data-lucide="arrow-right" class="w-6 h-6"></i>
+    <!-- ⑨ FAQ ACCORDION -->
+    <section class="py-24 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 fade-up">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy-900">Perguntas frequentes</h2>
+            </div>
+
+            <div class="space-y-4 fade-up">
+                <!-- Item 1 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">Como funciona a cobrança mensal?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Cobramos uma assinatura fixa pelo uso da plataforma (Dashboard, CRM, Discador) de acordo com o plano escolhido. Os custos das ligações são cobrados a parte, adicionando créditos diretamente pela plataforma da Twilio ou via nossa interface, garantindo o melhor custo por minuto do mercado.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">Preciso instalar software ou comprar hardware?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Não! O NexDial funciona 100% na nuvem através do navegador. Seus operadores só precisam de um computador com internet, navegador atualizado (Google Chrome recomendado) e um headset.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">Posso importar minha lista de contatos?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Sim, você pode importar suas planilhas (CSV ou Excel) de forma rápida e mapear as colunas diretamente na nossa interface para garantir que nenhum dado importante se perca.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">Tem período de demonstração gratuita?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Oferecemos uma demonstração ao vivo e guiada da plataforma para que você entenda exatamente como o NexDial pode ajudar sua operação. Fale com um consultor para agendar.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 5 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">O sistema funciona com qualquer operadora?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Nós utilizamos a infraestrutura robusta da Twilio como motor de telefonia. Isso significa que você terá estabilidade global e roteamento inteligente independente da operadora de destino do seu cliente.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 6 -->
+                <div x-data="{ expanded: false }" class="border border-slate-200 rounded-xl overflow-hidden">
+                    <button @click="expanded = !expanded" class="w-full px-6 py-4 flex justify-between items-center bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                        <span class="font-semibold text-slate-800 text-left">Como é o suporte técnico?</span>
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-slate-400 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="expanded" x-collapse>
+                        <div class="px-6 pb-4 text-slate-600 bg-white">
+                            Oferecemos suporte por chat e e-mail em horário comercial para todos os planos. Clientes do plano Pro e Enterprise possuem suporte prioritário e SLA garantido para resposta.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ⑩ CTA FINAL -->
+    <section class="py-20 hero-gradient relative overflow-hidden">
+        <div class="max-w-4xl mx-auto px-4 text-center relative z-10 fade-up">
+            <h2 class="text-4xl font-extrabold text-white mb-6">Pronto para transformar sua operação?</h2>
+            <p class="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">Fale com um consultor, veja uma demonstração ao vivo e descubra como podemos ajudar sua equipe a vender mais hoje.</p>
+            
+            <a href="https://wa.me/5500000000000" target="_blank" class="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-xl text-white bg-brand-500 hover:bg-brand-600 shadow-glow transition-all hover:-translate-y-1 mb-8">
+                Quero uma demonstração gratuita <i data-lucide="arrow-right" class="ml-2 h-6 w-6"></i>
             </a>
-            <div class="mt-12 flex flex-wrap justify-center gap-8 text-white/50 font-bold text-sm">
-                <div class="flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-accent"></i> Setup em 5 min</div>
-                <div class="flex items-center gap-2"><i data-lucide="heart" class="w-4 h-4 text-accent"></i> Suporte incluído</div>
-                <div class="flex items-center gap-2"><i data-lucide="unlock" class="w-4 h-4 text-accent"></i> Cancele quando quiser</div>
+
+            <div class="flex flex-wrap justify-center gap-6 text-sm font-medium text-indigo-200">
+                <span class="flex items-center"><i data-lucide="check-circle-2" class="h-5 w-5 text-brand-400 mr-2"></i> Sem compromisso</span>
+                <span class="flex items-center"><i data-lucide="check-circle-2" class="h-5 w-5 text-brand-400 mr-2"></i> Demo em 24h</span>
+                <span class="flex items-center"><i data-lucide="check-circle-2" class="h-5 w-5 text-brand-400 mr-2"></i> Suporte incluído</span>
             </div>
         </div>
-        <!-- Background Elements -->
-        <div class="absolute top-0 right-0 w-96 h-96 bg-accent opacity-10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-        <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 opacity-10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
+        
+        <!-- Decorative SVG Top -->
+        <div class="absolute top-0 left-0 right-0 z-0 transform rotate-180 opacity-20">
+            <svg viewBox="0 0 1440 120" class="w-full h-auto text-white fill-current" preserveAspectRatio="none">
+                <path d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
+            </svg>
+        </div>
     </section>
 
-    <!-- 11. FOOTER -->
-    <footer class="bg-primary pt-20 pb-10 text-white">
-        <div class="container mx-auto px-6">
-            <div class="grid md:grid-cols-5 gap-12 mb-16">
-                <!-- Brand -->
-                <div class="md:col-span-2">
-                    <a href="/" class="text-3xl font-extrabold tracking-tight mb-6 inline-block">Nex<span class="text-accent">Dial</span></a>
-                    <p class="text-white/50 text-lg max-w-sm leading-relaxed mb-8">
-                        A plataforma líder em discagem automática para times que buscam alta performance e resultados reais.
-                    </p>
+    <!-- ⑪ FOOTER -->
+    <footer class="bg-slate-900 border-t border-slate-800 pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1">
+                    <div class="flex items-center mb-4">
+                        <i data-lucide="phone-call" class="h-6 w-6 text-brand-500 mr-2"></i>
+                        <span class="font-bold text-xl text-white tracking-tight">NexDial</span>
+                    </div>
+                    <p class="text-slate-400 text-sm mb-6 max-w-xs">Mais ligações. Mais vendas. Menos esforço. O motor inteligente da sua equipe de vendas.</p>
                     <div class="flex space-x-4">
-                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="instagram" class="w-5 h-5"></i></a>
-                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
-                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="youtube" class="w-5 h-5"></i></a>
+                        <a href="#" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="linkedin" class="h-5 w-5"></i></a>
+                        <a href="#" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="instagram" class="h-5 w-5"></i></a>
+                        <a href="https://wa.me/5500000000000" class="text-slate-400 hover:text-white transition-colors"><i data-lucide="message-circle" class="h-5 w-5"></i></a>
                     </div>
                 </div>
-                <!-- Links 1 -->
+                
                 <div>
-                    <h4 class="font-bold text-lg mb-6">Produto</h4>
-                    <ul class="space-y-4 text-white/60 font-medium">
-                        <li><a href="#features" class="hover:text-accent transition-colors">Funcionalidades</a></li>
-                        <li><a href="/login-page" class="hover:text-accent transition-colors">Webphone</a></li>
-                        <li><a href="/register-page" class="hover:text-accent transition-colors">Auto Dialer</a></li>
-                        <li><a href="/register-page" class="hover:text-accent transition-colors">API</a></li>
+                    <h4 class="text-white font-semibold mb-4 uppercase text-xs tracking-wider">Produto</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#funcionalidades" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Funcionalidades</a></li>
+                        <li><a href="#planos" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Planos e Preços</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Integrações</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">API</a></li>
                     </ul>
                 </div>
-                <!-- Links 2 -->
+
                 <div>
-                    <h4 class="font-bold text-lg mb-6">Recursos</h4>
-                    <ul class="space-y-4 text-white/60 font-medium">
-                        <li><a href="#" class="hover:text-accent transition-colors">Blog</a></li>
-                        <li><a href="#" class="hover:text-accent transition-colors">Suporte</a></li>
-                        <li><a href="#" class="hover:text-accent transition-colors">Documentação</a></li>
-                        <li><a href="#" class="hover:text-accent transition-colors">Ajuda</a></li>
+                    <h4 class="text-white font-semibold mb-4 uppercase text-xs tracking-wider">Empresa</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Sobre nós</a></li>
+                        <li><a href="#depoimentos" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Clientes</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Carreiras</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Contato</a></li>
                     </ul>
                 </div>
-                <!-- Links 3 -->
+
                 <div>
-                    <h4 class="font-bold text-lg mb-6">Legal</h4>
-                    <ul class="space-y-4 text-white/60 font-medium">
-                        <li><a href="#" class="hover:text-accent transition-colors">Privacidade</a></li>
-                        <li><a href="#" class="hover:text-accent transition-colors">Termos de Uso</a></li>
-                        <li><a href="#" class="hover:text-accent transition-colors">LGPD</a></li>
+                    <h4 class="text-white font-semibold mb-4 uppercase text-xs tracking-wider">Legal</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Termos de Serviço</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Política de Privacidade</a></li>
+                        <li><a href="#" class="text-slate-400 hover:text-brand-400 text-sm transition-colors">Segurança</a></li>
                     </ul>
                 </div>
             </div>
             
-            <hr class="border-white/5 mb-10">
-            
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-sm font-medium">
-                <p>© 2026 NexDial. Todos os direitos reservados.</p>
-                <div class="flex gap-4">
-                    <span>Feito com ❤️ no Brasil</span>
+            <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-slate-500 text-sm">© 2025 NexDial. Todos os direitos reservados.</p>
+                <div class="mt-4 md:mt-0 text-slate-500 text-sm flex items-center">
+                    Feito com <i data-lucide="heart" class="h-4 w-4 text-red-500 mx-1 fill-current"></i> no Brasil
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        // Init Lucide Icons
+        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Scroll Reveal Animation
-        const observerOptions = {
-            threshold: 0.1
-        };
+        // Intersection Observer for scroll animations
+        document.addEventListener("DOMContentLoaded", function() {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.fade-up').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // Header scroll effect
+            const header = document.querySelector('header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 10) {
+                    header.classList.add('shadow-md');
+                } else {
+                    header.classList.remove('shadow-md');
                 }
             });
-        }, observerOptions);
-
-        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+        });
     </script>
 </body>
 </html>
