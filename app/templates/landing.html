@@ -1,270 +1,620 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexDial — Discador Inteligente para Vendas</title>
-<meta name="description" content="NexDial é o discador automático que acelera suas vendas. Mais chamadas, mais conversões, menos esforço.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --purple: #7c3aed;
-    --purple-light: #8b5cf6;
-    --purple-dark: #6d28d9;
-    --indigo: #4f46e5;
-    --cyan: #06b6d4;
-    --bg: #050816;
-    --bg2: #0a0f23;
-    --bg3: #0f172a;
-    --card: rgba(255,255,255,0.04);
-    --border: rgba(255,255,255,0.08);
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --radius: 16px;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexDial — Acelere suas Vendas com Discagem Automática</title>
+    <meta name="description" content="Sua equipe faz 3x mais ligações com o NexDial. Discador automático, CRM integrado e relatórios em tempo real.">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-  /* ── NAV ── */
-  nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 24px;backdrop-filter:blur(20px);background:rgba(5,8,22,.8);border-bottom:1px solid var(--border)}
-  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
-  .logo{font-size:1.4rem;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .nav-cta{display:flex;gap:12px;align-items:center}
-  .btn-ghost{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.9rem;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.2s}
-  .btn-ghost:hover{border-color:var(--purple-light);color:#fff}
-  .btn-primary{padding:9px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:.9rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.2s;box-shadow:0 4px 20px rgba(124,58,237,.35)}
-  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,.5)}
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a1f5e',
+                        secondary: '#2d3a8c',
+                        accent: '#00c853',
+                        orange_cta: '#ff6b35',
+                        light_bg: '#f8f9fa'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
 
-  /* ── HERO ── */
-  .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
-  .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.18) 0%,transparent 70%)}
-  .hero::after{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.08),transparent 70%);bottom:-200px;left:50%;transform:translateX(-50%)}
-  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);font-size:.8rem;color:var(--purple-light);margin-bottom:28px}
-  .badge-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-  .hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;line-height:1.1;letter-spacing:-2px;margin-bottom:24px}
-  .hero h1 span{background:linear-gradient(135deg,#8b5cf6 0%,#06b6d4 60%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .hero p{font-size:1.2rem;color:var(--muted);max-width:580px;margin:0 auto 48px;line-height:1.7}
-  .hero-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-  .btn-hero{padding:16px 36px;border-radius:12px;font-size:1rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.25s;display:inline-flex;align-items:center;gap:10px}
-  .btn-hero-primary{background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;border:none;box-shadow:0 8px 32px rgba(124,58,237,.4)}
-  .btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(124,58,237,.6)}
-  .btn-hero-secondary{background:transparent;color:#fff;border:1px solid var(--border)}
-  .btn-hero-secondary:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.05)}
-
-  /* stats bar */
-  .stats-bar{display:flex;gap:48px;justify-content:center;flex-wrap:wrap;margin-top:72px;padding-top:48px;border-top:1px solid var(--border)}
-  .stat{text-align:center}
-  .stat-num{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-  .stat-label{font-size:.85rem;color:var(--muted);margin-top:4px}
-
-  /* ── SECTION ── */
-  section{padding:100px 24px}
-  .container{max-width:1200px;margin:0 auto}
-  .section-label{font-size:.8rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--purple-light);margin-bottom:12px}
-  .section-title{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1.2;letter-spacing:-1px;margin-bottom:16px}
-  .section-sub{font-size:1.05rem;color:var(--muted);line-height:1.7;max-width:540px}
-
-  /* ── FEATURES ── */
-  .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:64px}
-  .feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;transition:.3s;position:relative;overflow:hidden}
-  .feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,58,237,.6),transparent);opacity:0;transition:.3s}
-  .feature-card:hover{border-color:rgba(124,58,237,.3);transform:translateY(-4px);background:rgba(255,255,255,.06)}
-  .feature-card:hover::before{opacity:1}
-  .feature-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:20px}
-  .feature-card h3{font-size:1.1rem;font-weight:700;margin-bottom:10px}
-  .feature-card p{font-size:.9rem;color:var(--muted);line-height:1.65}
-
-  /* ── HOW IT WORKS ── */
-  .how-bg{background:var(--bg2)}
-  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;margin-top:64px;counter-reset:steps}
-  .step{text-align:center;counter-increment:steps;position:relative}
-  .step::after{content:'';position:absolute;top:28px;left:calc(50% + 40px);width:calc(100% - 80px);height:1px;background:linear-gradient(90deg,var(--purple-light),transparent);display:none}
-  @media(min-width:768px){.step:not(:last-child)::after{display:block}}
-  .step-num{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;margin:0 auto 20px;box-shadow:0 0 28px rgba(124,58,237,.4)}
-  .step h3{font-size:1rem;font-weight:700;margin-bottom:8px}
-  .step p{font-size:.87rem;color:var(--muted);line-height:1.6}
-
-  /* ── CTA ── */
-  .cta-section{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(79,70,229,.1));border:1px solid rgba(124,58,237,.2);border-radius:24px;padding:80px 48px;text-align:center;max-width:900px;margin:0 auto;position:relative;overflow:hidden}
-  .cta-section::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.15),transparent 70%)}
-  .cta-section h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-1px;margin-bottom:16px}
-  .cta-section p{color:var(--muted);font-size:1.05rem;margin-bottom:40px}
-
-  /* ── FOOTER ── */
-  footer{border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:var(--muted);font-size:.85rem}
-  footer span{color:var(--purple-light);font-weight:600}
-
-  /* ── FLOATING ORBS ── */
-  .orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;opacity:.35}
-  .orb-1{width:400px;height:400px;background:radial-gradient(circle,rgba(124,58,237,.5),transparent);top:-100px;right:-100px;animation:float1 8s ease-in-out infinite}
-  .orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(6,182,212,.4),transparent);bottom:10%;left:-80px;animation:float2 10s ease-in-out infinite}
-  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,30px)}}
-  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-20px)}}
-
-  @media(max-width:640px){
-    .stats-bar{gap:32px}
-    .cta-section{padding:48px 24px}
-    .nav-cta .btn-ghost{display:none}
-  }
-</style>
+    <style>
+        [x-cloak] { display: none !important; }
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease-out;
+        }
+        .scroll-reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #1a1f5e 0%, #2d3a8c 100%);
+        }
+        .step-line::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 100%;
+            height: 2px;
+            background: #e5e7eb;
+            z-index: -1;
+        }
+        @media (max-width: 768px) {
+            .step-line::after { display: none; }
+        }
+    </style>
 </head>
-<body>
+<body class="font-sans text-gray-900 bg-white">
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
+    <!-- 1. HEADER FIXO -->
+    <header x-data="{ open: false, scrolled: false }" 
+            @scroll.window="scrolled = (window.pageYOffset > 20)"
+            :class="{ 'bg-white shadow-md py-3': scrolled, 'bg-transparent py-5': !scrolled && !open, 'bg-white': open }"
+            class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <!-- Logo -->
+            <a href="/" class="text-2xl font-extrabold tracking-tight" :class="scrolled || open ? 'text-primary' : 'text-white'">
+                Nex<span class="text-accent">Dial</span>
+            </a>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <div class="logo">⚡ NexDial</div>
-    <div class="nav-cta">
-      <a href="/login-page" class="btn-ghost">Entrar</a>
-      <a href="/login-page" class="btn-primary">Acessar Plataforma →</a>
-    </div>
-  </div>
-</nav>
+            <!-- Desktop Menu -->
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#features" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">Funcionalidades</a>
+                <a href="#pricing" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">Planos</a>
+                <a href="#faq" class="font-medium hover:text-accent transition-colors" :class="scrolled ? 'text-gray-700' : 'text-white/90'">FAQ</a>
+                <div class="flex items-center space-x-4">
+                    <a href="/login-page" class="px-4 py-2 border rounded-lg font-semibold transition-all" 
+                       :class="scrolled ? 'border-primary text-primary hover:bg-primary hover:text-white' : 'border-white/30 text-white hover:bg-white/10'">
+                        Login
+                    </a>
+                    <a href="/register-page" class="px-5 py-2.5 bg-accent text-white rounded-lg font-bold shadow-lg shadow-accent/20 hover:scale-105 transition-transform">
+                        Testar Grátis
+                    </a>
+                </div>
+            </nav>
 
-<!-- HERO -->
-<section class="hero">
-  <div style="position:relative;z-index:1;width:100%">
-    <div class="hero-badge">
-      <span class="badge-dot"></span>
-      Plataforma em produção
-    </div>
-    <h1>Discador inteligente<br>para <span>times de vendas</span></h1>
-    <p>Automatize suas chamadas, qualifique leads em tempo real e escale suas vendas sem aumentar a equipe.</p>
-    <div class="hero-actions">
-      <a href="/login-page" class="btn-hero btn-hero-primary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        Acessar Plataforma
-      </a>
-      <a href="#features" class="btn-hero btn-hero-secondary">Ver recursos</a>
-    </div>
-    <div class="stats-bar">
-      <div class="stat"><div class="stat-num">3×</div><div class="stat-label">mais chamadas por hora</div></div>
-      <div class="stat"><div class="stat-num">100%</div><div class="stat-label">integrado ao Twilio</div></div>
-      <div class="stat"><div class="stat-num">Real‑time</div><div class="stat-label">status de chamadas</div></div>
-      <div class="stat"><div class="stat-num">CRM</div><div class="stat-label">pipeline integrado</div></div>
-    </div>
-  </div>
-</section>
+            <!-- Mobile Toggle -->
+            <button @click="open = !open" class="md:hidden p-2" :class="scrolled || open ? 'text-primary' : 'text-white'">
+                <i data-lucide="menu" x-show="!open"></i>
+                <i data-lucide="x" x-show="open"></i>
+            </button>
+        </div>
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-label">Recursos</div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px">
-      <div>
-        <h2 class="section-title">Tudo que você precisa<br>para vender mais</h2>
-      </div>
-      <p class="section-sub">Do discador automático ao CRM, tudo em um só lugar para o seu time operar com máxima eficiência.</p>
-    </div>
-    <div class="features-grid">
+        <!-- Mobile Menu -->
+        <div x-show="open" x-cloak x-transition class="md:hidden bg-white border-t border-gray-100 px-6 py-8 space-y-6 flex flex-col items-center">
+            <a @click="open = false" href="#features" class="text-lg font-semibold text-gray-800">Funcionalidades</a>
+            <a @click="open = false" href="#pricing" class="text-lg font-semibold text-gray-800">Planos</a>
+            <a @click="open = false" href="#faq" class="text-lg font-semibold text-gray-800">FAQ</a>
+            <hr class="w-full border-gray-100">
+            <a href="/login-page" class="text-lg font-bold text-primary">Login</a>
+            <a href="/register-page" class="w-full py-4 bg-accent text-white text-center rounded-xl font-bold text-lg shadow-xl shadow-accent/20">
+                Criar Conta Grátis
+            </a>
+        </div>
+    </header>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(124,58,237,.15)">📞</div>
-        <h3>Discador Automático</h3>
-        <p>Percorre todos os números do lead antes de avançar. Sem pular contatos, sem perder oportunidades.</p>
-      </div>
+    <!-- 2. HERO SECTION -->
+    <section class="hero-gradient pt-32 pb-20 md:pt-48 md:pb-32 text-white overflow-hidden">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center">
+                <!-- Content -->
+                <div class="md:w-1/2 mb-16 md:mb-0 text-center md:text-left z-10">
+                    <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-accent font-bold text-sm mb-6 animate-pulse">
+                        🚀 Novo: Discagem automática com IA
+                    </span>
+                    <h1 class="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
+                        Sua equipe faz 3x mais ligações. <br>
+                        <span class="text-accent italic">No mesmo tempo.</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-white/80 mb-10 max-w-xl leading-relaxed">
+                        NexDial conecta sua equipe de vendas automaticamente com leads qualificados. Sem espera. Sem esforço manual. Só resultado.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                        <a href="/register-page" class="px-8 py-4 bg-accent text-white rounded-xl font-bold text-lg shadow-2xl shadow-accent/30 hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                            Começar agora — grátis
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </a>
+                        <a href="#features" class="px-8 py-4 bg-transparent border border-white/30 text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-colors">
+                            Ver demonstração
+                        </a>
+                    </div>
+                    <!-- Stats -->
+                    <div class="mt-12 flex flex-wrap justify-center md:justify-start gap-8 opacity-70">
+                        <div class="flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5"></i> <span class="font-semibold">+200 empresas</span></div>
+                        <div class="flex items-center gap-2"><i data-lucide="phone-call" class="w-5 h-5"></i> <span class="font-semibold">+1M ligações/mês</span></div>
+                        <div class="flex items-center gap-2"><i data-lucide="star" class="w-5 h-5 fill-accent text-accent"></i> <span class="font-semibold">4.9/5 avaliação</span></div>
+                    </div>
+                </div>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(6,182,212,.12)">🎧</div>
-        <h3>Webphone Integrado</h3>
-        <p>Operadores atendem e fazem chamadas direto no navegador, sem precisar de telefone físico ou softphone externo.</p>
-      </div>
+                <!-- Dashboard Mockup -->
+                <div class="md:w-1/2 relative">
+                    <div class="relative z-20 rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-[#0f172a] transform md:rotate-3 hover:rotate-0 transition-transform duration-500">
+                        <!-- Dashboard Header -->
+                        <div class="bg-gray-800/50 p-3 flex items-center space-x-2 border-b border-white/5">
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                            </div>
+                            <div class="bg-white/5 rounded px-2 py-0.5 text-[10px] text-white/30 flex-grow text-center">app.nexdial.com/dashboard</div>
+                        </div>
+                        <!-- Mockup Content -->
+                        <div class="p-6 grid grid-cols-3 gap-4">
+                            <div class="col-span-3 h-12 bg-white/5 rounded-lg flex items-center px-4 justify-between">
+                                <div class="w-24 h-2 bg-white/10 rounded"></div>
+                                <div class="w-10 h-6 bg-accent/20 rounded"></div>
+                            </div>
+                            <div class="h-24 bg-primary/40 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
+                                <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center"><i data-lucide="phone" class="w-4 h-4 text-accent"></i></div>
+                                <div class="w-12 h-2 bg-white/20 rounded"></div>
+                            </div>
+                            <div class="h-24 bg-white/5 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
+                                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center"><i data-lucide="users" class="w-4 h-4 text-blue-400"></i></div>
+                                <div class="w-12 h-2 bg-white/20 rounded"></div>
+                            </div>
+                            <div class="h-24 bg-white/5 rounded-xl border border-white/5 flex flex-col items-center justify-center space-y-2">
+                                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center"><i data-lucide="bar-chart-3" class="w-4 h-4 text-purple-400"></i></div>
+                                <div class="w-12 h-2 bg-white/20 rounded"></div>
+                            </div>
+                            <div class="col-span-3 h-32 bg-white/5 rounded-xl border border-white/5 p-4 space-y-3">
+                                <div class="flex justify-between items-center"><div class="w-32 h-3 bg-white/10 rounded"></div><div class="w-12 h-3 bg-accent/40 rounded"></div></div>
+                                <div class="w-full h-1 bg-white/5 rounded"><div class="w-2/3 h-full bg-accent rounded"></div></div>
+                                <div class="flex justify-between items-center"><div class="w-24 h-3 bg-white/10 rounded"></div><div class="w-10 h-3 bg-white/10 rounded"></div></div>
+                                <div class="w-full h-1 bg-white/5 rounded"><div class="w-1/3 h-full bg-blue-400 rounded"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Decor Orbs -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-accent/20 rounded-full blur-[100px] z-0"></div>
+                    <div class="absolute bottom-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] z-0"></div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(34,197,94,.12)">📊</div>
-        <h3>CRM & Pipeline</h3>
-        <p>Qualifique leads em tempo real durante a chamada. Pipeline visual com etapas personalizáveis por empresa.</p>
-      </div>
+    <!-- 3. LOGOS CLIENTES -->
+    <section class="py-12 bg-white overflow-hidden border-b border-gray-100">
+        <div class="container mx-auto px-6">
+            <p class="text-center text-sm font-bold uppercase tracking-widest text-gray-400 mb-8">Empresas que já vendem mais com NexDial</p>
+            <div class="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
+                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 01</span>
+                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 02</span>
+                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 03</span>
+                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 04</span>
+                <span class="text-2xl font-bold text-gray-900 italic">LOGOTIPO 05</span>
+                <span class="text-2xl font-bold text-gray-900">LOGOTIPO 06</span>
+            </div>
+        </div>
+    </section>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(245,158,11,.12)">⚡</div>
-        <h3>Campanhas por Lote</h3>
-        <p>Importe sua lista, configure a campanha e deixe o sistema discar. Seu time só fala com quem atendeu.</p>
-      </div>
+    <!-- 4. PROBLEMA → SOLUÇÃO -->
+    <section class="py-24 bg-white scroll-reveal">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <h2 class="text-3xl md:text-5xl font-extrabold text-primary mb-6">Chega de discar na mão</h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Sua equipe merece focar em fechar negócios, não em ouvir tom de ocupado ou digitar números.</p>
+            </div>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(239,68,68,.12)">🔔</div>
-        <h3>Fila de Callback</h3>
-        <p>Agende retornos automáticos para leads que pediram para ligar depois. Nenhum contato se perde.</p>
-      </div>
+            <div class="grid md:grid-cols-3 gap-10">
+                <!-- Card 1 -->
+                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="clock" class="text-red-500 w-8 h-8"></i></div>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">❌</span>
+                            <p class="text-gray-500 font-medium">Vendedor perde 40% do dia discando números manualmente.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">✅</span>
+                            <p class="text-primary font-bold text-lg">Discagem automática contínua e sem espera.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Card 2 -->
+                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="calendar-off" class="text-orange-500 w-8 h-8"></i></div>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">❌</span>
+                            <p class="text-gray-500 font-medium">Leads esfriando sem o follow-up no momento certo.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">✅</span>
+                            <p class="text-primary font-bold text-lg">Fila inteligente de callbacks automáticos.</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Card 3 -->
+                <div class="p-8 rounded-2xl bg-light_bg border border-gray-100 hover:shadow-xl transition-shadow">
+                    <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6"><i data-lucide="eye-off" class="text-blue-500 w-8 h-8"></i></div>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">❌</span>
+                            <p class="text-gray-500 font-medium">Falta de dados sobre a produtividade real do time.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <span class="text-xl">✅</span>
+                            <p class="text-primary font-bold text-lg">Dashboard em tempo real com métricas completas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-      <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(79,70,229,.15)">🔐</div>
-        <h3>Multi-empresa</h3>
-        <p>Cada cliente com seus próprios dados, credenciais e configurações Twilio. Isolamento total por tenant.</p>
-      </div>
+    <!-- 5. FUNCIONALIDADES -->
+    <section id="features" class="py-24 bg-light_bg scroll-reveal">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-extrabold text-primary mb-6">Tudo que seu time de vendas precisa</h2>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- F1 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="phone-forwarded" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Auto Dialer</h3>
+                    <p class="text-gray-600">Discagem automática contínua. O sistema só passa a ligação para o vendedor quando o lead atende.</p>
+                </div>
+                <!-- F2 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="layout-dashboard" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Dashboard ao Vivo</h3>
+                    <p class="text-gray-600">Monitore cada ligação em tempo real. Saiba quem está em linha e quem está vendendo agora.</p>
+                </div>
+                <!-- F3 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="target" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Gestão de Leads</h3>
+                    <p class="text-gray-600">CRM integrado com pipeline visual para organizar suas oportunidades de ponta a ponta.</p>
+                </div>
+                <!-- F4 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="refresh-cw" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Callback Automático</h3>
+                    <p class="text-gray-600">Nunca perca um lead que não atendeu. O sistema reagenda o retorno automaticamente na fila.</p>
+                </div>
+                <!-- F5 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="monitor" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Softphone Web</h3>
+                    <p class="text-gray-600">Ligue direto do navegador. Sem hardware, sem cabos, 100% cloud com alta qualidade.</p>
+                </div>
+                <!-- F6 -->
+                <div class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:border-accent/50 transition-colors">
+                    <i data-lucide="trending-up" class="text-accent mb-4 w-10 h-10"></i>
+                    <h3 class="text-xl font-bold text-primary mb-3">Relatórios Premium</h3>
+                    <p class="text-gray-600">Métricas completas de conversão, tempo de fala e produtividade por operador.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    </div>
-  </div>
-</section>
+    <!-- 6. COMO FUNCIONA -->
+    <section class="py-24 bg-white scroll-reveal">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-20">Em 3 passos você já está ligando</h2>
+            
+            <div class="grid md:grid-cols-3 gap-16 md:gap-4 relative">
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10 step-line">1</div>
+                    <h3 class="text-2xl font-bold text-primary mb-4">Importe seus leads</h3>
+                    <p class="text-gray-600">Suba sua lista em CSV ou conecte via API com seu CRM favorito em segundos.</p>
+                </div>
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10 step-line">2</div>
+                    <h3 class="text-2xl font-bold text-primary mb-4">Configure sua campanha</h3>
+                    <p class="text-gray-600">Defina o script, os horários permitidos e as prioridades de discagem.</p>
+                </div>
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center text-3xl font-black mb-8 shadow-xl shadow-accent/20 relative z-10">3</div>
+                    <h3 class="text-2xl font-bold text-primary mb-4">Venda muito mais</h3>
+                    <p class="text-gray-600">Sua equipe só recebe chamadas com pessoas na linha. Máxima eficiência de tempo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<!-- HOW IT WORKS -->
-<section class="how-bg">
-  <div class="container">
-    <div style="text-align:center;margin-bottom:16px">
-      <div class="section-label">Como funciona</div>
-      <h2 class="section-title">Em 4 passos simples</h2>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Importe seus leads</h3>
-        <p>Suba uma planilha com seus contatos. O sistema normaliza e organiza automaticamente.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Configure a campanha</h3>
-        <p>Defina o nome, os leads, intervalo entre chamadas e se quer apenas celulares.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Ligue com 1 clique</h3>
-        <p>O discador liga automaticamente e conecta o operador apenas quando o lead atende.</p>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <h3>Classifique e avance</h3>
-        <p>Qualifique o lead no popup, anote observações e o sistema já disca o próximo.</p>
-      </div>
-    </div>
-  </div>
-</section>
+    <!-- 7. PLANOS E PREÇOS -->
+    <section id="pricing" class="py-24 hero-gradient text-white scroll-reveal">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20">
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-6">Planos que crescem com você</h2>
+                <p class="text-xl text-white/70">Pague apenas pelo que usar, sem taxas de adesão ou fidelidade.</p>
+            </div>
 
-<!-- CTA -->
-<section>
-  <div class="container">
-    <div class="cta-section">
-      <h2>Pronto para começar?</h2>
-      <p>Acesse a plataforma agora mesmo e comece a discar.</p>
-      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-        <a href="/login-page" class="btn-hero btn-hero-primary" style="font-size:.95rem;padding:14px 32px">
-          Fazer Login
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <!-- Starter -->
+                <div class="bg-white/5 border border-white/10 p-10 rounded-3xl backdrop-blur-sm">
+                    <h3 class="text-2xl font-bold mb-2">Starter</h3>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-sm font-semibold">R$</span>
+                        <span class="text-5xl font-black text-accent">0,35</span>
+                        <span class="text-sm text-white/50">/min</span>
+                    </div>
+                    <ul class="space-y-4 mb-10 text-white/80 font-medium">
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Até 5 operadores</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Auto dialer básico</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Dashboard padrão</li>
+                        <li class="flex gap-2 text-white/30"><i data-lucide="x-circle" class="w-5 h-5"></i> Relatórios Avançados</li>
+                    </ul>
+                    <a href="/register-page" class="block w-full py-4 text-center border border-white/20 rounded-xl font-bold hover:bg-white/10 transition-colors">Começar agora</a>
+                </div>
 
-<!-- FOOTER -->
-<footer>
-  <p>© 2026 <span>NexDial</span> — Discador inteligente para times de vendas.</p>
-</footer>
+                <!-- Pro -->
+                <div class="bg-white p-10 rounded-3xl text-primary transform scale-105 shadow-2xl relative z-10 border-t-8 border-accent">
+                    <span class="absolute top-0 right-10 -translate-y-1/2 px-4 py-1 bg-accent text-white text-xs font-black uppercase tracking-tighter rounded-full">Mais Popular ⭐</span>
+                    <h3 class="text-2xl font-bold mb-2">Pro</h3>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-sm font-semibold">R$</span>
+                        <span class="text-5xl font-black text-primary">0,29</span>
+                        <span class="text-sm text-gray-400">/min</span>
+                    </div>
+                    <ul class="space-y-4 mb-10 text-gray-600 font-medium">
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Até 20 operadores</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Auto dialer avançado</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> CRM & Pipeline</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Suporte prioritário</li>
+                    </ul>
+                    <a href="/register-page" class="block w-full py-4 text-center bg-primary text-white rounded-xl font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">Falar com vendas</a>
+                </div>
 
-<script>
-  // Se já tiver token válido, redireciona direto pro dashboard
-  const token = localStorage.getItem('nexdial_token') || localStorage.getItem('token');
-  if (token) {
-    fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
-      .then(r => { if (r.ok) window.location.href = '/'; })
-      .catch(() => {});
-  }
-</script>
+                <!-- Enterprise -->
+                <div class="bg-white/5 border border-white/10 p-10 rounded-3xl backdrop-blur-sm">
+                    <h3 class="text-2xl font-bold mb-2 text-white/90">Enterprise</h3>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-sm font-semibold">R$</span>
+                        <span class="text-5xl font-black text-white/90">0,25</span>
+                        <span class="text-sm text-white/50">/min</span>
+                    </div>
+                    <ul class="space-y-4 mb-10 text-white/80 font-medium">
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Operadores ilimitados</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> API & Integrações</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> Gerente de Conta</li>
+                        <li class="flex gap-2"><i data-lucide="check-circle-2" class="text-accent w-5 h-5"></i> SLA Garantido</li>
+                    </ul>
+                    <a href="/register-page" class="block w-full py-4 text-center border border-white/20 rounded-xl font-bold hover:bg-white/10 transition-colors">Falar com vendas</a>
+                </div>
+            </div>
+
+            <div class="mt-16 text-center text-white/60 font-medium text-lg">
+                <p>💳 Pague só o que usar. Sem mensalidade fixa. Sem fidelidade.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. DEPOIMENTOS -->
+    <section class="py-24 bg-white scroll-reveal">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-20">Quem usa, recomenda</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- T1 -->
+                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
+                    <div class="flex text-accent mb-6">
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                    </div>
+                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"Triplicamos o volume de contatos no primeiro mês. O time adorou e não quer saber de outra coisa."</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center font-bold">CM</div>
+                        <div>
+                            <p class="font-bold text-primary">Carlos M.</p>
+                            <p class="text-sm text-gray-500">Gerente Comercial, TechVendas</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- T2 -->
+                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
+                    <div class="flex text-accent mb-6">
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                    </div>
+                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"O sistema de callback é o que nos salvou. Paramos de queimar lead e a produtividade dobrou."</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold">AL</div>
+                        <div>
+                            <p class="font-bold text-primary">Ana Luiza</p>
+                            <p class="text-sm text-gray-500">SDR, Logistix</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- T3 -->
+                <div class="p-10 rounded-3xl bg-light_bg border border-gray-100 flex flex-col">
+                    <div class="flex text-accent mb-6">
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                        <i data-lucide="star" class="w-5 h-5 fill-accent"></i>
+                    </div>
+                    <p class="text-lg text-gray-700 italic mb-8 flex-grow">"Implementação em 10 minutos. No mesmo dia já estávamos operando com força total."</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-orange_cta text-white rounded-full flex items-center justify-center font-bold">RP</div>
+                        <div>
+                            <p class="font-bold text-primary">Roberto P.</p>
+                            <p class="text-sm text-gray-500">Founder, FastSaaS</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 9. FAQ ACCORDION -->
+    <section id="faq" class="py-24 bg-light_bg scroll-reveal" x-data="{ selected: null }">
+        <div class="container mx-auto px-6 max-w-3xl">
+            <h2 class="text-3xl md:text-5xl font-extrabold text-primary text-center mb-16">Perguntas frequentes</h2>
+            
+            <div class="space-y-4">
+                <!-- Q1 -->
+                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                    <button @click="selected !== 1 ? selected = 1 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
+                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Como funciona a cobrança por minuto?</span>
+                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 1 ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="selected === 1" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
+                        Nós trabalhamos no modelo pré-pago. Você carrega créditos em sua conta e o valor é descontado em tempo real por cada minuto de ligação efetuada. Não há taxas de manutenção.
+                    </div>
+                </div>
+                <!-- Q2 -->
+                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                    <button @click="selected !== 2 ? selected = 2 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
+                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Preciso instalar algum software?</span>
+                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 2 ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="selected === 2" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
+                        Não! O NexDial é 100% web. Sua equipe só precisa de um navegador (Chrome ou Edge) e um headset para começar a vender.
+                    </div>
+                </div>
+                <!-- Q3 -->
+                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                    <button @click="selected !== 3 ? selected = 3 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
+                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Posso importar minha lista de leads?</span>
+                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 3 ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="selected === 3" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
+                        Sim, você pode importar listas em formato CSV ou Excel (.xlsx) diretamente no nosso painel administrativo. O sistema normaliza os números automaticamente para você.
+                    </div>
+                </div>
+                <!-- Q4 -->
+                <div class="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                    <button @click="selected !== 4 ? selected = 4 : selected = null" class="w-full p-6 text-left flex justify-between items-center group">
+                        <span class="text-lg font-bold text-primary group-hover:text-accent transition-colors">Tem período de teste gratuito?</span>
+                        <i data-lucide="chevron-down" class="text-gray-400 transition-transform" :class="selected === 4 ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="selected === 4" x-cloak x-transition.opacity class="p-6 pt-0 text-gray-600 leading-relaxed border-t border-gray-50">
+                        Sim! Ao criar sua conta, você recebe um bônus inicial para testar o sistema com seu time sem compromisso.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 10. CTA FINAL -->
+    <section class="py-24 hero-gradient relative overflow-hidden scroll-reveal">
+        <div class="container mx-auto px-6 text-center relative z-10">
+            <h2 class="text-4xl md:text-6xl font-extrabold text-white mb-6">Pronto para vender mais?</h2>
+            <p class="text-xl text-white/70 mb-12 max-w-xl mx-auto font-medium">Comece hoje. Sem cartão de crédito. Sem burocracia. Setup em 5 minutos.</p>
+            <a href="/register-page" class="inline-flex px-12 py-5 bg-accent text-white rounded-2xl font-bold text-2xl shadow-2xl shadow-accent/40 hover:scale-110 transition-transform flex items-center justify-center gap-3">
+                Criar minha conta grátis
+                <i data-lucide="arrow-right" class="w-6 h-6"></i>
+            </a>
+            <div class="mt-12 flex flex-wrap justify-center gap-8 text-white/50 font-bold text-sm">
+                <div class="flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-accent"></i> Setup em 5 min</div>
+                <div class="flex items-center gap-2"><i data-lucide="heart" class="w-4 h-4 text-accent"></i> Suporte incluído</div>
+                <div class="flex items-center gap-2"><i data-lucide="unlock" class="w-4 h-4 text-accent"></i> Cancele quando quiser</div>
+            </div>
+        </div>
+        <!-- Background Elements -->
+        <div class="absolute top-0 right-0 w-96 h-96 bg-accent opacity-10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 opacity-10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
+    </section>
+
+    <!-- 11. FOOTER -->
+    <footer class="bg-primary pt-20 pb-10 text-white">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-5 gap-12 mb-16">
+                <!-- Brand -->
+                <div class="md:col-span-2">
+                    <a href="/" class="text-3xl font-extrabold tracking-tight mb-6 inline-block">Nex<span class="text-accent">Dial</span></a>
+                    <p class="text-white/50 text-lg max-w-sm leading-relaxed mb-8">
+                        A plataforma líder em discagem automática para times que buscam alta performance e resultados reais.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-accent transition-colors"><i data-lucide="youtube" class="w-5 h-5"></i></a>
+                    </div>
+                </div>
+                <!-- Links 1 -->
+                <div>
+                    <h4 class="font-bold text-lg mb-6">Produto</h4>
+                    <ul class="space-y-4 text-white/60 font-medium">
+                        <li><a href="#features" class="hover:text-accent transition-colors">Funcionalidades</a></li>
+                        <li><a href="/login-page" class="hover:text-accent transition-colors">Webphone</a></li>
+                        <li><a href="/register-page" class="hover:text-accent transition-colors">Auto Dialer</a></li>
+                        <li><a href="/register-page" class="hover:text-accent transition-colors">API</a></li>
+                    </ul>
+                </div>
+                <!-- Links 2 -->
+                <div>
+                    <h4 class="font-bold text-lg mb-6">Recursos</h4>
+                    <ul class="space-y-4 text-white/60 font-medium">
+                        <li><a href="#" class="hover:text-accent transition-colors">Blog</a></li>
+                        <li><a href="#" class="hover:text-accent transition-colors">Suporte</a></li>
+                        <li><a href="#" class="hover:text-accent transition-colors">Documentação</a></li>
+                        <li><a href="#" class="hover:text-accent transition-colors">Ajuda</a></li>
+                    </ul>
+                </div>
+                <!-- Links 3 -->
+                <div>
+                    <h4 class="font-bold text-lg mb-6">Legal</h4>
+                    <ul class="space-y-4 text-white/60 font-medium">
+                        <li><a href="#" class="hover:text-accent transition-colors">Privacidade</a></li>
+                        <li><a href="#" class="hover:text-accent transition-colors">Termos de Uso</a></li>
+                        <li><a href="#" class="hover:text-accent transition-colors">LGPD</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr class="border-white/5 mb-10">
+            
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-sm font-medium">
+                <p>© 2026 NexDial. Todos os direitos reservados.</p>
+                <div class="flex gap-4">
+                    <span>Feito com ❤️ no Brasil</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // Scroll Reveal Animation
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+    </script>
 </body>
 </html>
