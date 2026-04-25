@@ -924,8 +924,184 @@
             }
         }
     </style>
+    <style>
+        body.light-mode {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .main {
+            background: #f1f5f9 !important;
+        }
+        body.light-mode .sidebar {
+            background: #ffffff !important;
+            border-right: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .brand h1 {
+            color: #0f1f5c !important;
+        }
+        body.light-mode .panel,
+        body.light-mode .card,
+        body.light-mode .stat-card,
+        body.light-mode .table-container,
+        body.light-mode .log-box {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+        }
+        body.light-mode .topbar h2,
+        body.light-mode h3, 
+        body.light-mode h4,
+        body.light-mode h5 {
+            color: #0f1f5c !important;
+        }
+        body.light-mode .text-muted,
+        body.light-mode .topbar p,
+        body.light-mode .brand p {
+            color: #64748b !important;
+        }
+        body.light-mode th {
+            background: #f8fafc !important;
+            color: #475569 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode td {
+            border-bottom: 1px solid #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+        body.light-mode .btn-secondary {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #334155 !important;
+        }
+        body.light-mode .btn-secondary:hover {
+            background: #f1f5f9 !important;
+        }
+        body.light-mode .menu button {
+            color: #475569 !important;
+        }
+        body.light-mode .menu button:hover {
+            background: #f1f5f9 !important;
+            color: #0f1f5c !important;
+        }
+        body.light-mode .menu button.active {
+            background: #16a34a !important;
+            color: #ffffff !important;
+        }
+        body.light-mode .btn-primary {
+            background: #16a34a !important;
+            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+        }
+        body.light-mode .btn-primary:hover {
+            background: #15803d !important;
+        }
+        body.light-mode .hub-right {
+            background: #ffffff !important;
+            border-left: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .hub-info-card {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .hub-info-card p {
+            color: #0f172a !important;
+        }
+        body.light-mode .input {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .call-btn {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        }
+        body.light-mode .btn-mute,
+        body.light-mode .btn-pause {
+            background: #e2e8f0 !important;
+            color: #475569 !important;
+        }
+        body.light-mode .btn-mute.active {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+        }
+        body.light-mode .hub-overlay {
+            background: rgba(255, 255, 255, 0.95) !important;
+        }
+        body.light-mode .hub-container {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1) !important;
+        }
+        body.light-mode .hub-left {
+            background: #ffffff !important;
+            border-right: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .class-btn {
+            background: #f1f5f9 !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+        body.light-mode .class-btn:hover {
+            background: #e2e8f0 !important;
+        }
+        body.light-mode .class-btn.selected {
+            background: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #16a34a !important;
+        }
+        body.light-mode .classify-modal {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1) !important;
+        }
+        body.light-mode .hub-notes {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.light-mode .log-item {
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+        body.light-mode .log-item strong {
+            color: #0f172a !important;
+        }
+        body.light-mode .log-item .time {
+            color: #64748b !important;
+        }
+        body.light-mode .table tbody tr:hover {
+            background: #f8fafc !important;
+        }
+        body.light-mode .stat-value {
+            color: #0f1f5c !important;
+        }
+        body.light-mode .stat-label {
+            color: #64748b !important;
+        }
+    </style>
 </head>
 <body>
+    <script>
+        if (localStorage.getItem('nexdial_theme') !== 'dark') {
+            document.body.classList.add('light-mode');
+        }
+        function toggleTheme() {
+            if (document.body.classList.contains('light-mode')) {
+                document.body.classList.remove('light-mode');
+                localStorage.setItem('nexdial_theme', 'dark');
+                const btn = document.getElementById('themeToggleBtn');
+                if (btn) btn.innerText = '☀️ Modo Claro';
+            } else {
+                document.body.classList.add('light-mode');
+                localStorage.setItem('nexdial_theme', 'light');
+                const btn = document.getElementById('themeToggleBtn');
+                if (btn) btn.innerText = '🌙 Modo Escuro';
+            }
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.innerText = document.body.classList.contains('light-mode') ? '🌙 Modo Escuro' : '☀️ Modo Claro';
+            }
+        });
+    </script>
     <div class="app">
         <aside class="sidebar">
             <div class="brand">
@@ -967,10 +1143,12 @@
             <div class="menu">
                 <button class="menu-link" data-section="users">Usuários</button>
                 <button class="menu-link admin-only" data-section="settings">Configurações</button>
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="menu-link" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; border-radius:0;">🌙 Modo Escuro</button>
             </div>
 
-            <div style="margin-top:auto; padding:12px 16px; border-top:1px solid rgba(255,255,255,.05); font-size:12px; color:#5a6480;">
-                <span id="sidebar-user-info">Carregando...</span>
+            <div style="margin-top:auto; padding:12px 16px; border-top:1px solid rgba(255,255,255,.05); font-size:12px; color:#5a6480; display:flex; justify-content:space-between; align-items:center;">
+                <span id="sidebar-user-info" style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Carregando...</span>
+                <button onclick="logoutApp()" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#ef4444; font-size:11px; cursor:pointer; font-weight:700; padding:4px 8px; border-radius:6px; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Sair da conta">Sair</button>
             </div>
         </aside>
 
@@ -3010,6 +3188,12 @@
                 return;
             }
             await pauseCampaign(campaignId);
+        }
+
+        function logoutApp() {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/auth/logout';
         }
 
         async function loadAllData() {
