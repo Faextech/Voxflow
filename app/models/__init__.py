@@ -5,6 +5,8 @@ from app.models.lead import Lead
 from app.models.call import Call
 from app.models.agent import Agent
 from app.models.pipeline import Pipeline, PipelineStage
+from app.models.support import SupportTicket, TicketMessage
+from app.models.billing import CreditTransaction
 
 __all__ = [
     'Company',
@@ -15,4 +17,5 @@ __all__ = [
     'Agent',
     'Pipeline',
     'PipelineStage',
+    'CreditTransaction',
 ]

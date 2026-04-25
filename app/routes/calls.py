@@ -6,7 +6,7 @@ from sqlalchemy import func
 from app.auth import require_auth
 from app.extensions import db
 from app.models import Lead, Call, Campaign, Company
-from app.services.twilio_service import TwilioService
+from app.services.twilio_service import TwilioService, InsufficientCreditError
 
 calls_bp = Blueprint("calls", __name__)
 
@@ -125,6 +125,9 @@ def call_lead(lead_id):
             "call":    serialize_call(call),
         }), 200
 
+    except InsufficientCreditError as e:
+        db.session.rollback()
+        return jsonify({"error": "Saldo insuficiente para realizar chamadas. Recarregue seu crédito.", "balance": e.balance}), 402
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

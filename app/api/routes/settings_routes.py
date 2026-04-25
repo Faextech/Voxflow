@@ -129,6 +129,15 @@ def wipe_company_data():
 
     try:
         # Apagar dados na ordem correta para não ferir foreign keys
+        from app.models.deal_activity import DealActivity
+        from app.models.deal_task import DealTask
+        from app.models.notification import Notification
+        from app.models.callback_queue import CallbackQueue
+        
+        Notification.query.filter_by(company_id=g.company_id).delete()
+        CallbackQueue.query.filter_by(company_id=g.company_id).delete()
+        DealActivity.query.filter_by(company_id=g.company_id).delete()
+        DealTask.query.filter_by(company_id=g.company_id).delete()
         Call.query.filter_by(company_id=g.company_id).delete()
         Deal.query.filter_by(company_id=g.company_id).delete()
         Lead.query.filter_by(company_id=g.company_id).delete()

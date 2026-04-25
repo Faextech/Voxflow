@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53,11 +53,18 @@
                                 <i class="fas fa-phone-volume"></i> Chamadas
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/credito" id="nav-credito">
+                                <i class="fas fa-wallet"></i>
+                                <span id="nav-saldo" class="badge bg-success ms-1">...</span>
+                            </a>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user-circle"></i> {{ session.get('user_name', 'Usuário') }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                                <li><a class="dropdown-item" href="/credito"><i class="fas fa-wallet"></i> Meu Crédito</a></li>
                                 <li><a class="dropdown-item" href="/profile"><i class="fas fa-cog"></i> Configurações</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
@@ -109,5 +116,32 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
+
+    <!-- Saldo na navbar — carrega em toda página logada -->
+    <script>
+    (function() {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+      const saldoEl = document.getElementById('nav-saldo');
+      if (!saldoEl || !token) return;
+
+      function atualizarSaldo() {
+        fetch('/api/billing/balance', { headers: { 'Authorization': 'Bearer ' + token } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data) { saldoEl.style.display = 'none'; return; }
+            const val = parseFloat(data.balance).toFixed(2).replace('.', ',');
+            saldoEl.textContent = 'R$ ' + val;
+            saldoEl.className = 'badge ms-1 ' + (
+              data.balance <= 0 ? 'bg-danger' :
+              data.balance < 10 ? 'bg-warning text-dark' : 'bg-success'
+            );
+          })
+          .catch(() => saldoEl.style.display = 'none');
+      }
+
+      atualizarSaldo();
+      setInterval(atualizarSaldo, 60000);
+    })();
+    </script>
 </body>
 </html>

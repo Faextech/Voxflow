@@ -869,6 +869,11 @@
                 </a>
             </div>
 
+            <div class="menu-title">Financeiro</div>
+            <div class="menu">
+                <button class="menu-link" data-section="credito">💳 Meu Crédito</button>
+            </div>
+
             <div class="menu-title">Sistema</div>
             <div class="menu">
                 <button class="menu-link" data-section="users">Usuários</button>
@@ -910,6 +915,11 @@
                     <div class="card metric-card">
                         <small>Leads novos</small>
                         <h3 id="metric-new-leads">0</h3>
+                    </div>
+                    <div class="card metric-card" id="dash-credit-card" style="cursor:pointer" onclick="navigateTo('credito')" title="Ver detalhes de crédito">
+                        <small>💳 Saldo disponível</small>
+                        <h3 id="dash-balance" style="color:#22c55e">—</h3>
+                        <div id="dash-credit-status" style="font-size:11px;margin-top:2px"></div>
                     </div>
                 </div>
 
@@ -1712,6 +1722,7 @@
                     </div>
                     <div class="actions-row">
                         <button class="btn btn-primary" onclick="submitSupportTicket()">Enviar chamado</button>
+                        <a href="/suporte" class="btn btn-secondary" style="margin-left: 10px;">Ver meus chamados</a>
                     </div>
                     <div id="support-message" class="message"></div>
                 </div>
@@ -1730,7 +1741,147 @@
                 </div>
             </section>
 
+            <!-- ── CRÉDITO ── -->
+            <section id="section-credito" class="content-section">
+                <div style="max-width:960px;margin:0 auto">
 
+                    <h2 style="margin-bottom:4px">💳 Meu Crédito</h2>
+                    <p style="color:#8892a4;margin-bottom:24px">Gerencie seu saldo e recarregue quando precisar</p>
+
+                    <!-- Cards de resumo -->
+                    <div class="cards" style="margin-bottom:24px">
+                        <div class="card metric-card" style="border-left:3px solid #22c55e">
+                            <small>Saldo disponível</small>
+                            <h3 id="cr-balance" style="color:#22c55e">—</h3>
+                            <div id="cr-status" style="font-size:11px;margin-top:4px"></div>
+                        </div>
+                        <div class="card metric-card" style="border-left:3px solid #3b82f6">
+                            <small>Custo por minuto</small>
+                            <h3 id="cr-cost" style="color:#3b82f6">—</h3>
+                        </div>
+                        <div class="card metric-card" style="border-left:3px solid #f59e0b">
+                            <small>Gasto (30 dias)</small>
+                            <h3 id="cr-spent">—</h3>
+                        </div>
+                        <div class="card metric-card" style="border-left:3px solid #8b5cf6">
+                            <small>Chamadas (30 dias)</small>
+                            <h3 id="cr-calls">—</h3>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+                        <!-- Histórico -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div><h3>Histórico de movimentações</h3></div>
+                                <div style="display:flex;gap:8px">
+                                    <button class="btn btn-sm" id="cr-filter-all" onclick="crFiltrar('all')" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:12px">Todos</button>
+                                    <button class="btn btn-sm" id="cr-filter-recharge" onclick="crFiltrar('recharge')" style="background:transparent;color:#8892a4;border:1px solid #2a3040;border-radius:6px;padding:4px 12px;font-size:12px">Recargas</button>
+                                    <button class="btn btn-sm" id="cr-filter-calls" onclick="crFiltrar('call_debit')" style="background:transparent;color:#8892a4;border:1px solid #2a3040;border-radius:6px;padding:4px 12px;font-size:12px">Chamadas</button>
+                                </div>
+                            </div>
+                            <div style="overflow-x:auto">
+                                <table style="width:100%;border-collapse:collapse;font-size:13px">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid #2a3040;color:#8892a4;text-align:left">
+                                            <th style="padding:10px 12px">Data</th>
+                                            <th style="padding:10px 12px">Tipo</th>
+                                            <th style="padding:10px 12px">Descrição</th>
+                                            <th style="padding:10px 12px;text-align:right">Valor</th>
+                                            <th style="padding:10px 12px;text-align:right">Saldo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cr-txs">
+                                        <tr><td colspan="5" style="text-align:center;padding:24px;color:#8892a4">Carregando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="text-align:center;padding:12px;display:none" id="cr-load-more">
+                                <button onclick="crCarregarMais()" style="background:transparent;color:#3b82f6;border:1px solid #3b82f6;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px">Carregar mais</button>
+                            </div>
+                        </div>
+
+                        <!-- Painel de recarga -->
+                        <div>
+                            <div class="panel" style="margin-bottom:16px">
+                                <div class="panel-header">
+                                    <div><h3>Recarregar crédito</h3></div>
+                                </div>
+                                <div style="padding:0 0 8px">
+                                    <p style="font-size:12px;color:#8892a4;margin-bottom:12px">Selecione o valor:</p>
+                                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="cr-quick-btns">
+                                        <button onclick="crSelecionarValor(50, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 50</button>
+                                        <button onclick="crSelecionarValor(100, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 100</button>
+                                        <button onclick="crSelecionarValor(200, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 200</button>
+                                        <button onclick="crSelecionarValor(500, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 500</button>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+                                        <span style="color:#8892a4;font-size:13px">R$</span>
+                                        <input type="number" id="cr-custom-amount" placeholder="Outro valor" min="10" step="10"
+                                            style="flex:1;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;padding:10px;font-size:14px;outline:none"
+                                            oninput="crAtualizarCustom(this.value)">
+                                    </div>
+                                    <button onclick="crIniciarPIX()" id="cr-btn-pix"
+                                        style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600">
+                                        📱 Pagar via PIX
+                                    </button>
+                                    <p style="text-align:center;font-size:11px;color:#8892a4;margin-top:6px">Crédito adicionado automaticamente após pagamento</p>
+                                </div>
+                            </div>
+
+                            <!-- Info Twilio -->
+                            <div class="panel" style="background:#1a2035;border:1px solid #2a3040">
+                                <div style="padding:4px 0">
+                                    <p style="font-size:12px;font-weight:600;color:#8892a4;margin-bottom:8px">ℹ️ Sobre o sistema de crédito</p>
+                                    <p style="font-size:12px;color:#5a6480;line-height:1.6">
+                                        Seu saldo em reais é consumido conforme as chamadas são realizadas. Quando o saldo zerar, as chamadas são pausadas automaticamente até uma nova recarga.
+                                    </p>
+                                    <p style="font-size:12px;color:#5a6480;margin-top:8px">
+                                        <strong style="color:#8892a4">Custo estimado:</strong><br>
+                                        <span id="cr-estimate">—</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal PIX inline -->
+                    <div id="cr-pix-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)crFecharPIX()">
+                        <div style="background:#1e2536;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative">
+                            <button onclick="crFecharPIX()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#8892a4;font-size:20px;cursor:pointer">✕</button>
+
+                            <div id="cr-pix-loading">
+                                <div style="width:40px;height:40px;border:3px solid #3b82f6;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px"></div>
+                                <p style="color:#8892a4">Gerando código PIX...</p>
+                            </div>
+
+                            <div id="cr-pix-content" style="display:none">
+                                <h3 style="margin-bottom:4px">Pagar via PIX</h3>
+                                <p style="color:#22c55e;font-size:22px;font-weight:700;margin-bottom:16px" id="cr-pix-valor"></p>
+                                <img id="cr-pix-qr" src="" alt="QR Code" style="max-width:200px;border-radius:8px;margin-bottom:16px">
+                                <p style="font-size:12px;color:#8892a4;margin-bottom:6px">Código copia e cola:</p>
+                                <div style="display:flex;gap:6px;margin-bottom:16px">
+                                    <input id="cr-pix-code" type="text" readonly style="flex:1;background:#0f1420;border:1px solid #2a3040;border-radius:6px;color:#e2e8f0;padding:8px;font-size:11px;font-family:monospace">
+                                    <button onclick="crCopiarPIX()" style="background:#2a3040;border:none;border-radius:6px;color:#e2e8f0;padding:8px 12px;cursor:pointer">📋</button>
+                                </div>
+                                <div style="background:#1a2035;border-radius:8px;padding:12px;font-size:12px;color:#8892a4;margin-bottom:12px">
+                                    ✅ Crédito adicionado automaticamente após confirmação do pagamento
+                                </div>
+                                <div id="cr-pix-aguardando" style="color:#8892a4;font-size:12px">
+                                    <span style="display:inline-block;width:10px;height:10px;border:2px solid #3b82f6;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:6px;vertical-align:middle"></span>
+                                    Aguardando confirmação do pagamento...
+                                </div>
+                            </div>
+
+                            <div id="cr-pix-error" style="display:none">
+                                <p style="color:#ef4444;margin-bottom:12px" id="cr-pix-error-msg"></p>
+                                <button onclick="crIniciarPIX()" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 20px;cursor:pointer">Tentar novamente</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
         </main>
     </div>
@@ -1879,7 +2030,8 @@
         const SECTION_LABELS = {
             dashboard:'Painel de operação', analytics:'Analytics CRM', campaigns:'Campanhas', leads:'Leads',
             calls:'Chamadas', operation:'Webphone', import:'Importação',
-            reports:'Relatórios', users:'Usuários', settings:'Configurações'
+            reports:'Relatórios', users:'Usuários', settings:'Configurações',
+            credito:'Meu Crédito'
         };
         const SECTION_DESCS = {
             dashboard:'Visão geral da operação em tempo real.',
@@ -1891,7 +2043,8 @@
             import:'Importe leads via planilha CSV ou XLSX.',
             reports:'Métricas e relatórios de produtividade.',
             users:'Gerencie operadores e administradores.',
-            settings:'Integrações, Twilio e suporte.'
+            settings:'Integrações, Twilio e suporte.',
+            credito:'Gerencie seu saldo e recarregue quando precisar.'
         };
 
         function showSection(sectionName) {
@@ -3105,9 +3258,17 @@ async function deleteLead(leadId) {
             const notesTa = elP('premiumNotes');
             if (notesTa) notesTa.value = '';
 
-            elP('premiumIncomingCallPopup').classList.add('active');
-
             const st = (data.status || '').toLowerCase();
+            const relevantEvents = [
+                'answered_waiting_agent', 'answered_awaiting_amd', 'agent_joining', 
+                'agent_joined', 'answered', 'machine_dropped', 'voicemail', 'caixa_postal', 
+                'invalid_number', 'failed'
+            ];
+            const shouldOpen = relevantEvents.includes(st) || data.is_voicemail || data.audio_bridged;
+            
+            if (shouldOpen) {
+                elP('premiumIncomingCallPopup').classList.add('active');
+            }
             
             if (connectWrap) {
                 if (data.audio_bridged) {
@@ -3237,15 +3398,24 @@ async function deleteLead(leadId) {
         // o que desconecta o browser automaticamente via evento Twilio.
         async function hangupCallOnly() {
             try {
-                const conf = pendingConferenceData?.conference_name || currentPopupConferenceName;
-                const agId = pendingConferenceData?.agent_id || (typeof getAgentId === 'function' ? getAgentId() : 0);
-                await authFetch('/api/dialer/hangup-lead', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ conference_name: conf, agent_id: agId })
-                });
+                // Se for sessão de discador ativo, usa a regra obrigatória do usuário:
+                // Tenta o próximo número do lead. Se não houver, tenta o próximo lead.
+                if (typeof dialerOverlaySkipPhone === 'function' && typeof _dialerCampaignId !== 'undefined' && _dialerCampaignId) {
+                    await dialerOverlaySkipPhone();
+                } else {
+                    const conf = pendingConferenceData?.conference_name || currentPopupConferenceName;
+                    const agId = pendingConferenceData?.agent_id || (typeof getAgentId === 'function' ? getAgentId() : 0);
+                    await authFetch('/api/dialer/hangup-lead', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ conference_name: conf, agent_id: agId })
+                    });
+                }
             } catch(e) { console.error('Erro ao desligar:', e); }
-            // Mantém popup aberto para o operador finalizar o CRM
+            
+            // Fecha o popup atual
+            closeIncomingCallPopup();
+            if (typeof window.dismissPendingConference === 'function') window.dismissPendingConference();
         }
         window.hangupCallOnly = hangupCallOnly;
 
@@ -4811,13 +4981,49 @@ async function deleteLead(leadId) {
         }
     }
 
-    function submitSupportTicket() {
+    async function submitSupportTicket() {
         const subject = document.getElementById('support-subject').value.trim();
+        const category = document.getElementById('support-category').value;
         const desc    = document.getElementById('support-description').value.trim();
-        if (!subject || !desc) { setMessage('support-message','error','Preencha assunto e descrição.'); return; }
-        setMessage('support-message','success','Chamado enviado! Em breve nossa equipe entrará em contato.');
-        document.getElementById('support-subject').value = '';
-        document.getElementById('support-description').value = '';
+        
+        if (!subject || !desc) { 
+            setMessage('support-message','error','Preencha assunto e descrição.'); 
+            return; 
+        }
+
+        try {
+            const btn = document.querySelector('button[onclick="submitSupportTicket()"]');
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+
+            const payload = {
+                title: subject,
+                category: category === 'bug' ? 'tecnico' : category === 'question' ? 'geral' : category === 'feature' ? 'tecnico' : 'outro',
+                priority: 'medium',
+                description: desc
+            };
+
+            const res = await authFetch('/api/support/tickets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao enviar chamado');
+            }
+
+            setMessage('support-message','success','Chamado enviado! Acesse "Ver meus chamados" para acompanhar.');
+            document.getElementById('support-subject').value = '';
+            document.getElementById('support-description').value = '';
+        } catch (e) {
+            setMessage('support-message','error', e.message);
+        } finally {
+            const btn = document.querySelector('button[onclick="submitSupportTicket()"]');
+            btn.disabled = false;
+            btn.textContent = 'Enviar chamado';
+        }
     }
 
     // Carrega usuários quando a aba for aberta
@@ -5069,6 +5275,357 @@ async function deleteLead(leadId) {
         }
     }
     window.addEventListener('load', nexusAutoInit);
+    </script>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         CRÉDITO — JavaScript
+         ══════════════════════════════════════════════════════════════════ -->
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+    (function() {
+        /* ── state ── */
+        let _crPage        = 1;
+        let _crFilter      = 'all';
+        let _crAmount      = 100;
+        let _crPixInterval = null;
+        let _crPixId       = null;
+        let _crBootDone    = false;
+
+        /* ── helpers ── */
+        function _crFmt(v) {
+            return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+            });
+        }
+
+        function _crToken() {
+            return localStorage.getItem('nexdial_token') || '';
+        }
+
+        function _crFetch(url, opts) {
+            const tok = _crToken();
+            const hdrs = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+            return fetch(url, { ...opts, headers: { ...hdrs, ...(opts && opts.headers || {}) } });
+        }
+
+        /* ── load dashboard summary ── */
+        async function crCarregarResumo() {
+            try {
+                const r = await _crFetch('/api/billing/dashboard');
+                if (!r.ok) return;
+                const d = await r.json();
+
+                const balEl  = document.getElementById('cr-balance');
+                const statEl = document.getElementById('cr-status');
+                if (balEl)  balEl.textContent  = _crFmt(d.balance);
+                if (statEl) {
+                    if (d.balance <= 0) {
+                        statEl.textContent  = '⚠ Saldo zerado — chamadas pausadas';
+                        statEl.style.color  = '#ef4444';
+                    } else if (d.balance < 10) {
+                        statEl.textContent  = '⚠ Saldo baixo — recarregue em breve';
+                        statEl.style.color  = '#f59e0b';
+                    } else {
+                        statEl.textContent  = '';
+                    }
+                }
+
+                const costEl = document.getElementById('cr-cost');
+                if (costEl) costEl.textContent = _crFmt(d.cost_per_minute) + '/min';
+
+                const spentEl = document.getElementById('cr-spent');
+                if (spentEl) spentEl.textContent = _crFmt(d.spent_30d);
+
+                const callsEl = document.getElementById('cr-calls');
+                if (callsEl) callsEl.textContent = (d.calls_30d || 0) + ' chamadas';
+
+                const estEl = document.getElementById('cr-estimate');
+                if (estEl && d.cost_per_minute) {
+                    const min10 = _crFmt(d.cost_per_minute * 10);
+                    estEl.textContent = min10 + ' por 10 minutos de chamada';
+                }
+
+                /* update main dash card too */
+                _crAtualizarDashCard(d.balance);
+            } catch(e) {
+                console.error('[Credit/resumo]', e);
+            }
+        }
+
+        /* ── update the 5th metric card on main dashboard ── */
+        function _crAtualizarDashCard(balance) {
+            const balEl  = document.getElementById('dash-balance');
+            const statEl = document.getElementById('dash-credit-status');
+            if (balEl)  balEl.textContent = _crFmt(balance);
+            if (statEl) {
+                if (balance <= 0) {
+                    statEl.textContent = 'Saldo zerado';
+                    statEl.style.color = '#ef4444';
+                    if (balEl) balEl.style.color = '#ef4444';
+                } else if (balance < 10) {
+                    statEl.textContent = 'Saldo baixo';
+                    statEl.style.color = '#f59e0b';
+                    if (balEl) balEl.style.color = '#f59e0b';
+                } else {
+                    statEl.textContent = 'Disponível';
+                    statEl.style.color = '#22c55e';
+                    if (balEl) balEl.style.color = '#22c55e';
+                }
+            }
+        }
+
+        /* load balance into navbar badge too (supplementary — base.html has its own) */
+        async function _crAtualizarNavBadge() {
+            try {
+                const r = await _crFetch('/api/billing/balance');
+                if (!r.ok) return;
+                const d = await r.json();
+                _crAtualizarDashCard(parseFloat(d.balance));
+                const navBadge = document.getElementById('nav-saldo');
+                if (navBadge) {
+                    navBadge.textContent = _crFmt(d.balance);
+                    navBadge.className   = 'badge ms-1 ' + (
+                        d.balance <= 0 ? 'bg-danger' :
+                        d.balance < 10 ? 'bg-warning text-dark' : 'bg-success'
+                    );
+                }
+            } catch(e) {}
+        }
+
+        /* ── transaction history ── */
+        async function crCarregarTransacoes(resetPage) {
+            if (resetPage) _crPage = 1;
+            const tbody = document.getElementById('cr-txs');
+            if (!tbody) return;
+
+            if (_crPage === 1) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#8892a4">Carregando...</td></tr>';
+
+            try {
+                const qs  = new URLSearchParams({ page: _crPage, per_page: 20, type: _crFilter === 'all' ? '' : _crFilter });
+                const r   = await _crFetch('/api/billing/transactions?' + qs);
+                if (!r.ok) throw new Error('api error');
+                const d   = await r.json();
+
+                const rows = (d.transactions || []).map(tx => {
+                    const isCredit = tx.type === 'recharge' || tx.type === 'manual_recharge' || tx.type === 'bonus';
+                    const sign     = isCredit ? '+' : '-';
+                    const color    = isCredit ? '#22c55e' : '#ef4444';
+                    const icon     = isCredit ? '⬆' : '⬇';
+                    const date     = tx.created_at ? tx.created_at.slice(0,16).replace('T',' ') : '—';
+                    const typeLabel = {
+                        recharge:'Recarga PIX', manual_recharge:'Recarga manual',
+                        call_debit:'Chamada', bonus:'Bônus', adjustment:'Ajuste'
+                    }[tx.type] || tx.type;
+                    return `<tr style="border-bottom:1px solid #1a2035">
+                        <td style="padding:10px 12px;color:#8892a4;font-size:12px">${date}</td>
+                        <td style="padding:10px 12px"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${isCredit?'rgba(34,197,94,.15)':'rgba(239,68,68,.12)'};color:${color}">${icon} ${typeLabel}</span></td>
+                        <td style="padding:10px 12px;color:#c8d0e0;font-size:12px">${tx.description || '—'}</td>
+                        <td style="padding:10px 12px;text-align:right;font-weight:600;color:${color}">${sign}${_crFmt(tx.amount)}</td>
+                        <td style="padding:10px 12px;text-align:right;color:#8892a4;font-size:12px">${_crFmt(tx.balance_after)}</td>
+                    </tr>`;
+                }).join('');
+
+                if (_crPage === 1) {
+                    tbody.innerHTML = rows || '<tr><td colspan="5" style="text-align:center;padding:24px;color:#8892a4">Nenhuma movimentação encontrada</td></tr>';
+                } else {
+                    tbody.insertAdjacentHTML('beforeend', rows);
+                }
+
+                const loadMoreEl = document.getElementById('cr-load-more');
+                if (loadMoreEl) {
+                    const hasMore = (d.transactions || []).length >= 20;
+                    loadMoreEl.style.display = hasMore ? 'block' : 'none';
+                }
+            } catch(e) {
+                console.error('[Credit/txs]', e);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#ef4444">Erro ao carregar movimentações</td></tr>';
+            }
+        }
+
+        /* ── public functions referenced by onclick ── */
+        window.crFiltrar = function(type) {
+            _crFilter = type;
+            /* update button styles */
+            ['all','recharge','call_debit'].forEach(t => {
+                const btn = document.getElementById('cr-filter-' + (t === 'call_debit' ? 'calls' : t));
+                if (!btn) return;
+                if (t === type) {
+                    btn.style.background = '#3b82f6';
+                    btn.style.color      = '#fff';
+                    btn.style.border     = 'none';
+                } else {
+                    btn.style.background = 'transparent';
+                    btn.style.color      = '#8892a4';
+                    btn.style.border     = '1px solid #2a3040';
+                }
+            });
+            crCarregarTransacoes(true);
+        };
+
+        window.crCarregarMais = function() {
+            _crPage++;
+            crCarregarTransacoes(false);
+        };
+
+        window.crSelecionarValor = function(amount, btn) {
+            _crAmount = amount;
+            document.getElementById('cr-custom-amount').value = '';
+            document.querySelectorAll('#cr-quick-btns button').forEach(b => {
+                b.style.borderColor = '#2a3040';
+                b.style.background  = '#1a2035';
+                b.style.color       = '#e2e8f0';
+            });
+            if (btn) {
+                btn.style.borderColor = '#22c55e';
+                btn.style.background  = 'rgba(34,197,94,.12)';
+                btn.style.color       = '#22c55e';
+            }
+        };
+
+        window.crAtualizarCustom = function(val) {
+            const v = parseFloat(val);
+            if (!isNaN(v) && v >= 1) {
+                _crAmount = v;
+                document.querySelectorAll('#cr-quick-btns button').forEach(b => {
+                    b.style.borderColor = '#2a3040';
+                    b.style.background  = '#1a2035';
+                    b.style.color       = '#e2e8f0';
+                });
+            }
+        };
+
+        window.crIniciarPIX = async function() {
+            if (!_crAmount || _crAmount < 1) {
+                alert('Selecione ou digite um valor mínimo de R$ 1,00');
+                return;
+            }
+
+            const modal    = document.getElementById('cr-pix-modal');
+            const loading  = document.getElementById('cr-pix-loading');
+            const content  = document.getElementById('cr-pix-content');
+            const errorDiv = document.getElementById('cr-pix-error');
+            const errMsg   = document.getElementById('cr-pix-error-msg');
+
+            modal.style.display    = 'flex';
+            loading.style.display  = 'block';
+            content.style.display  = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                const r = await _crFetch('/api/billing/payment/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: _crAmount, method: 'pix' })
+                });
+                const d = await r.json();
+
+                if (!r.ok) throw new Error(d.error || 'Erro ao gerar PIX');
+
+                _crPixId = d.payment_id;
+
+                document.getElementById('cr-pix-valor').textContent = _crFmt(_crAmount);
+                const qrEl = document.getElementById('cr-pix-qr');
+                if (d.qr_code_base64) {
+                    qrEl.src = 'data:image/png;base64,' + d.qr_code_base64;
+                    qrEl.style.display = 'block';
+                } else {
+                    qrEl.style.display = 'none';
+                }
+                document.getElementById('cr-pix-code').value = d.pix_code || d.qr_code || '';
+
+                loading.style.display  = 'none';
+                content.style.display  = 'block';
+
+                /* poll for confirmation */
+                _crStopPix();
+                _crPixInterval = setInterval(_crVerificarPix, 5000);
+            } catch(e) {
+                loading.style.display  = 'none';
+                errorDiv.style.display = 'block';
+                errMsg.textContent     = e.message || 'Erro ao gerar PIX. Tente novamente.';
+            }
+        };
+
+        async function _crVerificarPix() {
+            if (!_crPixId) return;
+            try {
+                const r = await _crFetch('/api/billing/payment/' + _crPixId + '/status');
+                if (!r.ok) return;
+                const d = await r.json();
+                if (d.status === 'approved' || d.status === 'paid') {
+                    _crStopPix();
+                    const aguardando = document.getElementById('cr-pix-aguardando');
+                    if (aguardando) {
+                        aguardando.innerHTML = '✅ Pagamento confirmado! Seu crédito foi adicionado.';
+                        aguardando.style.color = '#22c55e';
+                    }
+                    setTimeout(() => {
+                        crFecharPIX();
+                        crCarregarResumo();
+                        crCarregarTransacoes(true);
+                        _crAtualizarNavBadge();
+                    }, 2500);
+                }
+            } catch(e) {}
+        }
+
+        function _crStopPix() {
+            if (_crPixInterval) { clearInterval(_crPixInterval); _crPixInterval = null; }
+        }
+
+        window.crFecharPIX = function() {
+            _crStopPix();
+            const modal = document.getElementById('cr-pix-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.crCopiarPIX = function() {
+            const el = document.getElementById('cr-pix-code');
+            if (!el || !el.value) return;
+            navigator.clipboard.writeText(el.value).then(() => {
+                const btn = el.nextElementSibling;
+                if (btn) { btn.textContent = '✅'; setTimeout(() => btn.textContent = '📋', 2000); }
+            }).catch(() => {
+                el.select(); document.execCommand('copy');
+            });
+        };
+
+        /* navigateTo called from dash-credit-card onclick */
+        window.navigateTo = function(section) {
+            if (window.switchSection) window.switchSection(section);
+            else if (typeof showSection === 'function') showSection(section);
+        };
+
+        /* ── boot when credit section is shown ── */
+        function _crBoot() {
+            if (_crBootDone) return;
+            _crBootDone = true;
+            crCarregarResumo();
+            crCarregarTransacoes(true);
+        }
+
+        /* hook into switchSection */
+        const _origSwitch = window.switchSection;
+        window.switchSection = function(id) {
+            if (typeof _origSwitch === 'function') _origSwitch(id);
+            if (id === 'credito') _crBoot();
+        };
+
+        /* Also listen on menu-link clicks directly as backup */
+        document.querySelectorAll('.menu-link[data-section="credito"]').forEach(btn => {
+            btn.addEventListener('click', () => setTimeout(_crBoot, 80));
+        });
+
+        /* Always populate dash-card balance on load */
+        window.addEventListener('DOMContentLoaded', function() {
+            _crAtualizarNavBadge();
+            setInterval(_crAtualizarNavBadge, 60000);
+        });
+    })();
     </script>
 
     <!-- Modal Wipe Data -->

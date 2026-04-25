@@ -258,13 +258,15 @@ def save_crm():
     
     # Encerrar chamada ativa no Twilio se houver
     hung_up = False
-    if call and call.call_sid and call.status not in ("completed", "failed", "voicemail", "no_answer"):
+    # Só ignora se já tiver finalizado de verdade. voicemail, no_answer e failed ainda podem estar na linha.
+    if call and call.call_sid and call.status not in ("completed", "canceled"):
         try:
             from app.services.twilio_service import TwilioService
             company = Company.query.get(g.company_id)
             if company:
                 svc = TwilioService.from_company(company)
                 svc.client.calls(call.call_sid).update(status="completed")
+                # Não sobrescreve se for voicemail/no_answer
                 if call.status not in ("voicemail", "no_answer", "failed", "busy"):
                     call.status = "completed"
                 call.ended_at = datetime.utcnow()
@@ -289,8 +291,20 @@ def save_crm():
                 if conf_item:
                     conf_to_clear = conf_item.get("conference_name")
         if conf_to_clear:
-            clear_pending_conference(conf_to_clear)
-            logger.info(f"[SAVE_CRM] Estado limpo da memória: {conf_to_clear}")
+            if conf_to_clear.startswith("agent_bridge_"):
+                bridge_item = ACTIVE_CONFERENCES_BY_NAME.get(conf_to_clear)
+                if bridge_item:
+                    bridge_item["lead_id"]          = None
+                    bridge_item["db_call_id"]       = None
+                    bridge_item["lead_call_sid"]    = None
+                    bridge_item["audio_bridged"]    = False
+                    bridge_item["lead_answered_at"] = None
+                    bridge_item["status"]           = "idle"
+                    ACTIVE_CONFERENCES_BY_NAME.pop(conf_to_clear, None)
+                    logger.info(f"[SAVE_CRM] Bridge {conf_to_clear} preservada (dados de lead limpos)")
+            else:
+                clear_pending_conference(conf_to_clear)
+                logger.info(f"[SAVE_CRM] Estado limpo da memória: {conf_to_clear}")
     except Exception as e_mem:
         logger.warning(f"[SAVE_CRM] Erro ao limpar memória: {e_mem}")
 

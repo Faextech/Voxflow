@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}Meu Crédito — NexDial{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Cabeçalho -->
+  <div class="col-12">
+    <h4 class="fw-bold mb-0"><i class="fas fa-wallet me-2 text-primary"></i>Meu Crédito</h4>
+    <small class="text-muted">Gerencie seu saldo e recarregue quando precisar</small>
+  </div>
+
+  <!-- Card de saldo -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100" id="balance-card">
+      <div class="card-body text-center py-4">
+        <div class="mb-2">
+          <i class="fas fa-coins fa-2x text-warning"></i>
+        </div>
+        <p class="text-muted mb-1 small">Saldo disponível</p>
+        <h2 class="fw-bold mb-0" id="balance-value">Carregando...</h2>
+        <small class="text-muted" id="cost-per-min"></small>
+        <div class="mt-3" id="balance-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card de uso nos últimos 30 dias -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body text-center py-4">
+        <div class="mb-2">
+          <i class="fas fa-chart-bar fa-2x text-info"></i>
+        </div>
+        <p class="text-muted mb-1 small">Últimos 30 dias</p>
+        <h2 class="fw-bold mb-0" id="spent-value">—</h2>
+        <small class="text-muted" id="calls-count"></small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card de recarga rápida -->
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-4">
+        <p class="fw-semibold mb-3"><i class="fas fa-plus-circle text-success me-1"></i>Recarregar crédito</p>
+
+        <div class="d-flex gap-2 flex-wrap mb-3" id="quick-amounts">
+          <button class="btn btn-outline-primary btn-sm quick-btn" data-amount="50">R$ 50</button>
+          <button class="btn btn-outline-primary btn-sm quick-btn" data-amount="100">R$ 100</button>
+          <button class="btn btn-outline-primary btn-sm quick-btn" data-amount="200">R$ 200</button>
+          <button class="btn btn-outline-primary btn-sm quick-btn" data-amount="500">R$ 500</button>
+        </div>
+
+        <div class="input-group mb-3">
+          <span class="input-group-text">R$</span>
+          <input type="number" class="form-control" id="custom-amount" placeholder="Outro valor" min="10" step="10">
+        </div>
+
+        <button class="btn btn-success w-100" id="btn-pix" onclick="iniciarPIX()">
+          <i class="fas fa-qrcode me-1"></i> Pagar via PIX
+        </button>
+        <small class="text-muted d-block text-center mt-1">Mínimo R$ 10,00</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal PIX -->
+  <div class="modal fade" id="pixModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold"><i class="fas fa-qrcode me-2"></i>Pagar via PIX</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+
+          <div id="pix-loading" class="py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Gerando PIX...</p>
+          </div>
+
+          <div id="pix-content" class="d-none">
+            <p class="text-muted mb-1">Valor</p>
+            <h4 class="fw-bold text-success mb-3" id="pix-amount-display"></h4>
+
+            <img id="pix-qr-image" src="" alt="QR Code PIX" class="img-fluid rounded mb-3" style="max-width:220px">
+
+            <p class="text-muted small mb-1">Ou copie o código:</p>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control form-control-sm font-monospace" id="pix-code" readonly>
+              <button class="btn btn-outline-secondary btn-sm" onclick="copiarPIX()">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+
+            <div class="alert alert-info py-2 small">
+              <i class="fas fa-info-circle me-1"></i>
+              O crédito é adicionado automaticamente após a confirmação do pagamento.
+              Aguarde alguns segundos após pagar.
+            </div>
+
+            <div id="pix-confirming" class="d-none">
+              <div class="spinner-border spinner-border-sm text-success me-1"></div>
+              <small class="text-muted">Aguardando confirmação...</small>
+            </div>
+          </div>
+
+          <div id="pix-error" class="d-none">
+            <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+            <p id="pix-error-msg" class="text-danger"></p>
+            <button class="btn btn-outline-primary btn-sm" onclick="iniciarPIX()">Tentar novamente</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Histórico de transações -->
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="fas fa-history me-1"></i>Histórico</span>
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-outline-secondary active" id="filter-all" onclick="filtrarTxs('all')">Todos</button>
+          <button class="btn btn-outline-secondary" id="filter-recharge" onclick="filtrarTxs('recharge')">Recargas</button>
+          <button class="btn btn-outline-secondary" id="filter-calls" onclick="filtrarTxs('call_debit')">Chamadas</button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th class="ps-3">Data</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th class="text-end">Valor</th>
+                <th class="text-end pe-3">Saldo após</th>
+              </tr>
+            </thead>
+            <tbody id="txs-body">
+              <tr><td colspan="5" class="text-center py-4 text-muted">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="text-center py-3 d-none" id="load-more-container">
+          <button class="btn btn-outline-secondary btn-sm" onclick="carregarMais()">Carregar mais</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+const HEADERS = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` };
+
+let txPage = 1;
+let txFilter = 'all';
+let selectedAmount = 0;
+let pixPaymentId = null;
+let pollInterval = null;
+
+// ── Carregar dashboard ────────────────────────────────────────────────────
+async function carregarDashboard() {
+  try {
+    const resp = await fetch('/api/billing/dashboard', { headers: HEADERS });
+    if (!resp.ok) {
+      if (resp.status === 401) { window.location.href = '/login-page'; return; }
+      throw new Error('Erro ao carregar');
+    }
+    const data = await resp.json();
+
+    const balance = data.balance;
+    const balanceEl = document.getElementById('balance-value');
+    balanceEl.textContent = `R$ ${balance.toFixed(2).replace('.', ',')}`;
+
+    // Cor do saldo
+    const card = document.getElementById('balance-card');
+    const statusEl = document.getElementById('balance-status');
+    if (balance <= 0) {
+      balanceEl.className = 'fw-bold mb-0 text-danger';
+      statusEl.innerHTML = '<span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Sem crédito — chamadas bloqueadas</span>';
+    } else if (balance < 10) {
+      balanceEl.className = 'fw-bold mb-0 text-warning';
+      statusEl.innerHTML = '<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i>Saldo baixo</span>';
+    } else {
+      balanceEl.className = 'fw-bold mb-0 text-success';
+      statusEl.innerHTML = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Ativo</span>';
+    }
+
+    document.getElementById('cost-per-min').textContent = `R$ ${data.cost_per_minute.toFixed(4).replace('.', ',')}/minuto`;
+
+    const spent = data.last_30_days.total_spent;
+    const calls = data.last_30_days.total_calls;
+    document.getElementById('spent-value').textContent = `R$ ${spent.toFixed(2).replace('.', ',')}`;
+    document.getElementById('calls-count').textContent = `${calls} chamada${calls !== 1 ? 's' : ''}`;
+
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ── Carregar transações ───────────────────────────────────────────────────
+async function carregarTransacoes(reset = false) {
+  if (reset) { txPage = 1; }
+
+  const params = new URLSearchParams({ page: txPage, per_page: 20 });
+  if (txFilter !== 'all') params.append('type', txFilter);
+
+  const resp = await fetch(`/api/billing/transactions?${params}`, { headers: HEADERS });
+  const data = await resp.json();
+
+  const tbody = document.getElementById('txs-body');
+  if (reset) tbody.innerHTML = '';
+
+  if (!data.transactions || data.transactions.length === 0) {
+    if (reset) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Nenhuma movimentação ainda</td></tr>';
+    document.getElementById('load-more-container').classList.add('d-none');
+    return;
+  }
+
+  data.transactions.forEach(tx => {
+    const isCredit = tx.amount > 0;
+    const dt = new Date(tx.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const badge = tx.type === 'recharge'
+      ? '<span class="badge bg-success-subtle text-success">Recarga</span>'
+      : tx.type === 'call_debit'
+        ? '<span class="badge bg-secondary-subtle text-secondary">Chamada</span>'
+        : '<span class="badge bg-info-subtle text-info">Ajuste</span>';
+
+    const duracao = tx.call_duration_seconds
+      ? ` <small class="text-muted">(${Math.ceil(tx.call_duration_seconds/60)} min)</small>`
+      : '';
+
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td class="ps-3 text-muted small">${dt}</td>
+        <td>${badge}</td>
+        <td class="small">${tx.description || '—'}${duracao}</td>
+        <td class="text-end fw-semibold ${isCredit ? 'text-success' : 'text-danger'}">
+          ${isCredit ? '+' : ''}R$ ${Math.abs(tx.amount).toFixed(2).replace('.', ',')}
+        </td>
+        <td class="text-end pe-3 text-muted small">R$ ${tx.balance_after.toFixed(2).replace('.', ',')}</td>
+      </tr>
+    `);
+  });
+
+  const hasMore = txPage < data.pages;
+  document.getElementById('load-more-container').classList.toggle('d-none', !hasMore);
+  if (hasMore) txPage++;
+}
+
+function filtrarTxs(type) {
+  txFilter = type;
+  document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById(`filter-${type === 'all' ? 'all' : type === 'recharge' ? 'recharge' : 'calls'}`).classList.add('active');
+  carregarTransacoes(true);
+}
+
+function carregarMais() { carregarTransacoes(false); }
+
+// ── Seleção de valor ──────────────────────────────────────────────────────
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+    document.querySelectorAll('.quick-btn').forEach(b => b.classList.add('btn-outline-primary'));
+    btn.classList.add('active', 'btn-primary');
+    btn.classList.remove('btn-outline-primary');
+    selectedAmount = parseFloat(btn.dataset.amount);
+    document.getElementById('custom-amount').value = '';
+  });
+});
+
+document.getElementById('custom-amount').addEventListener('input', e => {
+  document.querySelectorAll('.quick-btn').forEach(b => { b.classList.remove('active', 'btn-primary'); b.classList.add('btn-outline-primary'); });
+  selectedAmount = parseFloat(e.target.value) || 0;
+});
+
+// ── Iniciar PIX ───────────────────────────────────────────────────────────
+async function iniciarPIX() {
+  const amount = selectedAmount || parseFloat(document.getElementById('custom-amount').value);
+  if (!amount || amount < 10) {
+    alert('Selecione ou digite um valor mínimo de R$ 10,00');
+    return;
+  }
+
+  // Abrir modal
+  const modal = new bootstrap.Modal(document.getElementById('pixModal'));
+  modal.show();
+
+  document.getElementById('pix-loading').classList.remove('d-none');
+  document.getElementById('pix-content').classList.add('d-none');
+  document.getElementById('pix-error').classList.add('d-none');
+
+  try {
+    const resp = await fetch('/api/billing/payment/initiate', {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ amount, method: 'pix' })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) throw new Error(data.error || 'Erro ao gerar PIX');
+
+    pixPaymentId = data.payment_id;
+
+    document.getElementById('pix-loading').classList.add('d-none');
+    document.getElementById('pix-content').classList.remove('d-none');
+    document.getElementById('pix-amount-display').textContent = `R$ ${amount.toFixed(2).replace('.', ',')}`;
+    document.getElementById('pix-code').value = data.pix_copy_paste || '';
+
+    // QR Code
+    if (data.pix_qr_code_base64) {
+      document.getElementById('pix-qr-image').src = `data:image/png;base64,${data.pix_qr_code_base64}`;
+    } else {
+      document.getElementById('pix-qr-image').style.display = 'none';
+    }
+
+    // Polling de confirmação
+    document.getElementById('pix-confirming').classList.remove('d-none');
+    pollInterval = setInterval(verificarPagamento, 5000);
+
+  } catch(e) {
+    document.getElementById('pix-loading').classList.add('d-none');
+    document.getElementById('pix-error').classList.remove('d-none');
+    document.getElementById('pix-error-msg').textContent = e.message;
+  }
+}
+
+async function verificarPagamento() {
+  if (!pixPaymentId) return;
+  try {
+    // Recarrega o saldo — se aumentou, o pagamento foi confirmado
+    const resp = await fetch('/api/billing/balance', { headers: HEADERS });
+    const data = await resp.json();
+    const balanceEl = document.getElementById('balance-value');
+    const currentBalance = parseFloat(balanceEl.textContent.replace('R$ ', '').replace(',', '.')) || 0;
+    if (data.balance > currentBalance + 1) {
+      clearInterval(pollInterval);
+      document.getElementById('pix-confirming').innerHTML =
+        '<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Pagamento confirmado!</span>';
+      setTimeout(() => {
+        bootstrap.Modal.getInstance(document.getElementById('pixModal')).hide();
+        carregarDashboard();
+        carregarTransacoes(true);
+      }, 2000);
+    }
+  } catch(e) {}
+}
+
+function copiarPIX() {
+  const input = document.getElementById('pix-code');
+  input.select();
+  document.execCommand('copy');
+  const btn = input.nextElementSibling;
+  btn.innerHTML = '<i class="fas fa-check text-success"></i>';
+  setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 2000);
+}
+
+document.getElementById('pixModal').addEventListener('hidden.bs.modal', () => {
+  if (pollInterval) clearInterval(pollInterval);
+  pixPaymentId = null;
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+carregarDashboard();
+carregarTransacoes(true);
+// Atualiza saldo a cada 30s (detecta pagamento PIX confirmado)
+setInterval(carregarDashboard, 30000);
+</script>
+{% endblock %}

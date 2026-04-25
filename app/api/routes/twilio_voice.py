@@ -692,17 +692,21 @@ def conference_events():
                     c.ended_at = c.ended_at or datetime.utcnow()
                     db.session.commit()
 
-            # Limpa dados do lead da ponte persistente (mantém ponte ativa para agente).
-            # Feito SEMPRE (com ou sem agente) para evitar que dados do lead anterior
-            # contaminem a próxima chamada.
+            # Limpa dados do lead da ponte persistente apenas se o agente NÃO atendeu (ex: caixa postal, desligou antes).
+            # Se o agente atendeu, mantemos os dados para que o popup continue aberto e o operador possa classificar a ligação.
+            # O /classified do frontend chamará _clear_bridge_for_sid posteriormente.
             if conference_name.startswith("agent_bridge_"):
-                item["lead_id"]          = None
-                item["db_call_id"]       = None
-                item["lead_call_sid"]    = None
-                item["audio_bridged"]    = False
-                item["lead_answered_at"] = None
-                item["status"]           = "agent_joined" if agent_was_connected else "idle"
-                logger.info("[CONF] Ponte %s → lead removido (agent_was_connected=%s)", conference_name, agent_was_connected)
+                if not agent_was_connected:
+                    item["lead_id"]          = None
+                    item["db_call_id"]       = None
+                    item["lead_call_sid"]    = None
+                    item["audio_bridged"]    = False
+                    item["lead_answered_at"] = None
+                    item["status"]           = "idle"
+                    logger.info("[CONF] Ponte %s → lead removido imediatamente (agent_was_connected=False)", conference_name)
+                else:
+                    item["status"]           = "agent_joined"
+                    logger.info("[CONF] Ponte %s → lead desligou, mas dados preservados para popup de classificação", conference_name)
 
             if item.get("shifting_to_bridge"):
                 return "", 204
@@ -833,17 +837,6 @@ def pending_call(agent_id):
 
     status = (item.get("status") or "").strip().lower()
 
-    # BLOQUEIO DE SEGURANCA: se o AMD ja decidiu DROP, nunca mostrar popup.
-    # machine_dropped e setado pelo amd_callback quando AnsweredBy != human.
-    if status == "machine_dropped":
-        return jsonify({
-            "has_call": False,
-            "show_popup": False,
-            "status": "machine_dropped",
-            "status_display": _call_status_display("machine_dropped"),
-            "conference_name": item.get("conference_name"),
-        }), 200
-
     # awaiting_confirmation não é mais usado (AMD desativado) — promover imediatamente
     if status == "awaiting_confirmation":
         item["status"] = "answered_waiting_agent"
@@ -855,25 +848,14 @@ def pending_call(agent_id):
     # Dados básicos para o popup (serão suplementados pelo DB abaixo)
     lead_id = item.get("lead_id")
 
-    # REGRA DE OURO: popup só abre quando o lead efetivamente atendeu.
-    # - ringing_lead: telefone tocando — sem popup ainda
-    # - answered_waiting_agent / agent_joining / agent_joined: lead atendeu — popup
-    lead_answered = bool(item.get("lead_answered_at"))
-
-    show_popup = (
-        lead_id is not None and
-        lead_answered and
-        status in ('answered_waiting_agent', 'agent_joining', 'agent_joined')
-    )
+    # NOVA REGRA A PEDIDO DO CLIENTE:
+    # O popup deve abrir e ficar aberto para TODAS as ligações desde o início,
+    # mesmo que dê caixa postal, rejeitada ou não atenda,
+    # para que o operador possa ler as notas e classificar a ligação manualmente.
+    show_popup = lead_id is not None
 
     if show_popup:
-        logger.info("[POPUP] Regra de Ouro atendida para operador %s | Lead %s | Status %s", agent_id, lead_id, status)
-        # Log extra solicitado pelo usuário
-        print(f"[POPUP] Disparando popup para operador {agent_id} | Lead {lead_id}")
-
-    # FIX: Se não houver um lead_id (apenas o webphone conectou à bridge persistente via /browser-outgoing), não mostra o popup falso
-    if not lead_id:
-        show_popup = False
+        logger.info("[POPUP] Disparando popup para operador %s | Lead %s | Status %s", agent_id, lead_id, status)
 
     # Persistent Bridge: verifica se a perna do agente ainda está viva via REST API
     # Se o browser fechou/atualizou, o call_sid do agente estará 'completed'.

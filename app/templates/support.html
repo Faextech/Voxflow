@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+
+{% block title %}Suporte - NexDial{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos Específicos do Suporte */
+    .ticket-list {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+    
+    .ticket-item {
+        cursor: pointer;
+        transition: all 0.2s;
+        border-left: 4px solid transparent;
+    }
+    
+    .ticket-item:hover {
+        background-color: var(--bs-tertiary-bg);
+    }
+    
+    .ticket-item.active {
+        background-color: rgba(37, 99, 235, 0.15); /* var(--primary-color) com opacidade */
+        border-left-color: var(--primary-color);
+    }
+    
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 280px);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: var(--bs-secondary-bg);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .message {
+        max-width: 80%;
+        margin-bottom: 1rem;
+        clear: both;
+    }
+    
+    .message.them {
+        float: left;
+    }
+    
+    .message.me {
+        float: right;
+    }
+    
+    .message-bubble {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        position: relative;
+    }
+    
+    .message.them .message-bubble {
+        background-color: var(--bs-tertiary-bg);
+        border: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+        border-bottom-left-radius: 2px;
+    }
+    
+    .message.me .message-bubble {
+        background-color: var(--primary-color);
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+    
+    .message.internal .message-bubble {
+        background-color: #fff3cd !important;
+        border: 1px solid #ffe69c !important;
+        color: #664d03 !important;
+        border-bottom-right-radius: 2px;
+    }
+    
+    .message-meta {
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+        color: #6c757d;
+    }
+    
+    .message.me .message-meta {
+        text-align: right;
+    }
+    
+    /* Status Badges */
+    .badge-status-open { background-color: #0dcaf0; color: #000; }
+    .badge-status-in_progress { background-color: #0d6efd; }
+    .badge-status-resolved { background-color: #198754; }
+    .badge-status-closed { background-color: #6c757d; }
+    
+    /* Priority Badges */
+    .badge-priority-low { background-color: #6c757d; }
+    .badge-priority-medium { background-color: #0dcaf0; color: #000; }
+    .badge-priority-high { background-color: #fd7e14; }
+    .badge-priority-urgent { background-color: #dc3545; }
+
+    /* Admin Dashboard Cards */
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row h-100">
+    <!-- Barra Lateral: Lista de Tickets -->
+    <div class="col-md-4 col-lg-3 border-end pe-0">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+            <h5 class="mb-0">Meus Tickets</h5>
+            <button class="btn btn-primary btn-sm" onclick="showNewTicketModal()">
+                <i class="fas fa-plus"></i> Novo
+            </button>
+        </div>
+        
+        <!-- Filtros Rápidos -->
+        <div class="p-2 border-bottom bg-dark">
+            <select class="form-select form-select-sm" id="filterStatus" onchange="loadTickets()">
+                <option value="">Todos os Status</option>
+                <option value="open">Abertos</option>
+                <option value="in_progress">Em Andamento</option>
+                <option value="resolved">Resolvidos</option>
+                <option value="closed">Fechados</option>
+            </select>
+        </div>
+
+        <div class="ticket-list" id="ticketsList">
+            <!-- Renderizado via JS -->
+            <div class="text-center p-4 text-muted">
+                <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
+                <div>Carregando tickets...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área Principal: Detalhe do Ticket -->
+    <div class="col-md-8 col-lg-9 ps-0">
+        <!-- Dashboard Admin (mostrado quando não há ticket selecionado e usuário é admin) -->
+        <div id="adminDashboard" class="p-4 d-none">
+            <h4 class="mb-4">Visão Geral do Suporte</h4>
+            <div class="row g-3 mb-4" id="statsContainer">
+                <!-- Preenchido via JS se admin -->
+            </div>
+        </div>
+
+        <!-- Placeholder (quando nenhum ticket selecionado) -->
+        <div id="emptyState" class="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+            <i class="fas fa-life-ring fa-4x mb-3 text-light"></i>
+            <h4>Central de Suporte</h4>
+            <p>Selecione um ticket ao lado ou crie um novo para começar.</p>
+        </div>
+
+        <!-- View do Ticket Selecionado -->
+        <div id="ticketDetail" class="d-none h-100 d-flex flex-column">
+            <!-- Header do Ticket -->
+            <div class="p-3 border-bottom bg-dark shadow-sm z-1">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h5 class="mb-1" id="activeTicketTitle">Título do Ticket</h5>
+                        <div class="text-muted small">
+                            #<span id="activeTicketId">000</span> • 
+                            Criado em <span id="activeTicketDate">--</span> por 
+                            <span id="activeTicketCreator" class="fw-bold">--</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span id="activeTicketPriority" class="badge">--</span>
+                        <span id="activeTicketStatus" class="badge">--</span>
+                        
+                        <!-- Controles Admin -->
+                        <div class="dropdown d-none admin-controls">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Alterar Status</h6></li>
+                                <li><a class="dropdown-item" href="#" onclick="updateTicketStatus('open')">Aberto</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="updateTicketStatus('in_progress')">Em Andamento</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="updateTicketStatus('resolved')">Resolvido</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="updateTicketStatus('closed')">Fechado</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteTicket()">Excluir Ticket</a></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Controles Cliente (só resolver) -->
+                        <button id="btnResolveClient" class="btn btn-success btn-sm d-none" onclick="updateTicketStatus('resolved')">
+                            <i class="fas fa-check"></i> Marcar como Resolvido
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row align-items-center mt-3">
+                    <div class="col-md-6 text-muted small">
+                        <strong>Categoria:</strong> <span id="activeTicketCategory">--</span>
+                    </div>
+                    <div class="col-md-6 text-end small admin-controls d-none">
+                        <strong>Responsável:</strong> 
+                        <select id="assigneeSelect" class="form-select form-select-sm d-inline-block w-auto" onchange="assignTicket(this.value)">
+                            <option value="">Não atribuído</option>
+                            <!-- Agentes via JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat / Mensagens -->
+            <div class="chat-container d-flex flex-column flex-grow-1 p-3" style="min-height: 400px; max-height: calc(100vh - 150px);">
+                <div class="chat-messages flex-grow-1" id="chatMessages" style="overflow-y: auto;">
+                    <!-- Mensagens via JS -->
+                </div>
+
+                <!-- Input de Resposta -->
+                <div class="border-top pt-3 mt-3 bg-dark flex-shrink-0" id="replyForm">
+                    <form onsubmit="sendMessage(event)">
+                        <div class="input-group">
+                            <textarea id="messageInput" class="form-control" rows="2" placeholder="Digite sua resposta..." required></textarea>
+                            <button class="btn btn-primary px-4" type="submit">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="form-check mt-2 admin-controls d-none">
+                            <input class="form-check-input" type="checkbox" id="isInternalNote">
+                            <label class="form-check-label text-warning small" for="isInternalNote">
+                                <i class="fas fa-lock"></i> Nota interna (apenas equipe de suporte)
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div id="closedAlert" class="alert alert-secondary mt-3 d-none text-center flex-shrink-0">
+                    Este ticket está fechado. Responda acima para reabri-lo.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Ticket -->
+<div class="modal fade" id="newTicketModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Abrir Novo Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newTicketForm" onsubmit="createTicket(event)">
+                    <div class="mb-3">
+                        <label class="form-label">Assunto</label>
+                        <input type="text" class="form-control" id="newTicketTitle" required maxlength="255">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Categoria</label>
+                            <select class="form-select" id="newTicketCategory" required>
+                                <option value="geral">Geral</option>
+                                <option value="tecnico">Suporte Técnico</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Prioridade</label>
+                            <select class="form-select" id="newTicketPriority" required>
+                                <option value="low">Baixa</option>
+                                <option value="medium" selected>Média</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição Detalhada</label>
+                        <textarea class="form-control" id="newTicketDesc" rows="4" required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btnCreateTicket">
+                            Criar Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Decodifica JWT
+    function parseJwt(token) {
+        try {
+            return JSON.parse(atob(token.split('.')[1]));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    const token = localStorage.getItem('nexdial_token');
+    if (!token) {
+        window.location.href = '/login';
+    }
+    const decoded = parseJwt(token) || {};
+
+    // Estado global
+    let currentTicketId = null;
+    let currentUserCompanyId = parseInt(decoded.company_id || 0);
+    let currentUserRole = decoded.role || 'agent';
+    let currentUserId = parseInt(decoded.user_id || 0);
+    
+    // Para ser admin do sistema de tickets, tem que ser da company_id = 1 e role admin/supervisor
+    const isAdmin = currentUserCompanyId === 1 && ['admin', 'supervisor'].includes(currentUserRole);
+
+    // Helpers UI
+    const statusClasses = {
+        'open': 'badge-status-open',
+        'in_progress': 'badge-status-in_progress',
+        'resolved': 'badge-status-resolved',
+        'closed': 'badge-status-closed'
+    };
+
+    const priorityClasses = {
+        'low': 'badge-priority-low',
+        'medium': 'badge-priority-medium',
+        'high': 'badge-priority-high',
+        'urgent': 'badge-priority-urgent'
+    };
+
+    // Inicialização
+    $(document).ready(() => {
+        // Exibe controles de admin se for o caso
+        if (isAdmin) {
+            $('.admin-controls').removeClass('d-none');
+            loadAdminStats();
+            loadAgents();
+            $('#emptyState').addClass('d-none');
+            $('#adminDashboard').removeClass('d-none');
+        }
+
+        loadTickets();
+    });
+
+    // API Calls wrappers
+    async function apiCall(endpoint, options = {}) {
+        const token = localStorage.getItem('nexdial_token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? {'Authorization': `Bearer ${token}`} : {})
+        };
+        
+        options.headers = {...headers, ...options.headers};
+        
+        try {
+            const res = await fetch(`/api/support${endpoint}`, options);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro na requisição');
+            }
+            return await res.json();
+        } catch (error) {
+            alert(error.message);
+            throw error;
+        }
+    }
+
+    // Listar Tickets
+    async function loadTickets() {
+        const status = $('#filterStatus').val();
+        let url = '/tickets';
+        if (status) url += `?status=${status}`;
+
+        try {
+            const data = await apiCall(url);
+            renderTicketsList(data.tickets);
+        } catch (e) {
+            $('#ticketsList').html('<div class="p-3 text-danger">Erro ao carregar tickets.</div>');
+        }
+    }
+
+    function renderTicketsList(tickets) {
+        const container = $('#ticketsList');
+        container.empty();
+
+        if (tickets.length === 0) {
+            container.html('<div class="p-4 text-center text-muted">Nenhum ticket encontrado.</div>');
+            return;
+        }
+
+        tickets.forEach(t => {
+            const date = new Date(t.created_at).toLocaleDateString('pt-BR');
+            const isActive = t.id === currentTicketId ? 'active' : '';
+            
+            const html = `
+                <div class="ticket-item p-3 border-bottom ${isActive}" onclick="openTicket(${t.id})">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="badge ${statusClasses[t.status]}">${t.status_label}</span>
+                        <small class="text-muted">${date}</small>
+                    </div>
+                    <div class="fw-bold text-truncate mb-1">${t.title}</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">#${t.id} • ${t.creator_name}</small>
+                        <span class="badge rounded-pill bg-light text-dark border">
+                            <i class="far fa-comment-alt"></i> ${t.message_count}
+                        </span>
+                    </div>
+                </div>
+            `;
+            container.append(html);
+        });
+    }
+
+    // Dashboard Admin
+    async function loadAdminStats() {
+        try {
+            const stats = await apiCall('/stats');
+            const container = $('#statsContainer');
+            container.html(`
+                <div class="col-md-3">
+                    <div class="card stat-card bg-primary text-white h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Total de Tickets</h6>
+                            <h2 class="mb-0">${stats.total}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card bg-info text-dark h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Aguardando Atribuição</h6>
+                            <h2 class="mb-0">${stats.unassigned_open}</h2>
+                        </div>
+                    </div>
+                </div>
+                <!-- Você pode adicionar mais cards com stats.by_status etc -->
+            `);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadAgents() {
+        try {
+            const agents = await apiCall('/agents');
+            const select = $('#assigneeSelect');
+            agents.forEach(a => {
+                select.append(`<option value="${a.id}">${a.name}</option>`);
+            });
+        } catch (e) {}
+    }
+
+    let chatPollInterval = null;
+    let lastMessageCount = 0;
+
+    // Detalhe do Ticket
+    async function openTicket(id) {
+        currentTicketId = id;
+        lastMessageCount = 0; // reseta contador
+        
+        // Atualiza UI da lista
+        $('.ticket-item').removeClass('active');
+        $(`.ticket-item[onclick="openTicket(${id})"]`).addClass('active');
+
+        // Alterna views
+        $('#emptyState, #adminDashboard').addClass('d-none');
+        $('#ticketDetail').removeClass('d-none');
+        
+        // Loader provisório apenas no primeiro carregamento
+        $('#chatMessages').html('<div class="text-center mt-5"><div class="spinner-border text-primary"></div></div>');
+
+        try {
+            const ticket = await apiCall(`/tickets/${id}`);
+            lastMessageCount = ticket.messages ? ticket.messages.length : 0;
+            renderTicketDetail(ticket);
+            
+            // Inicia o polling para tempo real (a cada 3 segundos)
+            if (chatPollInterval) clearInterval(chatPollInterval);
+            chatPollInterval = setInterval(pollCurrentTicket, 3000);
+        } catch (e) {
+            $('#ticketDetail').addClass('d-none');
+            $('#emptyState').removeClass('d-none');
+        }
+    }
+
+    async function pollCurrentTicket() {
+        if (!currentTicketId) return;
+        try {
+            const ticket = await apiCall(`/tickets/${currentTicketId}`);
+            const newCount = ticket.messages ? ticket.messages.length : 0;
+            
+            // Só re-renderiza se houver mensagens novas ou mudança de status
+            const statusChanged = $('#activeTicketStatus').text() !== ticket.status_label;
+            
+            if (newCount > lastMessageCount || statusChanged) {
+                lastMessageCount = newCount;
+                renderTicketDetail(ticket); // Atualiza os badges e o chat
+            }
+        } catch (e) {}
+    }
+
+    function renderTicketDetail(ticket) {
+        $('#activeTicketId').text(ticket.id);
+        $('#activeTicketTitle').text(ticket.title);
+        $('#activeTicketDate').text(new Date(ticket.created_at).toLocaleString('pt-BR'));
+        $('#activeTicketCreator').text(ticket.creator_name);
+        $('#activeTicketCategory').text(ticket.category_label);
+        
+        // Badges
+        const statusBadge = $('#activeTicketStatus');
+        statusBadge.removeClass().addClass(`badge ${statusClasses[ticket.status]}`).text(ticket.status_label);
+        
+        const priorityBadge = $('#activeTicketPriority');
+        priorityBadge.removeClass().addClass(`badge ${priorityClasses[ticket.priority]}`).text(ticket.priority_label);
+
+        // Controles de Status/Admin
+        if (isAdmin) {
+            $('#assigneeSelect').val(ticket.assigned_to || '');
+        } else {
+            // Cliente só pode resolver se não estiver resolvido/fechado
+            if (['open', 'in_progress'].includes(ticket.status)) {
+                $('#btnResolveClient').removeClass('d-none');
+            } else {
+                $('#btnResolveClient').addClass('d-none');
+            }
+        }
+
+        // Aviso de ticket fechado
+        if (['resolved', 'closed'].includes(ticket.status)) {
+            $('#closedAlert').removeClass('d-none');
+        } else {
+            $('#closedAlert').addClass('d-none');
+        }
+
+        // Renderiza mensagens
+        renderMessages(ticket.messages);
+    }
+
+    function renderMessages(messages) {
+        const container = $('#chatMessages');
+        container.empty();
+
+        messages.forEach(m => {
+            const isMe = m.author_id === currentUserId;
+            // Define estilo (me/them) ou nota interna
+            let msgClass = isMe ? 'me' : 'them';
+            if (m.is_internal) msgClass += ' internal';
+
+            const time = new Date(m.created_at).toLocaleString('pt-BR', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+
+            const html = `
+                <div class="message ${msgClass}">
+                    <div class="message-bubble shadow-sm">
+                        ${m.is_internal ? '<div class="small fw-bold mb-1"><i class="fas fa-lock"></i> Nota Interna</div>' : ''}
+                        <div style="white-space: pre-wrap;">${m.body}</div>
+                    </div>
+                    <div class="message-meta">
+                        ${m.author_name} • ${time}
+                    </div>
+                </div>
+                <div class="clearfix"></div>
+            `;
+            container.append(html);
+        });
+
+        // Scroll to bottom
+        container.scrollTop(container[0].scrollHeight);
+    }
+
+    // Ações
+    async function sendMessage(e) {
+        e.preventDefault();
+        if (!currentTicketId) return;
+
+        const input = $('#messageInput');
+        const btn = $(e.target).find('button[type="submit"]');
+        const body = input.val().trim();
+        const isInternal = $('#isInternalNote').is(':checked');
+
+        if (!body) return;
+
+        btn.prop('disabled', true);
+        try {
+            await apiCall(`/tickets/${currentTicketId}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({ body, is_internal: isInternal })
+            });
+            input.val('');
+            $('#isInternalNote').prop('checked', false);
+            
+            // Atualiza de forma silenciosa e instantânea sem mostrar o loader do openTicket()
+            pollCurrentTicket();
+            loadTickets(); // Atualiza contador na lista lateral
+        } finally {
+            btn.prop('disabled', false);
+            input.focus(); // Retorna o foco pro input para digitar a próxima mensagem
+        }
+    }
+
+    async function updateTicketStatus(newStatus) {
+        if (!currentTicketId) return;
+        try {
+            await apiCall(`/tickets/${currentTicketId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: newStatus })
+            });
+            openTicket(currentTicketId);
+            loadTickets();
+        } catch (e) {}
+    }
+
+    async function assignTicket(userId) {
+        if (!currentTicketId || !isAdmin) return;
+        try {
+            await apiCall(`/tickets/${currentTicketId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ assigned_to: userId ? parseInt(userId) : null })
+            });
+            loadTickets();
+        } catch (e) {
+            // Reverte select em caso de erro
+            openTicket(currentTicketId);
+        }
+    }
+
+    async function deleteTicket() {
+        if (!currentTicketId || !isAdmin) return;
+        if (!confirm('Tem certeza que deseja excluir este ticket permanentemente?')) return;
+
+        try {
+            await apiCall(`/tickets/${currentTicketId}`, { method: 'DELETE' });
+            currentTicketId = null;
+            $('#ticketDetail').addClass('d-none');
+            $('#adminDashboard').removeClass('d-none');
+            loadTickets();
+        } catch (e) {}
+    }
+
+    // Criar Ticket Modal
+    function showNewTicketModal() {
+        $('#newTicketForm')[0].reset();
+        new bootstrap.Modal(document.getElementById('newTicketModal')).show();
+    }
+
+    async function createTicket(e) {
+        e.preventDefault();
+        const btn = $('#btnCreateTicket');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
+        const payload = {
+            title: $('#newTicketTitle').val().trim(),
+            category: $('#newTicketCategory').val(),
+            priority: $('#newTicketPriority').val(),
+            description: $('#newTicketDesc').val().trim(),
+        };
+
+        try {
+            const res = await apiCall('/tickets', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            bootstrap.Modal.getInstance(document.getElementById('newTicketModal')).hide();
+            loadTickets();
+            openTicket(res.id);
+        } finally {
+            btn.prop('disabled', false).text('Criar Ticket');
+        }
+    }
+</script>
+{% endblock %}

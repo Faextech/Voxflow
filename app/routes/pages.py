@@ -31,3 +31,13 @@ def crm():
 @pages_bp.route("/test-webphone")
 def test_webphone_page():
     return render_template("test_webphone.html")
+
+
+@pages_bp.route("/suporte")
+def support_page():
+    return render_template("support.html")
+
+
+@pages_bp.route("/credito")
+def billing_page():
+    return render_template("billing.html")

@@ -22,6 +22,8 @@ from app.api.routes.supervisor_routes import supervisor_bp
 from app.api.routes.crm_init_routes import crm_init_bp
 from app.api.routes.user_routes import user_routes_bp
 from app.api.routes.analytics import analytics_bp
+from app.api.routes.support_routes import support_bp
+from app.api.routes.billing_routes import billing_bp
 
 
 def register_blueprints(app):
@@ -49,3 +51,5 @@ def register_blueprints(app):
     app.register_blueprint(crm_init_bp)
     app.register_blueprint(user_routes_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(support_bp)
+    app.register_blueprint(billing_bp)

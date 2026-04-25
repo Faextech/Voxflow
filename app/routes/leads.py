@@ -8,7 +8,7 @@ from app.models import Campaign, Lead, Call
 from app.models.company import Company
 from app.models.deal import Deal
 from app.models.pipeline import Pipeline, PipelineStage
-from app.services.twilio_service import TwilioService, normalize_phone_br
+from app.services.twilio_service import TwilioService, normalize_phone_br, InsufficientCreditError
 
 leads_bp = Blueprint("leads", __name__)
 
@@ -433,6 +433,9 @@ def dial_next_lead(campaign_id):
             "call":     serialize_call_basic(call),
         }), 200
 
+    except InsufficientCreditError as e:
+        db.session.rollback()
+        return jsonify({"error": "Saldo insuficiente. Recarregue seu crédito.", "balance": e.balance}), 402
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -519,6 +522,9 @@ def tick_campaign(campaign_id):
             "call":     serialize_call_basic(call),
         }), 200
 
+    except InsufficientCreditError as e:
+        db.session.rollback()
+        return jsonify({"error": "Saldo insuficiente. Recarregue seu crédito.", "balance": e.balance}), 402
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

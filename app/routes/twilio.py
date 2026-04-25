@@ -1,3 +1,7 @@
+# ATENÇÃO: Este blueprint (twilio_bp) é registrado ANTES de twilio_voice_bp e
+# por isso vence o conflito de URL para POST /api/twilio/status.
+# Contém: status callback com débito de crédito + avanço do discador.
+# twilio_voice.py contém as demais rotas (/browser-outgoing, /voice, etc).
 import logging
 from datetime import datetime
 
@@ -190,6 +194,24 @@ def status_callback():
                 resume_auto_dialer_for_campaign(call.campaign_id, call.company_id)
         except Exception as _exc:
             logger.error("[STATUS→DIALER] Erro ao retomar discador: %s", _exc)
+
+    # ── Débito automático de crédito ────────────────────────────────────────
+    if call_status == "completed" and call_duration and call.company_id:
+        try:
+            duration_sec = int(call_duration)
+            if duration_sec > 0:
+                from app.models.company import Company
+                company = Company.query.get(call.company_id)
+                if company:
+                    company.debit_call(duration_seconds=duration_sec, call_sid=call_sid)
+                    db.session.commit()
+                    if not company.has_credit():
+                        from app.services.twilio_subaccount_service import suspend_subaccount
+                        suspend_subaccount(company)
+                        logger.warning("[BILLING] Empresa %s sem saldo — subconta suspensa", company.id)
+        except Exception as _billing_err:
+            logger.error("[BILLING] Erro ao debitar chamada %s: %s", call_sid, _billing_err)
+    # ─────────────────────────────────────────────────────────────────────────
 
     return jsonify({
         "message": "status atualizado",

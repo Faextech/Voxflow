@@ -28,6 +28,16 @@ class Company(db.Model):
     twilio_api_key       = db.Column(db.String(255), nullable=True)
     twilio_api_secret    = db.Column(db.String(512), nullable=True)   # encrypted
     twilio_twiml_app_sid = db.Column(db.String(255), nullable=True)
+    # SID da subconta Twilio criada para este cliente (modelo master + subconta)
+    twilio_subaccount_sid = db.Column(db.String(255), nullable=True)
+
+    # ------------------------------------------------------------------
+    # Billing / Crédito
+    # ------------------------------------------------------------------
+    # Saldo atual em reais (sempre >= 0 ou pode ir negativo com margem)
+    credit_balance = db.Column(db.Numeric(12, 4), nullable=False, default=0)
+    # Custo por minuto de chamada em reais (definido pelo admin)
+    cost_per_minute = db.Column(db.Numeric(8, 4), nullable=False, default=0.35)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
@@ -37,11 +47,12 @@ class Company(db.Model):
         nullable=False,
     )
 
-    campaigns = db.relationship("Campaign", back_populates="company", lazy=True, cascade="all, delete-orphan")
-    leads     = db.relationship("Lead",     back_populates="company", lazy=True, cascade="all, delete-orphan")
-    calls     = db.relationship("Call",     back_populates="company", lazy=True, cascade="all, delete-orphan")
-    users     = db.relationship("User",     back_populates="company", lazy=True, cascade="all, delete-orphan")
-    agents    = db.relationship("Agent",    back_populates="company", lazy=True, cascade="all, delete-orphan")
+    campaigns           = db.relationship("Campaign",           back_populates="company", lazy=True, cascade="all, delete-orphan")
+    leads               = db.relationship("Lead",               back_populates="company", lazy=True, cascade="all, delete-orphan")
+    calls               = db.relationship("Call",               back_populates="company", lazy=True, cascade="all, delete-orphan")
+    users               = db.relationship("User",               back_populates="company", lazy=True, cascade="all, delete-orphan")
+    agents              = db.relationship("Agent",              back_populates="company", lazy=True, cascade="all, delete-orphan")
+    credit_transactions = db.relationship("CreditTransaction",  back_populates="company", lazy=True, cascade="all, delete-orphan")
 
     # ------------------------------------------------------------------
     # Fernet helpers (internos)
@@ -129,3 +140,53 @@ class Company(db.Model):
             and creds["auth_token"]
             and creds["phone_number"]
         )
+
+    # ------------------------------------------------------------------
+    # Billing helpers
+    # ------------------------------------------------------------------
+
+    def get_balance(self) -> float:
+        return float(self.credit_balance or 0)
+
+    def has_credit(self) -> bool:
+        return self.get_balance() > 0
+
+    def add_credit(self, amount: float, description: str = "Recarga", payment_id: str = None, payment_method: str = None):
+        """Adiciona crédito e registra a transação. Retorna a transação criada."""
+        from app.models.billing import CreditTransaction
+        from decimal import Decimal
+
+        self.credit_balance = Decimal(str(self.get_balance())) + Decimal(str(amount))
+        tx = CreditTransaction(
+            company_id=self.id,
+            type="recharge",
+            amount=Decimal(str(amount)),
+            balance_after=self.credit_balance,
+            description=description,
+            payment_id=payment_id,
+            payment_method=payment_method,
+            payment_status="approved" if payment_id else None,
+        )
+        db.session.add(tx)
+        return tx
+
+    def debit_call(self, duration_seconds: int, call_sid: str = None):
+        """Debita custo de chamada e registra a transação. Retorna a transação."""
+        from app.models.billing import CreditTransaction
+        from decimal import Decimal
+
+        minutes = Decimal(str(duration_seconds)) / Decimal("60")
+        cost = (minutes * Decimal(str(self.cost_per_minute))).quantize(Decimal("0.0001"))
+
+        self.credit_balance = Decimal(str(self.get_balance())) - cost
+        tx = CreditTransaction(
+            company_id=self.id,
+            type="call_debit",
+            amount=-cost,
+            balance_after=self.credit_balance,
+            description=f"Chamada {duration_seconds}s a R${float(self.cost_per_minute):.4f}/min",
+            call_sid=call_sid,
+            call_duration_seconds=duration_seconds,
+        )
+        db.session.add(tx)
+        return tx

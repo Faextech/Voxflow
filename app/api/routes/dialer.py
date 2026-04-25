@@ -339,12 +339,25 @@ def hangup_lead():
 
         # 3) Limpa estado em memória e retoma o discador
         c_camp_id = item.get("campaign_id")
+        lead_id = item.get("lead_id")
         if conf_name:
-            clear_pending_conference(conf_name)
-            
-        if c_camp_id:
-            from app.api.routes.auto_dialer import resume_auto_dialer_for_campaign
-            resume_auto_dialer_for_campaign(c_camp_id, g.company_id)
+            if conf_name.startswith("agent_bridge_"):
+                item["lead_id"]          = None
+                item["db_call_id"]       = None
+                item["lead_call_sid"]    = None
+                item["audio_bridged"]    = False
+                item["lead_answered_at"] = None
+                item["status"]           = "idle"
+                ACTIVE_CONFERENCES_BY_NAME.pop(conf_name, None)
+        # Resetar o status do lead para 'new' para que o discador automático tente os próximos números.
+        if lead_id:
+            from app.models.lead import Lead
+            lead = Lead.query.filter_by(id=lead_id, company_id=g.company_id).first()
+            if lead and lead.status == "dialing":
+                lead.status = "new"
+                db.session.commit()
+        # O frontend é responsável por decidir quando avançar.
+        pass
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

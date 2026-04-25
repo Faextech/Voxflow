@@ -38,7 +38,7 @@ from app.services.call_bridge import (
     register_pending_conference,
     update_pending_lead_call_sid,
 )
-from app.services.twilio_service import TwilioService, normalize_phone_br
+from app.services.twilio_service import TwilioService, normalize_phone_br, InsufficientCreditError
 
 logger = logging.getLogger(__name__)
 
@@ -325,27 +325,24 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
                 dial_next_in_session(campaign_id, company_id, force=True)
                 return
 
-    # Decide delay
-    if disposition == "answered":
-        logger.info("[EVENT] Chamada %s encerrada (%s) → Pausando campanha para aguardar classificação do operador", call_sid, disposition)
-        sess["status"] = "paused"
-        sess["current_call_sid"] = None
-        # Opcional: Atualizar status da campanha no DB para "paused"
-        try:
-            from app.models.campaign import Campaign
-            campaign = Campaign.query.get(campaign_id)
-            if campaign:
-                campaign.status = "paused"
-                db.session.commit()
-        except:
-            pass
-        return
-
-    if delay is None:
-        delay = 0
-
-    sess["status"]          = "running"
+    # A pedido do cliente: SEMPRE pausa a campanha para aguardar classificação do operador
+    # (seja answered, no_answer, busy, etc. que não pulou para o próximo phone acima)
+    logger.info("[EVENT] Chamada %s encerrada (disposition=%s) → Pausando campanha para aguardar classificação do operador", call_sid, disposition)
+    sess["status"] = "paused"
     sess["current_call_sid"] = None
+    
+    # Atualizar status da campanha no DB para "paused"
+    try:
+        from app.models.campaign import Campaign
+        campaign = Campaign.query.get(campaign_id)
+        if campaign:
+            campaign.status = "paused"
+            db.session.commit()
+    except Exception as exc:
+        logger.error("[EVENT] Erro ao pausar campanha no DB: %s", exc)
+
+    # Não avançamos automaticamente. O frontend (/classified) que vai retomar a campanha.
+    return
 
     logger.info("[EVENT] Chamada %s encerrada (%s) → próxima em %ss", call_sid, disposition, delay)
     _advance(campaign_id, company_id, delay=delay)
@@ -579,10 +576,44 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
             status_callback_method = "POST",
             timeout                = 55,
         )
+    except InsufficientCreditError as credit_err:
+        # Saldo zerado — pausa campanha imediatamente, não tenta próximo lead
+        db.session.rollback()
+        if conf_name.startswith("agent_bridge_"):
+            from app.services.call_bridge import ACTIVE_CONFERENCES_BY_NAME
+            item = ACTIVE_CONFERENCES_BY_NAME.get(conf_name)
+            if item:
+                item["lead_id"] = None
+                item["db_call_id"] = None
+                item["lead_call_sid"] = None
+                item["status"] = "idle"
+                ACTIVE_CONFERENCES_BY_NAME.pop(conf_name, None)
+        else:
+            clear_pending_conference(conf_name)
+        try:
+            lead.status = "new"
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        sess["status"] = "paused"
+        sess["pause_reason"] = "insufficient_credit"
+        logger.warning("[DIALER] Campanha %s pausada — saldo insuficiente: %s", campaign_id, credit_err)
+        return False, str(credit_err)
     except Exception as exc:
         db.session.rollback()
-        clear_pending_conference(conf_name)
-        # Registra telefone como falho para não tentar de novo
+        if conf_name.startswith("agent_bridge_"):
+            from app.services.call_bridge import ACTIVE_CONFERENCES_BY_NAME
+            item = ACTIVE_CONFERENCES_BY_NAME.get(conf_name)
+            if item:
+                item["lead_id"] = None
+                item["db_call_id"] = None
+                item["lead_call_sid"] = None
+                item["status"] = "idle"
+                ACTIVE_CONFERENCES_BY_NAME.pop(conf_name, None)
+        else:
+            clear_pending_conference(conf_name)
+        logger.error("[DIALER] Erro Twilio lead %s (%s): %s", lead.id, phone, exc, exc_info=True)
+        # Registra telefone como falho para não tentar de novo nesta sessão
         try:
             fail = Call(
                 company_id       = company_id,
@@ -600,7 +631,20 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
             db.session.commit()
         except Exception:
             db.session.rollback()
-        logger.error("[DIALER] Erro Twilio lead %s (%s): %s", lead.id, phone, exc)
+        # Pausa a campanha em vez de avançar recursivamente quando há erro de configuração Twilio
+        # (ex: número não verificado, saldo zerado, credenciais inválidas)
+        exc_str = str(exc).lower()
+        is_config_error = any(k in exc_str for k in [
+            "not yet verified", "not verified", "21210",
+            "authentication", "auth", "credentials", "21608",
+            "permission", "account suspended", "account is not active",
+        ])
+        if is_config_error:
+            sess["status"] = "paused"
+            sess["pause_reason"] = "twilio_config_error"
+            sess["pause_detail"] = str(exc)[:300]
+            logger.warning("[DIALER] Campanha %s pausada por erro de configuração Twilio: %s", campaign_id, exc)
+            return False, f"Erro de configuração Twilio: {exc}"
         # Tenta próximo telefone imediatamente (mesmo lead, telefone registrado como falho)
         return _dial_locked(campaign_id, company_id, sess, force=True)
 
@@ -623,7 +667,16 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     _cancel_ring_timer(sess)
 
     all_phones = lead.get_all_phones()
-    phone_idx  = (all_phones.index(phone) + 1) if phone in all_phones else 1
+    
+    # Normaliza a lista para encontrar o índice correto, já que 'phone' já está normalizado
+    norm_all_phones = []
+    for p in all_phones:
+        raw_p = str(p).strip()
+        if raw_p.endswith(".0"):
+            raw_p = raw_p[:-2]
+        norm_all_phones.append(normalize_phone_br(raw_p))
+        
+    phone_idx = (norm_all_phones.index(phone) + 1) if phone in norm_all_phones else 1
 
     sess["status"]               = "ringing"
     sess["current_lead_id"]      = lead.id
@@ -661,10 +714,40 @@ def start_auto():
     if not campaign:
         return jsonify({"error": "Campanha não encontrada"}), 404
 
+    dialable_statuses = [
+        "new", "novo", "tentativa", "tentando", "retry", "callback",
+        "retornar", "qualified", "no_answer", "busy", "failed", "voicemail", "invalid_number"
+    ]
+
+    # Reinício de campanha: reseta leads e histórico de chamadas para poder re-discar
+    is_restart = campaign.status in ("finished", "paused", "stopped")
+    if not is_restart:
+        dialable_count = Lead.query.filter(
+            Lead.campaign_id == campaign_id,
+            Lead.company_id  == g.company_id,
+            Lead.status.in_(dialable_statuses),
+        ).count()
+        is_restart = (dialable_count == 0)
+
+    if is_restart:
+        reset_statuses = ["completed", "exhausted", "answered", "contacted", "converted", "dialing", "invalid", "failed", "no_answer"]
+        Lead.query.filter(
+            Lead.campaign_id == campaign_id,
+            Lead.company_id  == g.company_id,
+            Lead.status.in_(reset_statuses),
+        ).update({"status": "new"}, synchronize_session=False)
+        # Marca chamadas antigas como "reset" para _phones_tried ignorá-las
+        Call.query.filter(
+            Call.campaign_id == campaign_id,
+            Call.company_id  == g.company_id,
+        ).update({"status": "reset"}, synchronize_session=False)
+        db.session.flush()
+        logger.info("[START] Campanha %s reiniciada — leads e histórico de chamadas resetados", campaign_id)
+
     leads_total = Lead.query.filter(
         Lead.campaign_id == campaign_id,
         Lead.company_id  == g.company_id,
-        Lead.status.in_(["new", "novo"]),
+        Lead.status.in_(dialable_statuses),
     ).count()
 
     AUTO_DIALER_SESSIONS[campaign_id] = _new_session(
@@ -1113,4 +1196,6 @@ def auto_status(campaign_id):
         "progress_percent":     progress,
         "active_call":          active_call_data,
         "started_at":           (sess or {}).get("started_at"),
+        "pause_reason":         (sess or {}).get("pause_reason"),
+        "pause_detail":         (sess or {}).get("pause_detail"),
     }), 200

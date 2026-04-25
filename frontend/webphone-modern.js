@@ -1589,15 +1589,27 @@ window.savePremiumCRM = async function() {
         if (document.getElementById('premiumNotes')) document.getElementById('premiumNotes').value = "";
         if (document.getElementById('premiumStageId')) document.getElementById('premiumStageId').value = "";
 
-        // Dismiss popup
+        // NOVO COMPORTAMENTO: Desligar e Próximo
+        // 1. Encerrar a ligação
+        try {
+            const confName = pendingConferenceData?.conference_name || (typeof currentPopupConferenceName !== 'undefined' ? currentPopupConferenceName : null);
+            if (confName) {
+                await fetch('/api/dialer/hangup-lead', {
+                    method: 'POST',
+                    headers: _authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ conference_name: confName, agent_id: agentId })
+                });
+            }
+        } catch (e) {
+            console.error("Erro ao desligar chamada no Desligar e Próximo:", e);
+        }
+
+        // 2. Fechar o popup
         if (typeof window.dismissPendingConference === 'function') {
             window.dismissPendingConference();
         }
 
-        // AVANÇO based on disposition (advance_action from backend)
-        // REGRAS:
-        // - Cx Postal / Não Atendeu / Inválido → próximo NÚMERO do mesmo lead
-        // - Atendeu → NÃO avança, operador clica manualmente em "Próximo Lead"
+        // 3. Avançar automaticamente
         const advanceAction = data?.advance_action;
         
         if (advanceAction === "next_phone") {
@@ -1605,11 +1617,17 @@ window.savePremiumCRM = async function() {
             log("📱 Avançando para próximo número do mesmo lead...");
             if (typeof window.skipToNextPhone === 'function') {
                 await window.skipToNextPhone();
+            } else if (typeof window.dialerOverlaySkipPhone === 'function') {
+                await window.dialerOverlaySkipPhone();
             }
         } else {
-            // Atendeu / Qualificação positiva → NÃO avança automaticamente!
-            // O operador deve clicar manualmente em "Próximo Lead" quando quiser
-            log("✅ Lead marcado como contactado. Clique em 'Próximo Lead' quando quiser avançar.");
+            // Avançar para o próximo lead
+            log("🚀 Avançando para o próximo lead da lista...");
+            if (typeof window.dialerOverlayNext === 'function') {
+                await window.dialerOverlayNext();
+            } else {
+                log("⚠️ Função dialerOverlayNext não encontrada para avançar.");
+            }
         }
 
     } catch (err) {
