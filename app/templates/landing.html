@@ -112,7 +112,8 @@
                 </nav>
 
                 <!-- CTA Desktop -->
-                <div class="hidden md:flex items-center space-x-4">
+                <div class="hidden md:flex items-center space-x-3">
+                    <a href="/login" class="text-slate-600 font-medium hover:text-navy-800 px-3 py-2 transition-colors">Entrar</a>
                     <a href="https://wa.me/5500000000000" target="_blank" class="text-slate-700 font-medium hover:text-navy-800 px-3 py-2 border border-slate-300 rounded-lg hover:border-slate-400 transition-all">Falar com consultor</a>
                     <a href="/login" class="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-all hover:shadow-glow">Começar agora</a>
                 </div>
@@ -135,6 +136,7 @@
                 <a href="#planos" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Planos</a>
                 <a href="#depoimentos" @click="mobileMenuOpen = false" class="block px-3 py-3 text-base font-medium text-slate-700 hover:text-navy-800 hover:bg-slate-50 rounded-md">Depoimentos</a>
                 <div class="pt-4 flex flex-col space-y-3 px-3">
+                    <a href="/login" class="text-center text-slate-700 font-medium px-4 py-2 bg-slate-100 rounded-lg">Entrar na minha conta</a>
                     <a href="https://wa.me/5500000000000" target="_blank" class="text-center text-slate-700 font-medium px-4 py-3 border border-slate-300 rounded-lg">Falar com consultor</a>
                     <a href="/login" class="text-center bg-brand-500 text-white font-semibold px-4 py-3 rounded-lg">Começar agora</a>
                 </div>
@@ -598,7 +600,7 @@
                     </button>
                     <div x-show="expanded" x-collapse>
                         <div class="px-6 pb-4 text-slate-600 bg-white">
-                            Cobramos uma assinatura fixa pelo uso da plataforma (Dashboard, CRM, Discador) de acordo com o plano escolhido. Os custos das ligações são cobrados a parte, adicionando créditos diretamente pela plataforma da Twilio ou via nossa interface, garantindo o melhor custo por minuto do mercado.
+                            Cobramos uma assinatura fixa pelo uso da plataforma de acordo com o plano escolhido. Os minutos de ligação são adquiridos diretamente dentro do NexDial, de forma simples e transparente, sem precisar acessar nenhum outro sistema.
                         </div>
                     </div>
                 </div>
@@ -611,7 +613,7 @@
                     </button>
                     <div x-show="expanded" x-collapse>
                         <div class="px-6 pb-4 text-slate-600 bg-white">
-                            Não! O NexDial funciona 100% na nuvem através do navegador. Seus operadores só precisam de um computador com internet, navegador atualizado (Google Chrome recomendado) e um headset.
+                            Não! O NexDial funciona 100% na nuvem pelo navegador. Seus operadores precisam apenas de um computador com internet, navegador atualizado (Google Chrome recomendado) e um headset.
                         </div>
                     </div>
                 </div>
@@ -624,7 +626,7 @@
                     </button>
                     <div x-show="expanded" x-collapse>
                         <div class="px-6 pb-4 text-slate-600 bg-white">
-                            Sim, você pode importar suas planilhas (CSV ou Excel) de forma rápida e mapear as colunas diretamente na nossa interface para garantir que nenhum dado importante se perca.
+                            Sim! Você pode importar planilhas em CSV ou Excel e mapear as colunas diretamente na nossa interface, garantindo que nenhum dado importante se perca.
                         </div>
                     </div>
                 </div>
@@ -650,7 +652,7 @@
                     </button>
                     <div x-show="expanded" x-collapse>
                         <div class="px-6 pb-4 text-slate-600 bg-white">
-                            Nós utilizamos a infraestrutura robusta da Twilio como motor de telefonia. Isso significa que você terá estabilidade global e roteamento inteligente independente da operadora de destino do seu cliente.
+                            Sim. Utilizamos uma infraestrutura robusta de telefonia em nuvem que garante estabilidade e roteamento inteligente independente da operadora do seu cliente.
                         </div>
                     </div>
                 </div>
@@ -663,7 +665,7 @@
                     </button>
                     <div x-show="expanded" x-collapse>
                         <div class="px-6 pb-4 text-slate-600 bg-white">
-                            Oferecemos suporte por chat e e-mail em horário comercial para todos os planos. Clientes do plano Pro e Enterprise possuem suporte prioritário e SLA garantido para resposta.
+                            Oferecemos suporte por chat e e-mail em horário comercial para todos os planos. Clientes Pro e Enterprise possuem suporte prioritário com tempo de resposta garantido.
                         </div>
                     </div>
                 </div>
@@ -675,7 +677,7 @@
     <section class="py-20 hero-gradient relative overflow-hidden">
         <div class="max-w-4xl mx-auto px-4 text-center relative z-10 fade-up">
             <h2 class="text-4xl font-extrabold text-white mb-6">Pronto para transformar sua operação?</h2>
-            <p class="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">Fale com um consultor, veja uma demonstração ao vivo e descubra como podemos ajudar sua equipe a vender mais hoje.</p>
+            <p class="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">Fale com um consultor, veja uma demonstração ao vivo e descubra como o NexDial pode ajudar sua equipe a vender mais hoje.</p>
             
             <a href="https://wa.me/5500000000000" target="_blank" class="inline-flex items-center justify-center px-10 py-5 text-xl font-bold rounded-xl text-white bg-brand-500 hover:bg-brand-600 shadow-glow transition-all hover:-translate-y-1 mb-8">
                 Quero uma demonstração gratuita <i data-lucide="arrow-right" class="ml-2 h-6 w-6"></i>
