@@ -167,8 +167,19 @@ def save_crm():
     if call:
         if qualification:
             call.disposition = qualification
-        if call.status in ["queued", "ringing"]:
-            call.status = "completed"
+            q_lower = qualification.lower().strip()
+            if q_lower in ("voicemail", "caixa_postal", "caixa postal"):
+                call.status = "voicemail"
+            elif q_lower in ("nao_atendeu", "nao atendeu", "no_answer"):
+                call.status = "no_answer"
+            elif q_lower in ("numero_invalido", "numero invalido"):
+                call.status = "failed"
+            elif q_lower in ("busy", "ocupado"):
+                call.status = "busy"
+        
+        if call.status in ["queued", "ringing", "in-progress", "answered_waiting_agent", "agent_joining"]:
+            call.status = "completed"  # Fallback apenas se não foi classificado como algo específico acima
+        
         if not call.ended_at:
             call.ended_at = datetime.utcnow()
 
@@ -176,12 +187,36 @@ def save_crm():
 
     # Mover deal para etapa selecionada pelo operador no popup
     deal_moved = None
-    if stage_id:
-        try:
-            from app.models.deal import Deal
-            from app.models.pipeline import PipelineStage
-            from app.services.crm_service import move_to_stage
+    try:
+        from app.models.deal import Deal
+        from app.models.pipeline import PipelineStage
+        from app.services.crm_service import move_to_stage
 
+        # Se o operador não selecionou um stage específico, tenta deduzir pelo nome da qualification
+        if qualification and not stage_id:
+            deal_to_check = Deal.query.filter_by(lead_id=lead.id, company_id=g.company_id, status="open").order_by(Deal.created_at.desc()).first()
+            if deal_to_check and deal_to_check.pipeline_id:
+                qual_lower = qualification.lower().strip()
+                # Mapeamento heurístico comum de "qualification" -> "stage name"
+                qual_to_stage_map = {
+                    "caixa_postal": "caixa postal",
+                    "nao_atendeu": "não atendeu",
+                    "atendeu": "contato",
+                    "reuniao_agendada": "reunião",
+                    "ganho": "ganho"
+                }
+                search_name = qual_to_stage_map.get(qual_lower, qual_lower)
+                
+                # Busca etapa que contenha o nome na mesma pipeline
+                inferred_stage = PipelineStage.query.filter(
+                    PipelineStage.pipeline_id == deal_to_check.pipeline_id,
+                    db.func.lower(PipelineStage.name).like(f"%{search_name}%")
+                ).first()
+                if inferred_stage:
+                    stage_id = inferred_stage.id
+                    logger.info(f"[SAVE_CRM] Etapa deduzida automaticamente para '{search_name}': ID {stage_id}")
+
+        if stage_id:
             target_stage = PipelineStage.query.filter_by(
                 id=stage_id, company_id=g.company_id
             ).first()
@@ -196,8 +231,8 @@ def save_crm():
                 if deal:
                     move_to_stage(deal, target_stage, triggered_by="agent")
                     deal_moved = {"deal_id": deal.id, "stage": target_stage.name}
-        except Exception:
-            pass  # nunca travar o save_crm por erro de pipeline
+    except Exception as e:
+        logger.warning(f"[SAVE_CRM] Erro ao mover pipeline: {e}")
 
     db.session.commit()
 
@@ -230,7 +265,8 @@ def save_crm():
             if company:
                 svc = TwilioService.from_company(company)
                 svc.client.calls(call.call_sid).update(status="completed")
-                call.status = "completed"
+                if call.status not in ("voicemail", "no_answer", "failed", "busy"):
+                    call.status = "completed"
                 call.ended_at = datetime.utcnow()
                 db.session.commit()
                 hung_up = True
@@ -429,8 +465,9 @@ def schedule_callback():
 def skip_phone():
     """
     Pula para o próximo telefone do lead.
-    Agora chama a API do discador automático para discar o próximo número.
-    Body: { "agent_id": 1, "lead_id": 2 }
+    Marca a chamada atual como no_answer antes de discar o próximo número,
+    garantindo que _phones_tried() exclua o número atual corretamente.
+    Body: { "agent_id": 1, "lead_id": 2, "campaign_id": 3 }
     """
     data = request.get_json(silent=True) or {}
     agent_id = data.get("agent_id")
@@ -445,20 +482,68 @@ def skip_phone():
     if not agent:
         return jsonify({"error": "Agente não encontrado"}), 404
 
-    # Se há campaign_id, usa a API do discador automático
+    # Se há campaign_id, usa a lógica completa do discador
     if campaign_id:
         try:
-            # Limpa bridge ANTES de discar novo número para evitar conflito de estado
-            from app.services.call_bridge import clear_pending_conference, ACTIVE_CONFERENCES_BY_AGENT
-            agent = Agent.query.filter_by(id=agent_id, company_id=g.company_id).first()
-            if agent:
-                old_item = ACTIVE_CONFERENCES_BY_AGENT.get(agent_id)
-                if old_item:
-                    logger.info(f"[SKIP_PHONE] Limpando bridge antiga do agente {agent_id}")
-                    clear_pending_conference(old_item.get("conference_name"))
-            
-            from app.api.routes.auto_dialer import dial_next_in_session
-            ok, msg = dial_next_in_session(campaign_id, g.company_id, force=True)
+            from app.services.call_bridge import clear_pending_conference, ACTIVE_CONFERENCES_BY_AGENT, ACTIVE_CONFERENCES_BY_NAME
+            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS, dial_next_in_session, _cancel_ring_timer
+
+            sess = AUTO_DIALER_SESSIONS.get(int(campaign_id))
+
+            # 1. Cancela timer de ring
+            if sess:
+                _cancel_ring_timer(sess)
+
+            # 2. CRÍTICO: marca a chamada ativa como no_answer para que
+            #    _phones_tried() a exclua e não repita o mesmo número
+            current_call = Call.query.filter(
+                Call.lead_id     == lead_id,
+                Call.campaign_id == campaign_id,
+                Call.status.in_(["ringing", "dialing", "waiting_agent"]),
+            ).order_by(Call.created_at.desc()).first()
+
+            if current_call:
+                # Cancela no Twilio também
+                try:
+                    if current_call.call_sid:
+                        from app.models.company import Company
+                        from app.services.twilio_service import TwilioService
+                        company = Company.query.get(g.company_id)
+                        if company:
+                            svc = TwilioService.from_company(company)
+                            svc.client.calls(current_call.call_sid).update(status="completed")
+                except Exception as e_tw:
+                    logger.warning(f"[SKIP_PHONE] Erro ao cancelar Twilio: {e_tw}")
+
+                current_call.status   = "no_answer"
+                current_call.ended_at = datetime.utcnow()
+                db.session.commit()
+                logger.info(f"[SKIP_PHONE] Chamada {current_call.id} marcada como no_answer")
+
+            # 3. Limpa bridge do agente (preserva agent_leg, limpa dados do lead)
+            old_item = ACTIVE_CONFERENCES_BY_AGENT.get(int(agent_id))
+            if old_item:
+                conf_name = old_item.get("conference_name", "")
+                if conf_name.startswith("agent_bridge_"):
+                    old_item["lead_id"]          = None
+                    old_item["db_call_id"]       = None
+                    old_item["lead_call_sid"]    = None
+                    old_item["audio_bridged"]    = False
+                    old_item["lead_answered_at"] = None
+                    old_item["status"]           = "idle"
+                    ACTIVE_CONFERENCES_BY_NAME.pop(conf_name, None)
+                    logger.info(f"[SKIP_PHONE] Bridge {conf_name} limpa (lead removido, ponte mantida)")
+                else:
+                    clear_pending_conference(conf_name)
+                    logger.info(f"[SKIP_PHONE] Conference {conf_name} limpa")
+
+            # 4. Reseta sessão e disca próximo número
+            if sess:
+                sess["status"]           = "running"
+                sess["current_lead_id"]  = None
+                sess["current_call_sid"] = None
+
+            ok, msg = dial_next_in_session(int(campaign_id), g.company_id, force=True)
             logger.info(f"[SKIP_PHONE] Discador automático: ok={ok}, msg={msg}")
             return jsonify({
                 "message": "Discando próximo número",

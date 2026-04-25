@@ -1,33 +1,40 @@
-# Framework Web
+# ─── Framework Web ───────────────────────────────────────────────────────────
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
 Flask-CORS==4.0.0
+Flask-Migrate==4.0.7
 
-# Banco de Dados (SQLite para desenvolvimento)
+# ─── Banco de Dados ──────────────────────────────────────────────────────────
 SQLAlchemy==2.0.48
+# PostgreSQL (produção — Railway, Supabase, Neon, RDS)
+psycopg2-binary==2.9.9
 
-# Autenticação e Segurança
+# ─── Autenticação e Segurança ────────────────────────────────────────────────
 PyJWT==2.10.1
 bcrypt==4.1.2
 python-dotenv==1.0.0
+cryptography==41.0.7
 
-# Twilio
+# ─── Twilio ──────────────────────────────────────────────────────────────────
 twilio==8.10.0
 
-# Produção
+# ─── Produção ────────────────────────────────────────────────────────────────
+# Nota: workers=1 + threads para manter estado em memória consistente
+# (AUTO_DIALER_SESSIONS, ACTIVE_CONFERENCES_BY_AGENT são dicts em memória)
 gunicorn==21.2.0
+# Serve arquivos estáticos com eficiência (sem Nginx separado)
 whitenoise==6.6.0
 
-# Validação
+# ─── Validação ───────────────────────────────────────────────────────────────
 email-validator==2.1.0
 python-dateutil==2.8.2
 
-# Logging e Monitoring
+# ─── Logging e Monitoramento ─────────────────────────────────────────────────
 python-json-logger==2.0.7
 
-# Segurança adicional
-cryptography==41.0.7
+# ─── HTTP e Utilitários ──────────────────────────────────────────────────────
 requests==2.31.0
-
-# Utilities
 click==8.1.7
+
+# ─── Pagamento ───────────────────────────────────────────────────────────────
+mercadopago==2.3.0

@@ -28,6 +28,126 @@ let pendingConferencePoller = null;
 let operatorStatePoller = null;
 let lastOperatorCallStatus = null;
 let webphoneLastPopupOpenTime = 0;
+
+// Rastreamento de estado da campanha para log em tempo real
+let _lastLoggedCampaignLeadId = null;
+let _lastLoggedCampaignStatus = null;
+
+// Lead cujo popup foi dispensado manualmente durante a chamada (não reabre enquanto chamada ativa)
+let _dismissedLeadId = null;
+
+// Grace period: mantém popup aberto N segundos após lead desligar para classificar
+const CLASSIFICATION_GRACE_SECONDS = 35;
+let _graceActive = false;
+let _graceTimer  = null;
+
+function _startClassificationGrace() {
+    if (_graceActive) return;
+    _graceActive = true;
+    let remaining = CLASSIFICATION_GRACE_SECONDS;
+    window.dispatchEvent(new CustomEvent('nexdial:classification_grace', { detail: { seconds: remaining } }));
+    _graceTimer = setInterval(() => {
+        remaining--;
+        window.dispatchEvent(new CustomEvent('nexdial:classification_grace', { detail: { seconds: remaining } }));
+        if (remaining <= 0) _endClassificationGrace();
+    }, 1000);
+}
+
+function _endClassificationGrace() {
+    _graceActive = false;
+    if (_graceTimer) { clearInterval(_graceTimer); _graceTimer = null; }
+    window.dispatchEvent(new CustomEvent('nexdial:classification_grace', { detail: { seconds: 0 } }));
+    if (popupOpen) hidePendingConferencePopup(true);
+}
+
+function _ts() {
+    return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function updateCampaignLog(data) {
+    const leadId = data?.lead_id;
+    const status = data?.status || '';
+    const leadName  = data?.lead?.name  || '';
+    const leadPhone = data?.lead?.phone || data?.phone_number || '';
+    const label = leadName ? `${leadName}${leadPhone ? ' (' + leadPhone + ')' : ''}` : leadPhone || 'Lead';
+
+    // Lead novo — reseta rastreamento
+    if (leadId && leadId !== _lastLoggedCampaignLeadId) {
+        _lastLoggedCampaignLeadId = leadId;
+        _lastLoggedCampaignStatus = null;
+    }
+
+    if (!data?.has_call) {
+        if (_lastLoggedCampaignStatus !== null && _lastLoggedCampaignStatus !== 'idle') {
+            const msg = `[${_ts()}] 📴 Chamada encerrada`;
+            log(msg);
+            _hubLog(msg);
+            _lastLoggedCampaignStatus = 'idle';
+        }
+        _updateCampaignStatusBox('idle', '');
+        return;
+    }
+
+    if (status === _lastLoggedCampaignStatus) return;
+    _lastLoggedCampaignStatus = status;
+
+    const msgs = {
+        'ringing_lead':           `[${_ts()}] 🔔 Discando ${label}...`,
+        'answered_waiting_agent': `[${_ts()}] ✅ ${label} atendeu!`,
+        'agent_joining':          `[${_ts()}] 🎙️ Conectando áudio com ${label}...`,
+        'agent_joined':           `[${_ts()}] 🎙️ Em conversa com ${label}`,
+        'machine_dropped':        `[${_ts()}] 🤖 Caixa postal detectada — pulando`,
+        'no_answer':              `[${_ts()}] ❌ Sem resposta — ${label}`,
+    };
+    if (msgs[status]) {
+        log(msgs[status]);
+        _hubLog(msgs[status]);
+    }
+
+    _updateCampaignStatusBox(status, label);
+}
+
+function _hubLog(msg) {
+    const box = document.getElementById('hubLogBox');
+    if (!box) return;
+    box.textContent = msg + '\n' + box.textContent;
+}
+
+function _updateCampaignStatusBox(status, label) {
+    const box = document.getElementById('campaignStatusBox');
+    if (!box) return;
+    const icons = {
+        'ringing_lead':           '🔔',
+        'answered_waiting_agent': '✅',
+        'agent_joining':          '🎙️',
+        'agent_joined':           '🎙️',
+        'machine_dropped':        '🤖',
+        'no_answer':              '❌',
+        'idle':                   '⏳',
+    };
+    const labels = {
+        'ringing_lead':           `Discando ${label}`,
+        'answered_waiting_agent': `Atendeu: ${label}`,
+        'agent_joining':          `Conectando: ${label}`,
+        'agent_joined':           `Em conversa: ${label}`,
+        'machine_dropped':        'Caixa postal — pulando',
+        'no_answer':              `Sem resposta: ${label}`,
+        'idle':                   'Aguardando próximo lead...',
+    };
+    const colors = {
+        'ringing_lead':           '#f59e0b',
+        'answered_waiting_agent': '#22c55e',
+        'agent_joining':          '#22c55e',
+        'agent_joined':           '#22c55e',
+        'machine_dropped':        '#94a3b8',
+        'no_answer':              '#ef4444',
+        'idle':                   '#475569',
+    };
+    box.textContent = `${icons[status] || '•'} ${labels[status] || status}`;
+    box.style.borderColor = colors[status] || '#334155';
+    box.style.color       = colors[status] || '#94a3b8';
+}
+
 // Verdadeiro somente após device.on("registered") — evita beep antes de iniciar webphone
 let webphoneInitialized = false;
 // Timestamp (ms) em que o device ficou registrado — usado para ignorar bipes no primeiro ciclo
@@ -472,14 +592,21 @@ function hidePendingConferencePopup(resetConference = false) {
   conferenceAnswerInProgress = false;
   pendingConferenceData = null;
 
+  // Cancela grace period se o operador fechou manualmente antes do tempo
+  if (_graceActive) {
+      _graceActive = false;
+      if (_graceTimer) { clearInterval(_graceTimer); _graceTimer = null; }
+      window.dispatchEvent(new CustomEvent('nexdial:classification_grace', { detail: { seconds: 0 } }));
+  }
+
   if (resetConference) {
-    if (currentPopupConferenceName) {
-      dismissedConferences.add(currentPopupConferenceName);
+    if (dataToCleanup?.call_id) {
+      dismissedConferences.add(`call_${dataToCleanup.call_id}`);
     }
 
-    // Bug #2: Atualiza cooldown para o próximo lead usando os dados capturados
+    // Cooldown para evitar re-abertura imediata da mesma chamada
     if (dataToCleanup) {
-        lastLeadIdCooldown = dataToCleanup.lead_id;
+        lastCallIdCooldown = dataToCleanup.call_id;
         lastLeadTimestampCooldown = Date.now();
     }
 
@@ -688,8 +815,9 @@ async function joinConferenceFromUserClick() {
 
 async function dismissPendingConference() {
   log("Popup minimizado/fechado pelo operador.");
-  // Não passamos resetConference=true para que o estado interno do webphone
-  // saiba que ainda há uma conference ativa se for o caso.
+  // Marca esta chamada como dispensada: o popup não reabre enquanto a chamada ainda estiver ativa.
+  // Quando o lead desligar (!has_call), o flag é limpo sem abrir grace period.
+  _dismissedCallId = pendingConferenceData?.call_id ?? null;
   hidePendingConferencePopup(false);
   
   // Apenas fecha o modal visualmente no dashboard
@@ -706,16 +834,19 @@ async function dismissPendingConference() {
 async function skipToNextPhone() {
   try {
     const agentId = getAgentId();
-    const leadId = currentWorkspace?.current_lead?.id;
-    const campaignId = currentWorkspace?.current_campaign?.id || localStorage.getItem('current_campaign_id');
-    
+    const leadId = pendingConferenceData?.lead_id
+                || currentWorkspace?.current_lead?.id;
+    const campaignId = pendingConferenceData?.campaign_id
+                    || currentWorkspace?.current_campaign?.id
+                    || localStorage.getItem('current_campaign_id');
+
     if (!leadId) {
       log("Nenhum lead loaded para pular número");
       return;
     }
-    
-    log("Pular para próximo telefone do lead...");
-    
+
+    log("Pular para próximo lead...");
+
     // Chamar API para pular número (agora com campaign_id para discador automático)
     const response = await fetch("/api/operator/workspace/skip_phone", {
       method: "POST",
@@ -1248,15 +1379,15 @@ async function pollPendingConference() {
     if (!response.ok) return;
 
     // Bug #2: Loop Infinito "Aguardando ciclo de limpeza"
-    // Só aguardar se o cooldown ainda está ativo E o lead atual é o mesmo que saiu
-    if (!popupOpen && !pendingConferenceData && lastLeadIdCooldown && Date.now() - lastLeadTimestampCooldown < COOLDOWN_MS) {
-        const currentLeadId = data?.lead?.id || data?.lead_id;
-        if (!currentLeadId || currentLeadId === lastLeadIdCooldown) {
+    // Só aguardar se o cooldown ainda está ativo E a chamada atual é a mesma que saiu
+    if (!popupOpen && !pendingConferenceData && lastCallIdCooldown && Date.now() - lastLeadTimestampCooldown < COOLDOWN_MS) {
+        const currentCallId = data?.call_id || data?.db_call_id;
+        if (!currentCallId || currentCallId === lastCallIdCooldown) {
             // log(`⏳ Aguardando ciclo de limpeza...`);
             return;
         }
-        // Lead diferente chegou — resetar cooldown e deixar passar
-        lastLeadIdCooldown = null;
+        // Chamada diferente chegou — resetar cooldown e deixar passar
+        lastCallIdCooldown = null;
         lastLeadTimestampCooldown = 0;
     }
 
@@ -1273,13 +1404,24 @@ async function pollPendingConference() {
 
     // 1. Verificação de chamada finalizada (has_call = false)
     if (!data?.has_call) {
-      if (popupOpen) {
-          log("📴 nuclear-close: Chamada finalizada detectada no poller — fechando popup imediatamente.");
-          // Se has_call é falso no backend, não há motivo para manter o estado de resposta ou popup
+      if (_dismissedCallId !== null) {
+          // Operador já dispensou o popup durante a chamada: não abre grace, apenas limpa
+          _dismissedCallId = null;
+      } else if (popupOpen && !_graceActive) {
+          // Popup ainda estava aberto: inicia grace period para classificar
           conferenceAnswerInProgress = false;
-          hidePendingConferencePopup(true);
+          log(`📴 Lead desligou — ${CLASSIFICATION_GRACE_SECONDS}s para classificar`);
+          _startClassificationGrace();
       }
+      updateCampaignLog(data);
       return;
+    }
+
+    // Novo lead chegou durante grace period: cancela grace e deixa popup atualizar
+    if (_graceActive) {
+        _graceActive = false;
+        if (_graceTimer) { clearInterval(_graceTimer); _graceTimer = null; }
+        window.dispatchEvent(new CustomEvent('nexdial:classification_grace', { detail: { seconds: 0 } }));
     }
 
     // 2. Verificação de Popup (show_popup = true ou status crítico)
@@ -1290,9 +1432,19 @@ async function pollPendingConference() {
       // DEBUG: Logar dados recebidos
       console.log('[POPUP-DEBUG] show_popup:', data.show_popup, 'status:', data.status, 'lead:', leadData.name, 'conf:', conferenceName);
 
-      if (dismissedConferences.has(conferenceName)) {
-        console.log('[POPUP-DEBUG] Conference', conferenceName, 'foi dispensada anteriormente — ignorando');
+      const currentCallId = data?.call_id || data?.db_call_id;
+      if (currentCallId && dismissedConferences.has(`call_${currentCallId}`)) {
+        console.log('[POPUP-DEBUG] Chamada', currentCallId, 'foi dispensada anteriormente — ignorando');
         return;
+      }
+
+      // Operador fechou popup durante chamada ativa: não reabre enquanto for a mesma chamada
+      if (currentCallId && currentCallId === _dismissedCallId) {
+        return;
+      }
+      // Nova chamada chegou: limpa o flag de dispensado
+      if (currentCallId && currentCallId !== _dismissedCallId) {
+        _dismissedCallId = null;
       }
 
       const isNewForPopup = currentPopupConferenceName !== conferenceName;
@@ -1301,10 +1453,10 @@ async function pollPendingConference() {
       // Normalização para manter compatibilidade com outras partes do sistema
       pendingConferenceData = {
           ...data,
-          lead_id: leadData.id,
+          lead_id: leadData.id || data.lead_id,
           lead_name: leadData.name,
           phone_number: leadData.phone,
-          campaign_id: leadData.campaign_id
+          campaign_id: data.campaign_id || leadData.campaign_id
       };
 
       // 🔥 DISPARO CRÍTICO: Se mudou para answered_waiting_agent, forçamos o popup!
@@ -1338,13 +1490,11 @@ async function pollPendingConference() {
     }
 
     // ── MANUTENÇÃO CONTÍNUA DO ÁUDIO DA PONTE PERSISTENTE ────────────────────
-    // Chamado a cada 800ms enquanto houver chamada ativa com audio_bridged=true.
-    // Garante que o pipeline de áudio seja retomado mesmo que o elemento de áudio
-    // tenha sido criado APÓS o `accept` event ou APÓS o popup abrir.
-    // Se o áudio já estiver tocando, `play()` retorna imediatamente (no-op).
     if (data.has_call && data.audio_bridged && activeCall) {
         resumeTwilioAudioPipeline();
     }
+
+    updateCampaignLog(data);
 
   } catch (error) {
     console.error("Erro no polling:", error);

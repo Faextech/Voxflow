@@ -6,6 +6,7 @@
     <title>NexDial - Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #ffffff;
@@ -847,6 +848,7 @@
             <div class="menu-title">Principal</div>
             <div class="menu">
                 <button class="menu-link active" data-section="dashboard">Dashboard</button>
+                <button class="menu-link" data-section="analytics">Analytics</button>
                 <button class="menu-link admin-only" data-section="supervisor" style="display:none;">Supervisor</button>
                 <button class="menu-link" data-section="campaigns">Campanhas</button>
                 <button class="menu-link" data-section="leads">Leads</button>
@@ -870,7 +872,7 @@
             <div class="menu-title">Sistema</div>
             <div class="menu">
                 <button class="menu-link" data-section="users">Usuários</button>
-                <button class="menu-link" data-section="settings">Configurações</button>
+                <button class="menu-link admin-only" data-section="settings">Configurações</button>
             </div>
 
             <div style="margin-top:auto; padding:12px 16px; border-top:1px solid rgba(255,255,255,.05); font-size:12px; color:#5a6480;">
@@ -1444,6 +1446,130 @@
                 </div>
             </section>
 
+            <!-- ── ANALYTICS CRM ── -->
+            <section id="section-analytics" class="content-section">
+
+                <!-- Filtros de período -->
+                <div class="panel" style="padding:14px 20px; margin-bottom:18px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Período</span>
+                        <button class="btn btn-secondary analytics-period active" data-period="month" onclick="setAnalyticsPeriod(this)">30 dias</button>
+                        <button class="btn btn-secondary analytics-period" data-period="week" onclick="setAnalyticsPeriod(this)">7 dias</button>
+                        <button class="btn btn-secondary analytics-period" data-period="day" onclick="setAnalyticsPeriod(this)">Hoje</button>
+                        <button class="btn btn-secondary analytics-period" data-period="custom" onclick="setAnalyticsPeriod(this)">Personalizado</button>
+                        <div id="an-custom-range" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <input type="date" id="an-date-from" style="background:#1e2330;border:1px solid rgba(255,255,255,.12);color:#e2e8f4;padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
+                            <span style="color:var(--muted);">até</span>
+                            <input type="date" id="an-date-to" style="background:#1e2330;border:1px solid rgba(255,255,255,.12);color:#e2e8f4;padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
+                            <button class="btn btn-primary" onclick="loadAnalytics()" style="font-size:12px;padding:8px 14px;">Aplicar</button>
+                        </div>
+                        <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12px;color:var(--muted);">Pipeline:</span>
+                            <select id="an-pipeline" onchange="loadFunnelOnly()" style="background:#1e2330;border:1px solid rgba(255,255,255,.12);color:#e2e8f4;padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPIs — linha 1: Deals -->
+                <div class="cards" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(34,197,94,.06); border:1px solid rgba(34,197,94,.18);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22c55e;margin-bottom:8px;">Contratos Fechados</div>
+                        <div id="an-won" style="font-size:32px;font-weight:800;color:#22c55e;">0</div>
+                        <div style="font-size:11px;font-weight:700;color:#22c55e;margin-top:6px;letter-spacing:.04em;">FATURADO</div>
+                        <div id="an-revenue" style="font-size:18px;font-weight:800;color:#4ade80;margin-top:2px;">R$ 0</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.18);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#ef4444;margin-bottom:8px;">Contratos Perdidos</div>
+                        <div id="an-lost" style="font-size:32px;font-weight:800;color:#ef4444;">0</div>
+                        <div style="font-size:11px;font-weight:700;color:#ef4444;margin-top:6px;letter-spacing:.04em;">VALOR PERDIDO</div>
+                        <div id="an-lost-value" style="font-size:18px;font-weight:800;color:#f87171;margin-top:2px;">R$ 0</div>
+                        <div id="an-open" style="font-size:11px;color:var(--muted);margin-top:4px;">0 em aberto</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Taxa de Conversão</div>
+                        <div id="an-conv-rate" style="font-size:32px;font-weight:800;color:var(--primary);">0%</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">ganhos ÷ (ganhos+perdidos)</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Ticket Médio</div>
+                        <div id="an-avg-ticket" style="font-size:32px;font-weight:800;color:#f59e0b;">R$ 0</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">valor médio dos ganhos</div>
+                    </div>
+                </div>
+
+                <!-- KPIs — linha 2: Operação -->
+                <div class="cards" style="grid-template-columns:repeat(4,1fr); margin-bottom:20px;">
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Leads no Período</div>
+                        <div id="an-leads-total" style="font-size:32px;font-weight:800;">0</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">novos leads criados</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Chamadas Realizadas</div>
+                        <div id="an-calls-total" style="font-size:32px;font-weight:800;">0</div>
+                        <div id="an-answered" style="font-size:12px;color:var(--muted);margin-top:4px;">0 atendidas</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Taxa de Contato</div>
+                        <div id="an-contact-rate" style="font-size:32px;font-weight:800;color:#3b82f6;">0%</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">chamadas atendidas</div>
+                    </div>
+                    <div class="card" style="padding:18px 20px; border-radius:var(--radius-lg); background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Tempo p/ Fechar</div>
+                        <div id="an-avg-days" style="font-size:32px;font-weight:800;">— dias</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:4px;">média de lead → ganho</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos — linha 1: Evolução + Funil -->
+                <div class="grid-2" style="margin-bottom:20px;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h3>Evolução no período</h3><p>Volume diário de leads, chamadas e conversões.</p></div>
+                        </div>
+                        <div style="position:relative; height:240px;">
+                            <canvas id="an-chart-timeline"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h3>Funil de vendas</h3><p>Deals por etapa no período selecionado.</p></div>
+                        </div>
+                        <div id="an-funnel-container" style="padding:8px 4px; min-height:240px; overflow-y:auto;">
+                            <p class="empty">Carregando funil...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos — linha 2: Barras por etapa + Donut discador -->
+                <div class="grid-2">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h3>Volume por etapa</h3><p>Distribuição de deals no pipeline.</p></div>
+                        </div>
+                        <div style="position:relative; height:240px;">
+                            <canvas id="an-chart-stages"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h3>Resultado das chamadas</h3><p>Desfechos do discador automático.</p></div>
+                        </div>
+                        <div style="display:flex; gap:20px; align-items:center; min-height:240px; padding:8px 0;">
+                            <div style="position:relative; width:180px; height:180px; flex-shrink:0;">
+                                <canvas id="an-chart-outcomes"></canvas>
+                            </div>
+                            <div id="an-outcomes-legend" style="flex:1; display:flex; flex-direction:column; gap:12px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
             <!-- ── USUÁRIOS ── -->
             <section id="section-users" class="content-section">
                 <div class="panel">
@@ -1589,7 +1715,22 @@
                     </div>
                     <div id="support-message" class="message"></div>
                 </div>
+
+                <div class="panel" style="border:1px solid rgba(239,68,68,0.2);">
+                    <div class="panel-header">
+                        <div><h3 style="color:#ef4444;">Zona de Perigo</h3><p>Ações destrutivas para sua conta.</p></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.05); padding:16px 20px; border-radius:12px;">
+                        <div>
+                            <div style="font-weight:600; color:#f87171; margin-bottom:4px;">Apagar todos os dados do sistema</div>
+                            <div style="font-size:13px; color:var(--muted);">Isso apagará permanentemente todos os leads, chamadas, negócios (deals) e campanhas. Configurações de integração e pipeline serão mantidas.</div>
+                        </div>
+                        <button class="btn btn-primary" style="background:#ef4444; color:white; border:none; padding:8px 16px; font-weight:600;" onclick="promptWipeData()">Apagar Dados</button>
+                    </div>
+                </div>
             </section>
+
+
 
         </main>
     </div>
@@ -1657,6 +1798,39 @@
                         <p id="hubSummaryAnsweredAt">Atendida em: —</p>
                     </div>
                 </div>
+
+                <!-- Log em tempo real da campanha -->
+                <div style="margin-top:18px;">
+                    <div id="campaignStatusBox" style="
+                        padding:10px 14px;
+                        border-radius:10px;
+                        border:1px solid #334155;
+                        background:#0b1220;
+                        font-size:14px;
+                        font-weight:600;
+                        color:#475569;
+                        margin-bottom:10px;
+                    ">⏳ Aguardando próximo lead...</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <small style="color:#64748b;font-size:12px;">Log de eventos</small>
+                        <button onclick="document.getElementById('hubLogBox').textContent=''" style="
+                            background:none;border:none;color:#64748b;font-size:11px;cursor:pointer;padding:2px 6px;
+                        ">limpar</button>
+                    </div>
+                    <div id="hubLogBox" style="
+                        background:#020617;
+                        border:1px solid #1e293b;
+                        border-radius:10px;
+                        padding:10px 12px;
+                        height:120px;
+                        overflow-y:auto;
+                        font-size:12px;
+                        font-family:monospace;
+                        color:#94a3b8;
+                        line-height:1.6;
+                        white-space:pre-line;
+                    "></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1703,12 +1877,13 @@
         });
 
         const SECTION_LABELS = {
-            dashboard:'Painel de operação', campaigns:'Campanhas', leads:'Leads',
+            dashboard:'Painel de operação', analytics:'Analytics CRM', campaigns:'Campanhas', leads:'Leads',
             calls:'Chamadas', operation:'Webphone', import:'Importação',
             reports:'Relatórios', users:'Usuários', settings:'Configurações'
         };
         const SECTION_DESCS = {
             dashboard:'Visão geral da operação em tempo real.',
+            analytics:'KPIs, funil de vendas, conversões e métricas do discador.',
             campaigns:'Crie, gerencie e inicie campanhas de discagem.',
             leads:'Cadastre e gerencie seus leads.',
             calls:'Histórico completo de chamadas.',
@@ -1810,6 +1985,8 @@
             'in_progress': '🗣️ Em conversa ativa',
             'waiting_agent': '🎧 Aguardando operador entrar...',
             'answered': '🎉 Atendido! Conectando...',
+            'exhausted': '🏁 Números esgotados',
+            'reset': '🔄 Chamada Resetada',
             'machine_start': '🤖 Caixa Postal detectada',
             'machine_end_beep': '🤖 Caixa Postal (Bipe)',
             'human': '👤 Humano detectado',
@@ -1999,6 +2176,39 @@
             } catch (err) {
                 console.error(err);
                 showToast('Erro ao apagar leads.', 'error');
+            }
+        }
+
+        function promptWipeData() {
+            document.getElementById('wipe-data-password').value = '';
+            document.getElementById('wipeDataModal').style.display = 'flex';
+        }
+
+        async function confirmWipeData() {
+            const password = document.getElementById('wipe-data-password').value;
+            if (!password) {
+                showToast('A senha é obrigatória', 'error');
+                return;
+            }
+
+            try {
+                const resp = await authFetch('/api/settings/wipe-data', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await resp.json().catch(() => ({}));
+                
+                if (resp.ok) {
+                    document.getElementById('wipeDataModal').style.display = 'none';
+                    showToast('Todos os dados foram apagados com sucesso!');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToast(data.error || 'Erro ao apagar dados.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Erro de conexão ao tentar apagar dados.', 'error');
             }
         }
 
@@ -3050,6 +3260,24 @@ async function deleteLead(leadId) {
             closeIncomingCallPopup();
         });
 
+        // Countdown de classificação após lead desligar
+        window.addEventListener('nexdial:classification_grace', (e) => {
+            const sec = e.detail && e.detail.seconds;
+            const subtitle = document.getElementById('premiumSubtitle');
+            const kicker   = document.querySelector('#premiumIncomingCallPopup .premium-kicker');
+            const el = subtitle || kicker;
+            if (!el) return;
+            const popup = document.getElementById('premiumIncomingCallPopup');
+            if (!popup || !popup.classList.contains('active')) return;
+            if (!sec || sec <= 0) {
+                el.textContent = 'Chamada encerrada';
+                el.style.color = '#ef4444';
+            } else {
+                el.textContent = `Lead desligou — classifique (${sec}s)`;
+                el.style.color = '#f59e0b';
+            }
+        });
+
         // --- Monitoramento Supervisor ---
         let supervisorPoller = null;
 
@@ -3535,7 +3763,10 @@ async function deleteLead(leadId) {
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; margin-top:12px;">
                     <div>
                         <div style="color:#888; font-size:11px;">Telefone discando</div>
-                        <div id="do-lead-phone" style="color:#60a5fa; font-size:1rem; font-weight:600; margin-top:2px;">—</div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                            <div id="do-lead-phone" style="color:#60a5fa; font-size:1rem; font-weight:600;">—</div>
+                            <div id="do-phone-badge" style="display:none; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:1px 7px; font-size:11px; color:#94a3b8; white-space:nowrap;"></div>
+                        </div>
                     </div>
                     <div>
                         <div style="color:#888; font-size:11px;">Empresa</div>
@@ -3563,7 +3794,7 @@ async function deleteLead(leadId) {
         </div>
     </div>
 
-    <script type="module" src="{{ url_for('static', filename='dist/webphone.js') }}"></script>
+    <script src="{{ url_for('static', filename='dist/webphone.js') }}"></script>
 
     <!-- ══════════════════════════════════════════════════════════════════
          SCRIPT: campanhas + discador overlay + auto-init
@@ -3623,6 +3854,7 @@ async function deleteLead(leadId) {
                             <span style="width:9px; height:9px; border-radius:50%; background:${dotColor};
                                          ${isRunning ? 'box-shadow:0 0 6px '+dotColor : ''}; flex-shrink:0;"></span>
                             <span style="font-size:16px; font-weight:700; color:#f1f5f9;">${escHtml(c.name)}</span>
+                            <button onclick="editCampaignName(${c.id}, '${escHtml(c.name)}')" style="background:none; border:none; color:var(--sidebar-active); cursor:pointer; font-size:14px; opacity:0.6; transition:opacity .2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" title="Renomear">✎</button>
                         </div>
                         <div style="font-size:12px; color:#6b7280; padding-left:17px;">
                             ${_statusLabel(c.status)} · ${total} leads · ${pending} pendentes
@@ -3718,6 +3950,30 @@ async function deleteLead(leadId) {
             const data = await res.json();
             renderCampaigns(data);
         } catch(e) { console.error(e); }
+    }
+
+    // ─── Editar nome da campanha ──────────────────────────────────────────────
+    async function editCampaignName(id, currentName) {
+        const newName = prompt(`Novo nome para a campanha "${currentName}":`, currentName);
+        if (newName === null) return; // cancelou
+        const trimmed = newName.trim();
+        if (!trimmed || trimmed === currentName) return;
+
+        try {
+            const res = await authFetch(`/api/campaign/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: trimmed }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Erro ao renomear campanha.');
+                return;
+            }
+            await reloadCampaigns();
+        } catch (err) {
+            alert('Erro de rede: ' + err.message);
+        }
     }
 
     // ─── Excluir campanha ────────────────────────────────────────────────────
@@ -3966,9 +4222,25 @@ async function deleteLead(leadId) {
             _lastLeadCompany = null;
         }
 
-        document.getElementById('do-lead-name').textContent      = currentLeadName;
-        document.getElementById('do-lead-phone').textContent     = currentLeadPhone;
-        document.getElementById('do-lead-company').textContent   = currentLeadCompany;
+        document.getElementById('do-lead-name').textContent     = currentLeadName;
+        document.getElementById('do-lead-phone').textContent    = currentLeadPhone;
+        document.getElementById('do-lead-company').textContent  = currentLeadCompany;
+
+        // Badge "Nº X de Y" — mostra quantos telefones o lead tem
+        const badge = document.getElementById('do-phone-badge');
+        if (badge) {
+            const idx   = session.current_phone_index;
+            const total = session.current_phone_total;
+            if (idx && total) {
+                badge.textContent = `Nº ${idx} de ${total}`;
+                badge.style.display = '';
+                // Verde se único número, amarelo se há mais
+                badge.style.borderColor = total > 1 ? '#f59e0b' : '#334155';
+                badge.style.color       = total > 1 ? '#fbbf24' : '#94a3b8';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
 
         // Status mais descritivo
         const statusEl = document.getElementById('do-status-line');
@@ -3992,6 +4264,10 @@ async function deleteLead(leadId) {
             case 'call_active':
                 statusText = '📞 Em chamada com ' + (session.current_lead_name || 'lead');
                 statusColor = '#22c55e'; // verde
+                break;
+            case 'ringing':
+                statusText = '🔔 Tocando no telefone de ' + (session.current_lead_name || 'lead') + '…';
+                statusColor = '#f59e0b'; // amarelo
                 break;
             case 'dialing':
                 statusText = '📲 Discar: ' + (session.current_lead_phone || '—');
@@ -4029,6 +4305,18 @@ async function deleteLead(leadId) {
         } else {
             btnPause.style.display  = '';
             btnResume.style.display = 'none';
+        }
+
+        // Atualiza label do botão "Próximo Número" com quantos restam
+        const btnSkipPhone = document.getElementById('do-btn-skip-phone');
+        if (btnSkipPhone) {
+            const idx   = session.current_phone_index;
+            const total = session.current_phone_total;
+            if (idx && total && total > 1) {
+                btnSkipPhone.textContent = `Próximo Número ↻ (${idx}/${total})`;
+            } else {
+                btnSkipPhone.textContent = 'Próximo Número ↻';
+            }
         }
 
         if (session.status === 'finished' || session.status === 'stopped') {
@@ -4536,6 +4824,236 @@ async function deleteLead(leadId) {
     document.querySelectorAll('.menu-link[data-section="users"]').forEach(btn => {
         btn.addEventListener('click', () => { setTimeout(loadUsers, 100); });
     });
+
+    // ── Analytics CRM ────────────────────────────────────────────────────────
+
+    let _anPeriod        = 'month';
+    let _anChartTimeline = null;
+    let _anChartStages   = null;
+    let _anChartOutcomes = null;
+    let _anBootDone      = false;
+
+    function fmtBRL(v) {
+        return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+    }
+
+    function setAnalyticsPeriod(btn) {
+        document.querySelectorAll('.analytics-period').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _anPeriod = btn.dataset.period;
+        const customRange = document.getElementById('an-custom-range');
+        customRange.style.display = _anPeriod === 'custom' ? 'flex' : 'none';
+        if (_anPeriod !== 'custom') loadAnalytics();
+    }
+
+    function _anParams() {
+        const p = new URLSearchParams({ period: _anPeriod });
+        if (_anPeriod === 'custom') {
+            const df = document.getElementById('an-date-from').value;
+            const dt = document.getElementById('an-date-to').value;
+            if (df) p.set('date_from', df);
+            if (dt) p.set('date_to', dt);
+        }
+        return p.toString();
+    }
+
+    async function loadAnalytics() {
+        try {
+            const qs = _anParams();
+            const pid = document.getElementById('an-pipeline').value || '';
+            const [rMetrics, rFunnel, rTs] = await Promise.all([
+                authFetch(`/api/analytics/dashboard?${qs}`),
+                authFetch(`/api/analytics/funnel?${qs}&pipeline_id=${pid}`),
+                authFetch(`/api/analytics/time-series?${qs}`),
+            ]);
+            if (!rMetrics.ok || !rFunnel.ok || !rTs.ok) throw new Error('analytics api error');
+            const [metrics, funnel, ts] = await Promise.all([rMetrics.json(), rFunnel.json(), rTs.json()]);
+            _anRenderKPIs(metrics);
+            _anRenderFunnel(funnel.stages);
+            _anRenderTimeline(ts);
+            _anRenderStagesBar(funnel.stages);
+            _anRenderOutcomes(metrics.calls);
+        } catch (e) {
+            console.error('[Analytics]', e);
+        }
+    }
+
+    async function loadFunnelOnly() {
+        try {
+            const qs = _anParams();
+            const pid = document.getElementById('an-pipeline').value || '';
+            const r = await authFetch(`/api/analytics/funnel?${qs}&pipeline_id=${pid}`);
+            if (!r.ok) return;
+            const { stages } = await r.json();
+            _anRenderFunnel(stages);
+            _anRenderStagesBar(stages);
+        } catch (e) { console.error('[Analytics/funnel]', e); }
+    }
+
+    async function _anLoadPipelines() {
+        try {
+            const r = await authFetch('/api/analytics/pipelines');
+            if (!r.ok) return;
+            const list = await r.json();
+            const sel = document.getElementById('an-pipeline');
+            list.forEach(p => {
+                const o = document.createElement('option');
+                o.value = p.id; o.textContent = p.name;
+                sel.appendChild(o);
+            });
+        } catch (e) { console.error('[Analytics/pipelines]', e); }
+    }
+
+    function _anRenderKPIs(m) {
+        const d = m.deals, c = m.calls, l = m.leads;
+        document.getElementById('an-won').textContent         = d.won;
+        document.getElementById('an-revenue').textContent     = fmtBRL(d.total_revenue);
+        document.getElementById('an-lost').textContent        = d.lost;
+        if (document.getElementById('an-lost-value'))
+            document.getElementById('an-lost-value').textContent = fmtBRL(d.total_lost_value || 0);
+        document.getElementById('an-open').textContent        = d.open + ' em aberto';
+        document.getElementById('an-conv-rate').textContent   = d.conversion_rate + '%';
+        document.getElementById('an-avg-ticket').textContent  = fmtBRL(d.avg_ticket);
+        document.getElementById('an-leads-total').textContent = l.total;
+        document.getElementById('an-calls-total').textContent = c.total;
+        document.getElementById('an-answered').textContent    = c.answered + ' atendidas';
+        document.getElementById('an-contact-rate').textContent = c.contact_rate + '%';
+        document.getElementById('an-avg-days').textContent    = d.avg_days_to_close > 0
+            ? d.avg_days_to_close + ' dias' : '— dias';
+    }
+
+    function _anRenderFunnel(stages) {
+        const el = document.getElementById('an-funnel-container');
+        if (!stages || stages.length === 0) {
+            el.innerHTML = '<p class="empty">Nenhum dado de funil disponível para o período.</p>';
+            return;
+        }
+        const max = Math.max(...stages.map(s => s.deal_count), 1);
+        el.innerHTML = stages.map(s => {
+            const pct  = Math.max(Math.round(s.deal_count / max * 100), 3);
+            const color = s.is_won ? '#22c55e' : s.is_lost ? '#ef4444' : (s.color || '#6366f1');
+            const val   = s.total_value > 0
+                ? '<span style="font-size:11px;color:var(--muted);margin-left:6px;">' + fmtBRL(s.total_value) + '</span>'
+                : '';
+            return `
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="font-size:12px;font-weight:600;color:#e2e8f4;">${s.name}${val}</span>
+                <span style="font-size:13px;color:var(--muted);font-weight:700;">${s.deal_count}</span>
+              </div>
+              <div style="background:rgba(255,255,255,.07);border-radius:5px;height:18px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${color};border-radius:5px;transition:width .5s ease;opacity:.85;"></div>
+              </div>
+            </div>`;
+        }).join('');
+    }
+
+    function _anRenderTimeline(ts) {
+        const daySet = new Set([
+            ...ts.leads.map(r => r.day),
+            ...ts.calls.map(r => r.day),
+            ...ts.won.map(r => r.day),
+        ]);
+        const days      = [...daySet].sort();
+        const leadsMap  = Object.fromEntries(ts.leads.map(r => [r.day, r.count]));
+        const callsMap  = Object.fromEntries(ts.calls.map(r => [r.day, r.count]));
+        const wonMap    = Object.fromEntries(ts.won.map(r => [r.day, r.count]));
+        const labels    = days.map(d => d.slice(5));
+        const ctx = document.getElementById('an-chart-timeline').getContext('2d');
+        if (_anChartTimeline) _anChartTimeline.destroy();
+        _anChartTimeline = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Leads',    data: days.map(d => leadsMap[d] || 0),
+                      borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.10)',
+                      tension: 0.4, fill: true, pointRadius: 3 },
+                    { label: 'Chamadas', data: days.map(d => callsMap[d] || 0),
+                      borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.08)',
+                      tension: 0.4, fill: true, pointRadius: 3 },
+                    { label: 'Ganhos',   data: days.map(d => wonMap[d] || 0),
+                      borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.10)',
+                      tension: 0.4, fill: true, pointRadius: 3 },
+                ],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#8a95b0', font: { family: 'Inter', size: 12 } } } },
+                scales: {
+                    x: { ticks: { color: '#8a95b0', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.06)' } },
+                    y: { ticks: { color: '#8a95b0', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.06)' }, beginAtZero: true },
+                },
+            },
+        });
+    }
+
+    function _anRenderStagesBar(stages) {
+        if (!stages || stages.length === 0) return;
+        const ctx = document.getElementById('an-chart-stages').getContext('2d');
+        if (_anChartStages) _anChartStages.destroy();
+        _anChartStages = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: stages.map(s => s.name),
+                datasets: [{
+                    label: 'Deals',
+                    data: stages.map(s => s.deal_count),
+                    backgroundColor: stages.map(s =>
+                        s.is_won ? 'rgba(34,197,94,.75)' : s.is_lost ? 'rgba(239,68,68,.75)' : 'rgba(99,102,241,.75)'
+                    ),
+                    borderRadius: 6,
+                }],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#8a95b0', font: { size: 11 } }, grid: { display: false } },
+                    y: { ticks: { color: '#8a95b0', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.06)' }, beginAtZero: true },
+                },
+            },
+        });
+    }
+
+    function _anRenderOutcomes(calls) {
+        const labels = ['Atendeu', 'Não atendeu', 'Ocupado', 'Caixa postal'];
+        const data   = [calls.answered, calls.no_answer, calls.busy, calls.voicemail];
+        const colors = ['#22c55e', '#ef4444', '#f59e0b', '#8b5cf6'];
+        const ctx = document.getElementById('an-chart-outcomes').getContext('2d');
+        if (_anChartOutcomes) _anChartOutcomes.destroy();
+        _anChartOutcomes = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: { legend: { display: false } },
+            },
+        });
+        const total = data.reduce((a, b) => a + b, 0) || 1;
+        document.getElementById('an-outcomes-legend').innerHTML = labels.map((l, i) => `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:12px;height:12px;border-radius:3px;background:${colors[i]};flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:#e2e8f4;">${l}</div>
+                <div style="font-size:11px;color:var(--muted);">${data[i]} &middot; ${Math.round(data[i]/total*100)}%</div>
+              </div>
+            </div>`).join('');
+    }
+
+    document.querySelectorAll('.menu-link[data-section="analytics"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTimeout(async () => {
+                if (!_anBootDone) {
+                    _anBootDone = true;
+                    await _anLoadPipelines();
+                }
+                loadAnalytics();
+            }, 80);
+        });
+    });
     </script>
     <script>
     async function nexusAutoInit() {
@@ -4552,5 +5070,20 @@ async function deleteLead(leadId) {
     }
     window.addEventListener('load', nexusAutoInit);
     </script>
+
+    <!-- Modal Wipe Data -->
+    <div id="wipeDataModal" class="modal" style="display:none; position:fixed; z-index:999999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:var(--surface); padding:24px; border-radius:16px; max-width:400px; width:90%; border:1px solid rgba(255,255,255,0.1); box-shadow:0 10px 25px rgba(0,0,0,0.5); pointer-events:auto;">
+            <h3 style="color:#ef4444; margin-bottom:12px; font-weight:700;"><i class="fas fa-exclamation-triangle me-2"></i>Aviso de Segurança</h3>
+            <p style="font-size:14px; color:var(--text); margin-bottom:20px; line-height:1.5;">Você está prestes a apagar <b>todos os dados gerados</b> (Leads, Deals, Campanhas e Chamadas).<br><br>Esta ação é <b>irreversível</b>. Para confirmar, digite sua senha de login:</p>
+            <div class="field" style="margin-bottom:20px;">
+                <input type="password" id="wipe-data-password" class="form-control" placeholder="Sua senha..." style="width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:white;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('wipeDataModal').style.display='none'">Cancelar</button>
+                <button class="btn btn-primary" style="background:#ef4444; border:none;" onclick="confirmWipeData()">Confirmar Exclusão</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

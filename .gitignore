@@ -1,6 +1,7 @@
 # Ambiente Python
 venv/
 env/
+.venv/
 *.pyc
 __pycache__/
 *.egg-info/
@@ -28,6 +29,7 @@ nexdial.db
 # Logs
 *.log
 logs/
+app.log
 
 # Cache
 .pytest_cache/
@@ -43,5 +45,14 @@ dist/
 build/
 *.egg-info/
 
-# Node (se usar)
+# Node
 node_modules/
+
+# Arquivos temporários de debug/scratch
+scratch/
+
+# Instância SQLite local
+instance/
+
+# Claude
+.claude/

@@ -109,8 +109,10 @@
                     return;
                 }
 
-                // salva no localStorage
+                // limpa dados antigos e salva sessão nova
+                localStorage.clear();
                 localStorage.setItem('nexdial_token', data.token);
+                localStorage.setItem('token', data.token);
                 localStorage.setItem('user_id', data.user_id);
                 localStorage.setItem('company_id', data.company_id);
                 localStorage.setItem('nexdial_role', data.role || 'agent');

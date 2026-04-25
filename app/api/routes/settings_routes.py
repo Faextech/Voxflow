@@ -3,6 +3,11 @@ from flask import Blueprint, jsonify, request, g
 from app.auth import require_auth, require_role
 from app.extensions import db
 from app.models.company import Company
+from app.models.user import User
+from app.models.lead import Lead
+from app.models.call import Call
+from app.models.campaign import Campaign
+from app.models.deal import Deal
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 
@@ -93,3 +98,44 @@ def update_twilio_settings():
         "twiml_app_sid": creds["twiml_app_sid"] or "",
         "configured":    company.has_twilio_configured(),
     }), 200
+
+@settings_bp.route("/wipe-data", methods=["DELETE"])
+@require_auth
+@require_role("admin")
+def wipe_company_data():
+    """
+    Apaga todos os dados da empresa (Leads, Deals, Chamadas, Campanhas) 
+    após validar a senha do usuário logado.
+    """
+    data = request.get_json(silent=True) or {}
+    password = data.get("password")
+    
+    if not password:
+        return jsonify({"error": "A senha é obrigatória"}), 400
+        
+    user = User.query.get(g.user_id)
+    if not user or not user.check_password(password):
+        return jsonify({"error": "Senha incorreta"}), 401
+
+    try:
+        # Parar discadores ativos
+        from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS
+        for c_id, sess in list(AUTO_DIALER_SESSIONS.items()):
+            if sess.get("company_id") == g.company_id:
+                sess["status"] = "stopped"
+                del AUTO_DIALER_SESSIONS[c_id]
+    except Exception:
+        pass
+
+    try:
+        # Apagar dados na ordem correta para não ferir foreign keys
+        Call.query.filter_by(company_id=g.company_id).delete()
+        Deal.query.filter_by(company_id=g.company_id).delete()
+        Lead.query.filter_by(company_id=g.company_id).delete()
+        Campaign.query.filter_by(company_id=g.company_id).delete()
+        
+        db.session.commit()
+        return jsonify({"message": "Todos os dados foram apagados com sucesso."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Erro ao apagar dados: {str(e)}"}), 500

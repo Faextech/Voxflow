@@ -57,7 +57,7 @@ def update_me():
     if data.get("password"):
         if len(data["password"]) < 6:
             return jsonify({"error": "Senha deve ter ao menos 6 caracteres"}), 400
-        user.password_hash = generate_password_hash(data["password"])
+        user.password_hash = generate_password_hash(data["password"], method='pbkdf2:sha256')
 
     db.session.commit()
 
@@ -112,17 +112,16 @@ def create_user():
         company_id    = g.company_id,
         name          = name,
         email         = email,
-        password_hash = generate_password_hash(password),
+        password_hash = generate_password_hash(password, method='pbkdf2:sha256'),
         role          = role,
         status        = "active",
     )
     db.session.add(user)
     db.session.flush()
 
-    # Se for agente, cria perfil Agent automaticamente
-    if role == "agent":
-        agent = Agent(company_id=g.company_id, user_id=user.id, status="offline")
-        db.session.add(agent)
+    # Cria perfil Agent para todos os roles (necessário para o webphone)
+    agent = Agent(company_id=g.company_id, user_id=user.id, status="offline")
+    db.session.add(agent)
 
     db.session.commit()
 

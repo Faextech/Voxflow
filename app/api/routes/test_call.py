@@ -10,13 +10,17 @@ def make_call(agent_id):
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     from_number = os.getenv("TWILIO_PHONE_NUMBER")
+    base_url = (os.getenv("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+
+    if not base_url:
+        return jsonify({"error": "PUBLIC_BASE_URL não configurado"}), 500
 
     client = Client(account_sid, auth_token)
 
     call = client.calls.create(
         to=f"client:agent_{agent_id}",
         from_=from_number,
-        url="https://undependent-wealthiest-troy.ngrok-free.dev/api/twilio/voice"
+        url=f"{base_url}/api/twilio/browser-outgoing"
     )
 
     return jsonify({

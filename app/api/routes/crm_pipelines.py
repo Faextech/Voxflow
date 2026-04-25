@@ -96,6 +96,7 @@ def serialize_deal(d):
         'currency':    d.currency,
         'probability': d.probability,
         'status':      d.status,
+        'notes':       d.notes,
         'pipeline_id': d.pipeline_id,
         'stage_id':    d.stage_id,
         'lead_id':     d.lead_id,
@@ -377,9 +378,17 @@ def get_board(pipeline_id):
 
     board = []
     for stage in pipeline.stages:
+        # Etapas "Ganho" mostram deals won; "Perdido" mostram deals lost; demais mostram abertos
+        if stage.is_won:
+            status_filter = 'won'
+        elif stage.is_lost:
+            status_filter = 'lost'
+        else:
+            status_filter = 'open'
+
         deals = (
             Deal.query
-            .filter_by(stage_id=stage.id, company_id=g.company_id, status='open')
+            .filter_by(stage_id=stage.id, company_id=g.company_id, status=status_filter)
             .all()
         )
         board.append({**serialize_stage(stage), 'deals': [serialize_deal(d) for d in deals]})
@@ -449,7 +458,7 @@ def update_deal(deal_id):
 
     data = request.get_json(silent=True) or {}
     allowed = ('title', 'value', 'stage_id', 'status', 'probability',
-               'expected_close_date', 'lost_reason', 'currency', 'agent_id')
+               'expected_close_date', 'lost_reason', 'currency', 'agent_id', 'notes')
 
     for field in allowed:
         if field in data:

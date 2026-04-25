@@ -1,4 +1,5 @@
 import logging
+import os
 from flask import Flask, request
 from sqlalchemy import inspect, text
 
@@ -53,6 +54,11 @@ def _sqlite_add_missing_columns(db):
             if col not in existing:
                 pending.append(f"ALTER TABLE campaigns ADD COLUMN {col} {col_type}")
 
+    if "deals" in tables:
+        existing = {col["name"] for col in inspector.get_columns("deals")}
+        if "notes" not in existing:
+            pending.append("ALTER TABLE deals ADD COLUMN notes TEXT")
+
     if pending:
         with db.engine.connect() as conn:
             for stmt in pending:
@@ -67,6 +73,9 @@ def create_app():
     # carrega config correta conforme FLASK_ENV
     app.config.from_object(app_config)
 
+    flask_env = os.getenv("FLASK_ENV", "development")
+    logger.info("[STARTUP] NexDial iniciando — env=%s", flask_env.upper())
+
     # extensões
     db.init_app(app)
     cors.init_app(
@@ -75,6 +84,18 @@ def create_app():
         supports_credentials=True
     )
     migrate.init_app(app, db)
+
+    # ── WhiteNoise — serve arquivos estáticos sem Nginx (produção) ──────────
+    if flask_env == "production":
+        try:
+            from whitenoise import WhiteNoise
+            # Pasta static/ do Flask (app/static e /static na raiz)
+            static_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
+            if os.path.isdir(static_root):
+                app.wsgi_app = WhiteNoise(app.wsgi_app, root=static_root, prefix="static")
+                logger.info("[STARTUP] WhiteNoise ativado para arquivos estáticos")
+        except ImportError:
+            logger.warning("[STARTUP] WhiteNoise não instalado — static files sem cache otimizado")
 
     # rotas
     from app.routes import register_blueprints
@@ -92,6 +113,8 @@ def create_app():
         from app.models.deal_activity import DealActivity
         from app.models.deal_task import DealTask
         from app.models.notification import Notification
+        from app.models.support import SupportTicket, TicketMessage
+        from app.models.billing import CreditTransaction
         # Cria tabelas novas; não altera as que já existem
         db.create_all()
 
@@ -137,14 +160,25 @@ def create_app():
 
     @app.route('/health', methods=['GET'])
     def health():
+        from datetime import datetime
         return {
             'status': 'ok',
-            'message': 'NexDial operacional'
+            'message': 'NexDial operacional',
+            'env': os.getenv('FLASK_ENV', 'development'),
+            'timestamp': datetime.utcnow().isoformat(),
         }, 200
 
     @app.before_request
     def log_request():
         if app.config.get('DEBUG'):
             logger.debug(f'{request.method} {request.path}')
+
+    @app.after_request
+    def security_headers(response):
+        """Headers de segurança básicos para produção."""
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        return response
 
     return app

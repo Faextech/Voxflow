@@ -121,7 +121,7 @@ def require_auth(f):
 
         g.user_id    = user.id
         g.company_id = user.company_id
-        g.user_role  = payload.get('role', 'agent')
+        g.user_role  = user.role
 
         return f(*args, **kwargs)
 
@@ -145,7 +145,9 @@ def require_role(*roles):
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if not hasattr(g, 'user_role') or g.user_role not in roles:
+            current_role = getattr(g, 'user_role', 'none')
+            if current_role not in roles:
+                logger.error(f"Acesso negado. Role required: {roles}, actual: {current_role}, user_id: {getattr(g, 'user_id', 'none')}")
                 return jsonify({
                     'error': f"Acesso restrito a: {', '.join(roles)}"
                 }), 403

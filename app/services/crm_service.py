@@ -174,11 +174,13 @@ def move_to_stage(deal, new_stage, triggered_by='agent'):
     # Update status based on stage flags
     if new_stage.is_won:
         deal.status = 'won'
-        deal.won_at = now
+        deal.won_at  = now
     elif new_stage.is_lost:
         deal.status = 'lost'
         deal.lost_at = now
-    # meeting stages keep status='open'
+    else:
+        # Movendo para etapa normal → reabre o deal
+        deal.status  = 'open'
 
     db.session.add(deal)
 

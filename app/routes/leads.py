@@ -186,6 +186,38 @@ def get_campaign(campaign_id):
     return jsonify(serialize_campaign(campaign)), 200
 
 
+@leads_bp.route("/campaign/<int:campaign_id>", methods=["PATCH"])
+@require_auth
+@require_role("admin", "agent")
+def update_campaign(campaign_id):
+    campaign = Campaign.query.filter_by(
+        id=campaign_id, company_id=g.company_id
+    ).first()
+    if not campaign:
+        return jsonify({"error": "Campanha não encontrada"}), 404
+
+    data = request.get_json() or {}
+    
+    if "name" in data:
+        name = data["name"].strip()
+        if not name:
+            return jsonify({"error": "Nome não pode ser vazio"}), 400
+        campaign.name = name
+    
+    if "description" in data:
+        campaign.description = data["description"]
+    
+    if "status" in data:
+        campaign.status = data["status"]
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Campanha atualizada com sucesso",
+        "campaign": serialize_campaign(campaign)
+    }), 200
+
+
 @leads_bp.route("/campaign/<int:campaign_id>/start", methods=["POST"])
 @require_auth
 @require_role("admin", "agent")
@@ -829,7 +861,12 @@ def reset_campaign_leads(campaign_id):
         campaign_id=campaign_id, company_id=g.company_id
     ).update({"status": "new"})
     
-    # ── SINCRONIZAÇÃO DE MEMÓRIA ─────────────────────────────────────────────
+    # Marca as chamadas antigas como 'reset' para que o _phones_tried ignore elas,
+    # permitindo que o discador disque todos os números novamente, mas sem deletar do histórico.
+    from app.models.call import Call
+    Call.query.filter_by(
+        campaign_id=campaign_id, company_id=g.company_id
+    ).update({"status": "reset"})
     # Se houver uma sessão de discador ativa para esta campanha, precisamos resetá-la
     try:
         from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS

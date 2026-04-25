@@ -517,6 +517,10 @@
             <label class="form-label form-label-sm">Previsão de fechamento</label>
             <input type="date" class="form-control form-control-sm" id="editDealCloseDate">
           </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm">Observações</label>
+            <textarea class="form-control form-control-sm" id="editDealNotes" rows="3" placeholder="Anotações sobre o deal..."></textarea>
+          </div>
         </div>
         <hr>
         <div id="dealLeadInfo" class="p-3 bg-light rounded mb-3" style="font-size:13px"></div>
@@ -729,8 +733,13 @@ async function loadBoard(pipelineId) {
     if (!res.ok) { toast('Erro ao carregar board', 'danger'); return; }
     const data = await res.json();
     currentBoard = data.board;
-    const total = currentBoard.reduce((s, col) => s + col.deals.length, 0);
-    document.getElementById('boardDealsCount').textContent = `${total} deals`;
+    const openCount = currentBoard.reduce((s, col) => s + (!col.is_won && !col.is_lost ? col.deals.length : 0), 0);
+    const wonCount  = currentBoard.reduce((s, col) => s + (col.is_won  ? col.deals.length : 0), 0);
+    const lostCount = currentBoard.reduce((s, col) => s + (col.is_lost ? col.deals.length : 0), 0);
+    let countLabel = `${openCount} abertos`;
+    if (wonCount)  countLabel += ` · ${wonCount} ganho${wonCount > 1 ? 's' : ''}`;
+    if (lostCount) countLabel += ` · ${lostCount} perdido${lostCount > 1 ? 's' : ''}`;
+    document.getElementById('boardDealsCount').textContent = countLabel;
     renderBoard();
   } catch(e) { toast('Erro ao carregar board', 'danger'); }
 }
@@ -784,28 +793,45 @@ function renderBoard() {
 }
 
 function renderDealCard(d) {
+  const isWon  = d.status === 'won';
+  const isLost = d.status === 'lost';
   const value = d.value ? `R$ ${Number(d.value).toLocaleString('pt-BR', {minimumFractionDigits:2})}` : '';
   const leadName = d.lead ? escH(d.lead.name || '') : '';
-  const phone = d.lead ? (d.lead.phone || '') : '';
-  const rawNotes = d.lead?.notes || '';
-  const notesSnippet = rawNotes ? escH(rawNotes.split('\n').pop().trim().slice(0, 80)) : '';
+  const rawNotes = d.notes || d.lead?.notes || '';
+  const notesSnippet = rawNotes ? escH(rawNotes.split('\n')[0].trim().slice(0, 80)) : '';
   const recordingIcon = d.has_recording ? `<span title="Possui gravação" class="ms-1" style="color:#059669"><i class="fas fa-tape"></i></span>` : '';
 
+  // Estilo visual por status
+  let cardBorder = '';
+  let statusBadge = '';
+  let actionBtns = `
+    <button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>
+    <button onclick="quickMarkWon(${d.id})" title="Marcar ganho" style="color:#059669"><i class="fas fa-check"></i></button>
+    <button onclick="quickMarkLost(${d.id})" title="Marcar perdido" style="color:#dc2626"><i class="fas fa-times"></i></button>`;
+
+  if (isWon) {
+    cardBorder = 'border-left: 3px solid #22c55e;';
+    statusBadge = `<span style="font-size:9px;font-weight:700;background:rgba(34,197,94,.18);color:#22c55e;border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.04em;">GANHO</span>`;
+    actionBtns = `<button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>`;
+  } else if (isLost) {
+    cardBorder = 'border-left: 3px solid #ef4444; opacity: 0.8;';
+    statusBadge = `<span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.18);color:#ef4444;border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.04em;">PERDIDO</span>`;
+    actionBtns = `<button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>`;
+  }
+
   return `
-    <div class="deal-card" data-deal-id="${d.id}" ondblclick="openDealDetail(${d.id})">
+    <div class="deal-card" data-deal-id="${d.id}" ondblclick="openDealDetail(${d.id})" style="${cardBorder}">
       <div class="deal-actions">
-        <button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>
-        <button onclick="quickMarkWon(${d.id})" title="Marcar ganho" style="color:#059669"><i class="fas fa-check"></i></button>
-        <button onclick="quickMarkLost(${d.id})" title="Marcar perdido" style="color:#dc2626"><i class="fas fa-times"></i></button>
+        ${actionBtns}
       </div>
       <div class="deal-title">
-        ${escH(d.title)}
+        ${escH(d.title)}${statusBadge}
         ${recordingIcon}
       </div>
       ${leadName ? `<div class="deal-lead text-truncate"><i class="fas fa-user-circle fa-xs me-1"></i>${leadName}</div>` : ''}
       ${notesSnippet ? `<div class="deal-notes" title="${escH(rawNotes)}"><i class="fas fa-sticky-note fa-xs me-1"></i>${notesSnippet}</div>` : ''}
       <div class="d-flex justify-content-between align-items-center mt-2">
-        <div class="deal-value">${value || ''}</div>
+        <div class="deal-value" style="${isWon ? 'color:#22c55e;font-weight:700;' : isLost ? 'color:#ef4444;' : ''}">${value || ''}</div>
         <div style="font-size:10px; color:#999;">${d.probability || 0}%</div>
       </div>
     </div>
@@ -813,9 +839,8 @@ function renderDealCard(d) {
 }
 
 async function handleDragEnd(evt) {
-  const dealId = parseInt(evt.item.dataset.dealId);
+  const dealId    = parseInt(evt.item.dataset.dealId);
   const newStageId = parseInt(evt.to.closest('.kanban-col').dataset.stageId);
-  // find old stage from board state
   const deal = findDealInBoard(dealId);
   if (!deal || deal.stage_id === newStageId) return;
 
@@ -825,14 +850,19 @@ async function handleDragEnd(evt) {
     });
     if (!res.ok) {
       toast('Erro ao mover deal', 'danger');
-      await loadBoard(currentPipeline.id); // revert
+      await loadBoard(currentPipeline.id);
       return;
     }
-    // update local state
-    deal.stage_id = newStageId;
-    updateColCounts();
+    // Recarrega o board para refletir novo status (won/lost/open) corretamente
+    await loadBoard(currentPipeline.id);
+
+    // Feedback toast baseado na etapa destino
+    const destCol = currentBoard.find(c => c.id === newStageId);
+    if (destCol?.is_won)  toast(`✅ Deal movido para "${destCol.name}" — marcado como Ganho!`, 'success');
+    else if (destCol?.is_lost) toast(`Deal movido para "${destCol.name}" — marcado como Perdido`, 'warning');
   } catch(e) {
     toast('Erro ao mover deal', 'danger');
+    await loadBoard(currentPipeline.id);
   }
 }
 
@@ -1131,6 +1161,7 @@ async function openDealDetail(dealId) {
   document.getElementById('editDealProb').value = deal.probability || 0;
   document.getElementById('editDealStatus').value = deal.status || 'open';
   document.getElementById('editDealCloseDate').value = deal.expected_close_date ? deal.expected_close_date.slice(0,10) : '';
+  document.getElementById('editDealNotes').value = deal.notes || '';
 
   const leadEl = document.getElementById('dealLeadInfo');
   const l = deal.lead;
@@ -1207,6 +1238,7 @@ async function submitUpdateDeal() {
       probability: parseInt(document.getElementById('editDealProb').value) || 0,
       status: document.getElementById('editDealStatus').value,
       expected_close_date: document.getElementById('editDealCloseDate').value || null,
+      notes: document.getElementById('editDealNotes').value.trim() || null,
     }),
   });
   bootstrap.Modal.getInstance(document.getElementById('dealDetailModal')).hide();
@@ -1215,22 +1247,45 @@ async function submitUpdateDeal() {
 }
 
 async function quickMarkWon(dealId) {
-  const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'won' }) });
-  if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como ganho!', 'success'); }
+  // Mover para a etapa is_won do pipeline atual
+  const wonStage = currentBoard ? currentBoard.find(col => col.is_won) : null;
+  if (wonStage) {
+    const res = await authFetch(`/api/crm/deals/${dealId}/stage`, {
+      method: 'PUT', body: JSON.stringify({ stage_id: wonStage.id, triggered_by: 'agent' })
+    });
+    if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como ganho!', 'success'); }
+    else toast('Erro ao marcar ganho', 'danger');
+  } else {
+    // Sem etapa is_won configurada — apenas muda status
+    const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'won' }) });
+    if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como ganho!', 'success'); }
+    else toast('Erro ao marcar ganho', 'danger');
+  }
 }
 async function quickMarkLost(dealId) {
-  const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'lost' }) });
-  if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como perdido', 'warning'); }
+  // Mover para a etapa is_lost do pipeline atual
+  const lostStage = currentBoard ? currentBoard.find(col => col.is_lost) : null;
+  if (lostStage) {
+    const res = await authFetch(`/api/crm/deals/${dealId}/stage`, {
+      method: 'PUT', body: JSON.stringify({ stage_id: lostStage.id, triggered_by: 'agent' })
+    });
+    if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como perdido', 'warning'); }
+    else toast('Erro ao marcar perdido', 'danger');
+  } else {
+    const res = await authFetch(`/api/crm/deals/${dealId}`, { method: 'PUT', body: JSON.stringify({ status: 'lost' }) });
+    if (res.ok) { await loadBoard(currentPipeline.id); toast('Deal marcado como perdido', 'warning'); }
+    else toast('Erro ao marcar perdido', 'danger');
+  }
 }
 async function markDealWon() {
   if (!currentDeal) return;
-  document.getElementById('editDealStatus').value = 'won';
-  await submitUpdateDeal();
+  bootstrap.Modal.getInstance(document.getElementById('dealDetailModal')).hide();
+  await quickMarkWon(currentDeal.id);
 }
 async function markDealLost() {
   if (!currentDeal) return;
-  document.getElementById('editDealStatus').value = 'lost';
-  await submitUpdateDeal();
+  bootstrap.Modal.getInstance(document.getElementById('dealDetailModal')).hide();
+  await quickMarkLost(currentDeal.id);
 }
 
 // ============================================================

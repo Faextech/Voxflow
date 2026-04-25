@@ -124,22 +124,23 @@ def is_mobile_br(phone: str) -> bool:
 
 
 def _phones_tried(lead_id, campaign_id, company_id, since=None) -> set:
-    failed_statuses = {"no_answer", "busy", "failed", "canceled", "voicemail", "invalid_number"}
     q = Call.query.filter(
         Call.lead_id     == lead_id,
         Call.campaign_id == campaign_id,
         Call.company_id  == company_id,
         Call.phone_dialed.isnot(None),
-        Call.status.in_(failed_statuses),
+        Call.status != "reset",
     )
-    if since:
-        q = q.filter(Call.created_at >= since)
+    # IGNORA o 'since' para que NUNCA repita telefones já tentados (mesmo após pausar/retomar)
     return {normalize_phone_br(c.phone_dialed) for c in q.all() if c.phone_dialed}
 
 
-def _next_phone_for_lead(lead, campaign_id, company_id, since=None, mobile_only=False):
-    tried = _phones_tried(lead.id, campaign_id, company_id, since=since)
-    logger.info("[PHONE] _next_phone_for_lead: lead=%s, phones=%s, tried=%s", lead.id, lead.get_all_phones(), tried)
+def _next_phone_for_lead(lead, campaign_id, company_id, since=None, mobile_only=False, ignore_history=False):
+    if ignore_history:
+        tried = set()
+    else:
+        tried = _phones_tried(lead.id, campaign_id, company_id, since=since)
+    logger.info("[PHONE] _next_phone_for_lead: lead=%s, phones=%s, tried=%s, ignore_history=%s", lead.id, lead.get_all_phones(), tried, ignore_history)
     for raw in lead.get_all_phones():
         raw = str(raw).strip()
         if raw.endswith(".0"):
@@ -155,7 +156,10 @@ def _next_phone_for_lead(lead, campaign_id, company_id, since=None, mobile_only=
 
 
 def _next_lead_query(campaign_id, company_id, exclude_ids):
-    target = ["new", "novo", "tentativa", "tentando", "retry", "callback", "retornar", "qualified"]
+    target = [
+        "new", "novo", "tentativa", "tentando", "retry", "callback", "retornar", "qualified",
+        "no_answer", "busy", "failed", "voicemail", "invalid_number"
+    ]
     q = Lead.query.filter(
         Lead.campaign_id == campaign_id,
         Lead.company_id  == company_id,
@@ -322,9 +326,23 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
                 return
 
     # Decide delay
+    if disposition == "answered":
+        logger.info("[EVENT] Chamada %s encerrada (%s) → Pausando campanha para aguardar classificação do operador", call_sid, disposition)
+        sess["status"] = "paused"
+        sess["current_call_sid"] = None
+        # Opcional: Atualizar status da campanha no DB para "paused"
+        try:
+            from app.models.campaign import Campaign
+            campaign = Campaign.query.get(campaign_id)
+            if campaign:
+                campaign.status = "paused"
+                db.session.commit()
+        except:
+            pass
+        return
+
     if delay is None:
-        # Conversa real → dá tempo ao operador para tomar notas
-        delay = sess.get("interval_seconds", 3) if disposition == "answered" else 0
+        delay = 0
 
     sess["status"]          = "running"
     sess["current_call_sid"] = None
@@ -472,14 +490,14 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
             lead = _next_lead_query(campaign_id, company_id, skipped)
             continue
 
-        phone = _next_phone_for_lead(lead, campaign_id, company_id, since=run_since, mobile_only=mobile_only)
+        phone = _next_phone_for_lead(lead, campaign_id, company_id, since=run_since, mobile_only=mobile_only, ignore_history=(cb is not None))
         if phone:
             break
 
         # Todos os números deste lead foram tentados
-        lead.status = "no_answer"
+        lead.status = "exhausted"
         db.session.commit()
-        logger.info("[DIALER] Lead %s — todos os números tentados → no_answer", lead.id)
+        logger.info("[DIALER] Lead %s — todos os números tentados → exhausted", lead.id)
         skipped.add(lead.id)
         lead = _next_lead_query(campaign_id, company_id, skipped)
 
@@ -544,7 +562,7 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     twiml = (
         f'<?xml version="1.0" encoding="UTF-8"?>'
         f'<Response><Dial>'
-        f'<Conference startConferenceOnEnter="true" endConferenceOnExit="true" beep="false"'
+        f'<Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false"'
         f' participantLabel="lead_{lead.id}"'
         f' statusCallback="{conf_url}" statusCallbackMethod="POST"'
         f' statusCallbackEvent="join leave">{conf_name}</Conference>'
@@ -593,15 +611,19 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     update_pending_lead_call_sid(conf_name, result.sid)
     db.session.commit()
 
-    # POPUP FORÇADO: abre popup imediatamente ao criar chamada (não espera lead atender)
+    # Marca status como ringing_lead para o poller saber que está discando
     bridge_item = ACTIVE_CONFERENCES_BY_AGENT.get(agent.id)
     if bridge_item:
-        bridge_item["status"]           = "ringing_lead"
-        bridge_item["lead_answered_at"] = datetime.utcnow().isoformat()
-        logger.info("[DIALER] Popup forçado ativado: lead=%s SID=%s", lead.id, result.sid)
+        bridge_item["status"] = "ringing_lead"
+        # lead_answered_at NÃO é setado aqui — só quando o lead realmente atende
+        # (conference_events → participant-join). Isso impede popup prematuro.
+        logger.info("[DIALER] Discando lead=%s SID=%s", lead.id, result.sid)
 
     # Cancela timer anterior e inicia novo (50s)
     _cancel_ring_timer(sess)
+
+    all_phones = lead.get_all_phones()
+    phone_idx  = (all_phones.index(phone) + 1) if phone in all_phones else 1
 
     sess["status"]               = "ringing"
     sess["current_lead_id"]      = lead.id
@@ -610,6 +632,8 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     sess["current_lead_company"] = getattr(lead, "company_name", None) or ""
     sess["current_call_sid"]     = result.sid
     sess["leads_done"]           = sess.get("leads_done", 0) + 1
+    sess["current_phone_index"]  = phone_idx
+    sess["current_phone_total"]  = len(all_phones)
 
     _start_ring_timer(campaign_id, company_id, result.sid, sess)
 
@@ -672,6 +696,27 @@ def stop_auto():
         _cancel_ring_timer(sess)
         sess["status"] = "stopped"
 
+    # Encerra chamadas ativas no Twilio para não deixar leads tocando
+    try:
+        company = Company.query.get(g.company_id)
+        if company:
+            svc = TwilioService.from_company(company)
+            active = Call.query.filter(
+                Call.campaign_id == campaign_id,
+                Call.status.in_(["ringing", "dialing", "waiting_agent", "in-progress", "answered", "agent_joined"]),
+            ).all()
+            for c in active:
+                if c.call_sid:
+                    try:
+                        svc.client.calls(c.call_sid).update(status="completed")
+                    except Exception:
+                        pass
+                c.status = "no_answer"
+                c.ended_at = datetime.utcnow()
+                _clear_bridge_for_sid(c.call_sid)
+    except Exception as e:
+        logger.warning(f"[STOP] Erro ao cancelar chamadas: {e}")
+
     campaign = Campaign.query.filter_by(id=campaign_id, company_id=g.company_id).first()
     if campaign:
         campaign.status = "paused"
@@ -691,6 +736,28 @@ def pause_auto():
     sess = AUTO_DIALER_SESSIONS.get(campaign_id)
     if sess:
         sess["status"] = "paused"
+        _cancel_ring_timer(sess)
+
+    # Encerra chamadas ativas no Twilio para não deixar leads tocando
+    try:
+        company = Company.query.get(g.company_id)
+        if company:
+            svc = TwilioService.from_company(company)
+            active = Call.query.filter(
+                Call.campaign_id == campaign_id,
+                Call.status.in_(["ringing", "dialing", "waiting_agent", "in-progress", "answered", "agent_joined"]),
+            ).all()
+            for c in active:
+                if c.call_sid:
+                    try:
+                        svc.client.calls(c.call_sid).update(status="completed")
+                    except Exception:
+                        pass
+                c.status = "no_answer"
+                c.ended_at = datetime.utcnow()
+                _clear_bridge_for_sid(c.call_sid)
+    except Exception as e:
+        logger.warning(f"[PAUSE] Erro ao cancelar chamadas: {e}")
 
     campaign = Campaign.query.filter_by(id=campaign_id, company_id=g.company_id).first()
     if campaign:
@@ -789,11 +856,11 @@ def next_lead():
     except Exception as e:
         logger.warning("[NEXT] Erro ao cancelar chamadas: %s", e)
 
-    # Marca lead atual como no_answer
+    # Marca lead atual como exhausted para que não seja discado novamente
     if current_lead_id:
         lead = Lead.query.filter_by(id=current_lead_id, company_id=g.company_id).first()
-        if lead and lead.status in ("dialing", "new", "novo"):
-            lead.status = "no_answer"
+        if lead and lead.status not in ("completed", "exhausted", "invalid"):
+            lead.status = "exhausted"
             db.session.commit()
 
     if current_sid:
@@ -851,7 +918,20 @@ def skip_phone():
                         svc.client.calls(sid).update(status="completed")
                     except Exception:
                         pass
-                clear_pending_conference(item.get("conference_name"))
+                # Limpa apenas dados do lead — preserva agent_leg_call_sid da ponte persistente
+                conf_name = item.get("conference_name", "")
+                if conf_name.startswith("agent_bridge_"):
+                    item["lead_id"]          = None
+                    item["db_call_id"]       = None
+                    item["lead_call_sid"]    = None
+                    item["audio_bridged"]    = False
+                    item["lead_answered_at"] = None
+                    item["status"]           = "idle"
+                    # Remove do index por nome para register_pending_conference não confundir
+                    from app.services.call_bridge import ACTIVE_CONFERENCES_BY_NAME
+                    ACTIVE_CONFERENCES_BY_NAME.pop(conf_name, None)
+                else:
+                    clear_pending_conference(conf_name)
     except Exception as e:
         logger.warning("[SKIP-PHONE] Erro ao cancelar chamada: %s", e)
 
@@ -1025,6 +1105,8 @@ def auto_status(campaign_id):
         "current_lead_name":    (sess or {}).get("current_lead_name"),
         "current_lead_phone":   (sess or {}).get("current_lead_phone"),
         "current_lead_company": (sess or {}).get("current_lead_company"),
+        "current_phone_index":  (sess or {}).get("current_phone_index"),
+        "current_phone_total":  (sess or {}).get("current_phone_total"),
         "leads_total":          leads_total,
         "leads_done":           leads_done,
         "leads_remaining":      leads_remaining,

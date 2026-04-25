@@ -23,6 +23,7 @@ class Deal(db.Model):
     status      = db.Column(db.String(20), default='open')
     # open | won | lost | frozen | transferred
 
+    notes               = db.Column(db.Text, nullable=True)
     lost_reason         = db.Column(db.String(255), nullable=True)
     expected_close_date = db.Column(db.Date, nullable=True)
 

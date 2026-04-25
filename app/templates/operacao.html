@@ -399,6 +399,13 @@
       </div>
 
       <div style="margin-top:16px;">
+        <div class="title" style="font-size:16px; margin-bottom:10px;">Status da Campanha</div>
+        <div id="campaignStatusBox" class="status-box" style="font-size:14px; font-weight:600; color:#475569; border-color:#334155;">
+          ⏳ Aguardando próximo lead...
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
         <div class="title" style="font-size:16px; margin-bottom:10px;">Logs</div>
         <div id="logBox" class="log-box"></div>
       </div>
@@ -515,6 +522,56 @@
     </div>
   </div>
 
-  <script type="module" src="{{ url_for('static', filename='dist/webphone.js') }}"></script>
+  <script src="{{ url_for('static', filename='dist/webphone.js') }}"></script>
+
+  <script>
+    function _showPopup(data) {
+      const lead   = (data && data.lead) || {};
+      const name   = lead.name || (data && data.lead_name) || 'Lead';
+      const phone  = lead.phone || (data && data.phone_number) || '-';
+
+      var nameEl  = document.getElementById('incomingLeadName');
+      var phoneEl = document.getElementById('incomingLeadPhone');
+      if (nameEl)  nameEl.textContent  = name;
+      if (phoneEl) phoneEl.textContent = phone;
+
+      var popup = document.getElementById('incomingCallPopup');
+      if (popup) popup.style.display = 'flex';
+    }
+
+    function _hidePopup() {
+      var popup = document.getElementById('incomingCallPopup');
+      if (popup) popup.style.display = 'none';
+    }
+
+    // Usado por dismissPendingConference() no webphone bundle
+    window.closeIncomingCallPopup = _hidePopup;
+
+    // Mostra o popup quando um lead atende (ou toca) na chamada
+    window.addEventListener('nexdial:incoming_call', function(e) {
+      _showPopup(e.detail);
+    });
+
+    // Esconde o popup quando a chamada termina ou é dispensada
+    window.addEventListener('nexdial:call_ended', function() {
+      _hidePopup();
+    });
+
+    // Countdown de classificação após lead desligar
+    window.addEventListener('nexdial:classification_grace', function(e) {
+      var sec = e.detail && e.detail.seconds;
+      var popup = document.getElementById('incomingCallPopup');
+      if (!popup || popup.style.display === 'none') return;
+      var kicker = popup.querySelector('.incoming-popup-kicker');
+      if (!kicker) return;
+      if (!sec || sec <= 0) {
+        kicker.textContent = 'Chamada Encerrada';
+        kicker.style.color = '#ef4444';
+      } else {
+        kicker.textContent = 'Lead desligou — classifique (' + sec + 's)';
+        kicker.style.color = '#f59e0b';
+      }
+    });
+  </script>
 </body>
 </html>

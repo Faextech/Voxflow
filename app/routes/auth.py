@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db
 from app.models import Company, User
+from app.models.agent import Agent
 from app.models.pipeline import Pipeline, PipelineStage
 from app.auth import generate_jwt_token
 
@@ -16,7 +17,7 @@ def register():
     data = request.get_json() or {}
 
     name         = data.get('name', 'Administrador')
-    email        = data.get('email')
+    email        = (data.get('email') or '').strip().lower()
     password     = data.get('password')
     company_name = data.get('company_name', 'Minha Empresa')
 
@@ -35,10 +36,14 @@ def register():
         company_id    = company.id,
         name          = name,
         email         = email,
-        password_hash = generate_password_hash(password),
+        password_hash = generate_password_hash(password, method='pbkdf2:sha256'),
         role          = 'admin',
     )
     db.session.add(user)
+    db.session.flush()
+
+    agent = Agent(company_id=company.id, user_id=user.id, status='offline')
+    db.session.add(agent)
     db.session.commit()
 
     # ── Pipeline padrão para novas empresas ──────────────────────────────────
@@ -94,7 +99,7 @@ def login_get():
 def login():
     data = request.get_json() or {}
 
-    email    = data.get('email')
+    email    = (data.get('email') or '').strip().lower()
     password = data.get('password')
 
     if not email or not password:

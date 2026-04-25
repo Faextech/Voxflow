@@ -692,15 +692,17 @@ def conference_events():
                     c.ended_at = c.ended_at or datetime.utcnow()
                     db.session.commit()
 
-            # Sem agente: limpa lead da ponte persistente (mantém ponte ativa para agente)
-            if not agent_was_connected and conference_name.startswith("agent_bridge_"):
-                item["status"]           = "agent_joined"
+            # Limpa dados do lead da ponte persistente (mantém ponte ativa para agente).
+            # Feito SEMPRE (com ou sem agente) para evitar que dados do lead anterior
+            # contaminem a próxima chamada.
+            if conference_name.startswith("agent_bridge_"):
                 item["lead_id"]          = None
                 item["db_call_id"]       = None
                 item["lead_call_sid"]    = None
                 item["audio_bridged"]    = False
                 item["lead_answered_at"] = None
-                logger.info("[CONF] Ponte %s → lead removido (sem agente)", conference_name)
+                item["status"]           = "agent_joined" if agent_was_connected else "idle"
+                logger.info("[CONF] Ponte %s → lead removido (agent_was_connected=%s)", conference_name, agent_was_connected)
 
             if item.get("shifting_to_bridge"):
                 return "", 204
@@ -740,9 +742,8 @@ def conference_events():
 
         logger.info("[CONF-END] %s encerrou (status=%s)", conference_name, item.get("status"))
 
-        final_status        = item.get("status", "")
-        was_answered        = final_status in ("agent_joined", "agent_left", "completed")
-        lead_answered_first = final_status in ("answered_waiting_agent", "agent_joining", "agent_joined", "agent_left", "completed")
+        final_status = item.get("status", "")
+        was_answered = final_status in ("agent_joined", "agent_left", "completed")
 
         campaign_id = item.get("campaign_id")
         company_id  = None
@@ -854,15 +855,15 @@ def pending_call(agent_id):
     # Dados básicos para o popup (serão suplementados pelo DB abaixo)
     lead_id = item.get("lead_id")
 
-    # REGRA DE OURO: O popup SÓ abre se o Lead de fato atendeu (lead_answered_at presente)
-    # e se estiver em um status de conversação ou aguardando o agente entrar.
-    # Isso impede popups precoçes durante o Ringing ou no início da Campanha.
+    # REGRA DE OURO: popup só abre quando o lead efetivamente atendeu.
+    # - ringing_lead: telefone tocando — sem popup ainda
+    # - answered_waiting_agent / agent_joining / agent_joined: lead atendeu — popup
     lead_answered = bool(item.get("lead_answered_at"))
-    
+
     show_popup = (
         lead_id is not None and
         lead_answered and
-        status in ('ringing_lead', 'answered_waiting_agent', 'agent_joining', 'agent_joined')
+        status in ('answered_waiting_agent', 'agent_joining', 'agent_joined')
     )
 
     if show_popup:
@@ -921,6 +922,8 @@ def pending_call(agent_id):
         "status_display": _call_status_display(status),
         "conference_name": item.get("conference_name"),
         "lead_id": lead_id,
+        "call_id": item.get("db_call_id"),
+        "campaign_id": item.get("campaign_id"),
         "webphone_connected": webphone_connected,
         "lead": lead_data,
         "audio_bridged": bool(item.get("audio_bridged"))
