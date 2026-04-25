@@ -46,7 +46,7 @@ def start_dialer():
             return jsonify({"error": "empresa não encontrada"}), 404
 
         try:
-            service = TwilioService.from_company(company)
+            service = TwilioService.from_company(company, current_user_email=getattr(g, 'user_email', None))
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 500
 
@@ -189,6 +189,7 @@ def start_dialer():
             campaign_id     = campaign_id,
             db_call_id      = db_call.id,
             lead_call_sid   = None,
+            user_email      = getattr(g, 'user_email', None),
         )
 
         # ==============================
@@ -308,7 +309,7 @@ def hangup_lead():
 
     try:
         company = Company.query.get(g.company_id)
-        service = TwilioService.from_company(company)
+        service = TwilioService.from_company(company, current_user_email=getattr(g, 'user_email', None))
 
         # 1) Encerrar pelo call_sid do lead (leg outbound)
         lead_call_sid = item.get("lead_call_sid")

@@ -122,6 +122,7 @@ def require_auth(f):
         g.user_id    = user.id
         g.company_id = user.company_id
         g.user_role  = user.role
+        g.user_email = user.email
 
         return f(*args, **kwargs)
 

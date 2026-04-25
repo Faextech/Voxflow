@@ -36,17 +36,36 @@ def get_token(agent_id):
 
     creds = company.get_twilio_credentials()
 
-    # Lê credenciais do tenant, com fallback para .env
-    account_sid   = (creds.get("account_sid")   or os.getenv("TWILIO_ACCOUNT_SID")   or "").strip()
-    api_key       = (creds.get("api_key")        or os.getenv("TWILIO_API_KEY")       or "").strip()
-    api_secret    = (creds.get("api_secret")     or os.getenv("TWILIO_API_SECRET")    or "").strip()
-    twiml_app_sid = (creds.get("twiml_app_sid")  or os.getenv("TWILIO_TWIML_APP_SID") or "").strip()
+    # SUPREME_EMAIL tem permissão para usar o fallback global
+    SUPREME_EMAIL = "allan.consultoriajba@gmail.com"
+    can_use_master = (getattr(g, 'user_email', '') == SUPREME_EMAIL)
+
+    # Lê credenciais do tenant, com fallback para .env apenas para o master
+    account_sid = creds.get("account_sid")
+    if not account_sid and can_use_master:
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    account_sid = (account_sid or "").strip()
+
+    api_key = creds.get("api_key")
+    if not api_key and can_use_master:
+        api_key = os.getenv("TWILIO_API_KEY")
+    api_key = (api_key or "").strip()
+
+    api_secret = creds.get("api_secret")
+    if not api_secret and can_use_master:
+        api_secret = os.getenv("TWILIO_API_SECRET")
+    api_secret = (api_secret or "").strip()
+
+    twiml_app_sid = creds.get("twiml_app_sid")
+    if not twiml_app_sid and can_use_master:
+        twiml_app_sid = os.getenv("TWILIO_TWIML_APP_SID")
+    twiml_app_sid = (twiml_app_sid or "").strip()
 
     if not account_sid or not api_key or not api_secret:
-        return jsonify({"error": "Credenciais Twilio incompletas (account_sid, api_key, api_secret)"}), 500
+        return jsonify({"error": "Credenciais Twilio incompletas ou acesso não autorizado à conta Master"}), 500
 
     if not twiml_app_sid:
-        return jsonify({"error": "TWILIO_TWIML_APP_SID não configurado"}), 500
+        return jsonify({"error": "Configuração Twilio (TWIML_APP_SID) ausente"}), 500
 
     identity = f"agent_{agent.id}"
 

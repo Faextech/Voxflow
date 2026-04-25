@@ -98,11 +98,11 @@ class TwilioService:
         )
 
     @classmethod
-    def from_company(cls, company) -> "TwilioService":
+    def from_company(cls, company, current_user_email: str = None) -> "TwilioService":
         """
         Lê credenciais do tenant (Company model).
-        Faz fallback para .env se o tenant ainda não configurou sua conta Twilio.
-        Isso garante compatibilidade durante a migração.
+        Faz fallback para .env apenas para o usuário 'supreme' (Allan).
+        Isso garante que outros clientes não usem o saldo da conta master.
         """
         creds = company.get_twilio_credentials()
 
@@ -110,12 +110,28 @@ class TwilioService:
         auth_token   = (creds.get("auth_token")   or "").strip()
         phone_number = (creds.get("phone_number") or "").strip()
 
+        # SUPREME_EMAIL tem permissão para usar o fallback global se a empresa dele não estiver configurada
+        SUPREME_EMAIL = "allan.consultoriajba@gmail.com"
+        can_use_master = (current_user_email == SUPREME_EMAIL)
+
         if not account_sid:
-            account_sid  = (os.getenv("TWILIO_ACCOUNT_SID")  or "").strip()
+            if can_use_master:
+                account_sid = (os.getenv("TWILIO_ACCOUNT_SID") or "").strip()
+            else:
+                logger.error(f"[TWILIO] Empresa {company.id} sem account_sid e usuário não é master")
+                raise ValueError("Configuração Twilio ausente para esta empresa.")
+
         if not auth_token:
-            auth_token   = (os.getenv("TWILIO_AUTH_TOKEN")   or "").strip()
+            if can_use_master:
+                auth_token = (os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+            else:
+                raise ValueError("Configuração Twilio ausente (auth_token).")
+
         if not phone_number:
-            phone_number = (os.getenv("TWILIO_PHONE_NUMBER") or "").strip()
+            if can_use_master:
+                phone_number = (os.getenv("TWILIO_PHONE_NUMBER") or "").strip()
+            else:
+                raise ValueError("Configuração Twilio ausente (phone_number).")
 
         return cls(account_sid, auth_token, phone_number, company=company)
 

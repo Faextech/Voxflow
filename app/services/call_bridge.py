@@ -17,6 +17,7 @@ def register_pending_conference(
     db_call_id=None,
     lead_call_sid=None,
     amd_enabled=False,
+    user_email=None,
 ):
     from datetime import datetime
     import logging
@@ -39,6 +40,7 @@ def register_pending_conference(
         "agent_id": agent_id,
         "lead_id": lead_id,
         "phone_number": phone_number,
+        "user_email": user_email,
         "lead_name": lead_name,
         "company_name": company_name,
         "campaign_id": campaign_id,

@@ -4,96 +4,259 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - NexDial</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --purple: #7c3aed;
+            --purple-light: #8b5cf6;
+            --bg: #050816;
+            --card: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
-        .box {
-            background: #111827;
-            padding: 30px;
-            border-radius: 15px;
-            width: 320px;
-            box-shadow: 0 0 25px rgba(0,0,0,0.3);
+        /* Orbs de fundo */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            z-index: 0;
+        }
+        .orb-1 { width: 400px; height: 400px; background: var(--purple); top: -100px; right: -100px; }
+        .orb-2 { width: 300px; height: 300px; background: #06b6d4; bottom: -50px; left: -50px; }
+
+        .login-card {
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            padding: 48px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 32px;
+            background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
             text-align: center;
+        }
+
+        p.subtitle {
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
             margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--muted);
         }
 
         input {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-radius: 8px;
-            border: none;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--purple-light);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            background: #7c3aed;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--purple), #4f46e5);
             color: white;
-            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
         }
 
         button:hover {
-            background: #6d28d9;
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.4);
+            filter: brightness(1.1);
         }
 
-        .link {
+        button:active {
+            transform: translateY(0);
+        }
+
+        .footer-links {
+            margin-top: 32px;
             text-align: center;
-            margin-top: 12px;
+            font-size: 0.9rem;
+            color: var(--muted);
         }
 
-        .link a {
-            color: #7c3aed;
+        .footer-links a {
+            color: var(--purple-light);
             text-decoration: none;
+            font-weight: 600;
         }
 
-        .error {
-            color: red;
-            font-size: 14px;
-            margin-bottom: 10px;
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            display: none;
             text-align: center;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Estilo para o modo 'supreme' */
+        .supreme-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            color: #000;
+            font-size: 0.7rem;
+            font-weight: 900;
+            border-radius: 100px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
         }
     </style>
 </head>
-
 <body>
-    <div class="box">
-        <h2>Login NexDial</h2>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
 
-        <div id="error" class="error"></div>
+    <div class="login-card">
+        <div class="logo">NexDial</div>
+        
+        <div id="supreme-indicator" style="display:none; text-align:center;">
+            <div class="supreme-badge">Acesso Supremo</div>
+        </div>
 
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Senha">
+        <h2>Bem-vindo de volta</h2>
+        <p class="subtitle">Acesse sua conta para gerenciar suas chamadas.</p>
 
-        <button onclick="login()">Entrar</button>
+        <div id="error" class="error-msg"></div>
 
-        <div class="link">
-            <a href="/register-page">Criar conta</a>
+        <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" placeholder="seu@email.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+
+        <button id="login-btn" onclick="login()">
+            <span id="btn-text">Entrar na Plataforma</span>
+            <div id="spinner" class="loading-spinner"></div>
+        </button>
+
+        <div class="footer-links">
+            Não tem uma conta? <a href="/register-page">Criar agora</a>
         </div>
     </div>
 
     <script>
+        const emailInput = document.getElementById('email');
+        const supremeIndicator = document.getElementById('supreme-indicator');
+
+        emailInput.addEventListener('input', (e) => {
+            if (e.target.value.toLowerCase() === 'allan.consultoriajba@gmail.com') {
+                supremeIndicator.style.display = 'block';
+            } else {
+                supremeIndicator.style.display = 'none';
+            }
+        });
+
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('error');
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('spinner');
+            const loginBtn = document.getElementById('login-btn');
 
-            errorDiv.innerText = '';
+            if (!email || !password) {
+                errorDiv.innerText = 'Preencha todos os campos';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            errorDiv.style.display = 'none';
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+            loginBtn.disabled = true;
 
             try {
                 const response = await fetch('/auth/login', {
@@ -106,10 +269,13 @@
 
                 if (!response.ok) {
                     errorDiv.innerText = data.error || 'Erro no login';
+                    errorDiv.style.display = 'block';
+                    btnText.style.display = 'block';
+                    spinner.style.display = 'none';
+                    loginBtn.disabled = false;
                     return;
                 }
 
-                // limpa dados antigos e salva sessão nova
                 localStorage.clear();
                 localStorage.setItem('nexdial_token', data.token);
                 localStorage.setItem('token', data.token);
@@ -117,14 +283,26 @@
                 localStorage.setItem('company_id', data.company_id);
                 localStorage.setItem('nexdial_role', data.role || 'agent');
                 localStorage.setItem('nexdial_user_name', data.name || '');
+                localStorage.setItem('user_email', email); // Salva o email para uso na UI
+                
                 if (data.agent_id) localStorage.setItem('agent_id', data.agent_id);
 
-                window.location.href = '/';
+                // Redireciona para o dashboard
+                window.location.href = '/app';
 
             } catch (err) {
                 errorDiv.innerText = 'Erro ao conectar com o servidor';
+                errorDiv.style.display = 'block';
+                btnText.style.display = 'block';
+                spinner.style.display = 'none';
+                loginBtn.disabled = false;
             }
         }
+
+        // Atalho para Enter
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>

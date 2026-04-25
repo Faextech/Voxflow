@@ -58,12 +58,13 @@ _STATUS_DISPLAY = {
 
 # ── Session factory ───────────────────────────────────────────────────────────
 
-def _new_session(campaign_id, company_id, campaign_name, interval_sec, leads_total, mobile_only=False):
+def _new_session(campaign_id, company_id, campaign_name, interval_sec, leads_total, mobile_only=False, user_email=None):
     return {
         "status":               "running",
         "campaign_id":          campaign_id,
         "company_id":           company_id,
         "campaign_name":        campaign_name,
+        "user_email":           user_email,
         "interval_seconds":     interval_sec,
         "leads_total":          leads_total,
         "leads_done":           0,
@@ -176,7 +177,9 @@ def _cancel_twilio_call(company_id, call_sid):
     try:
         company = Company.query.get(company_id)
         if company:
-            svc = TwilioService.from_company(company)
+            sess = AUTO_DIALER_SESSIONS.get(int(getattr(request, 'form', {}).get('campaign_id', 0))) or {}
+            email = sess.get("user_email")
+            svc = TwilioService.from_company(company, current_user_email=email)
             svc.client.calls(call_sid).update(status="completed")
             logger.info("[DIALER] Chamada %s encerrada no Twilio", call_sid)
     except Exception as e:
@@ -513,7 +516,7 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     # ── Twilio ────────────────────────────────────────────────────────────
     company = Company.query.get(company_id)
     try:
-        svc = TwilioService.from_company(company)
+        svc = TwilioService.from_company(company, current_user_email=sess.get("user_email"))
     except ValueError as e:
         return False, str(e)
 
@@ -554,6 +557,7 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
         db_call_id      = db_call.id,
         lead_call_sid   = None,
         amd_enabled     = False,
+        user_email      = sess.get("user_email"),
     )
 
     twiml = (
@@ -753,6 +757,7 @@ def start_auto():
     AUTO_DIALER_SESSIONS[campaign_id] = _new_session(
         campaign_id, g.company_id, campaign.name,
         interval_sec, leads_total, bool(campaign.mobile_only),
+        user_email=getattr(g, 'user_email', None)
     )
     campaign.status = "running"
     db.session.commit()
@@ -783,7 +788,7 @@ def stop_auto():
     try:
         company = Company.query.get(g.company_id)
         if company:
-            svc = TwilioService.from_company(company)
+            svc = TwilioService.from_company(company, current_user_email=sess.get("user_email") if sess else getattr(g, 'user_email', None))
             active = Call.query.filter(
                 Call.campaign_id == campaign_id,
                 Call.status.in_(["ringing", "dialing", "waiting_agent", "in-progress", "answered", "agent_joined"]),
@@ -825,7 +830,7 @@ def pause_auto():
     try:
         company = Company.query.get(g.company_id)
         if company:
-            svc = TwilioService.from_company(company)
+            svc = TwilioService.from_company(company, current_user_email=sess.get("user_email") if sess else getattr(g, 'user_email', None))
             active = Call.query.filter(
                 Call.campaign_id == campaign_id,
                 Call.status.in_(["ringing", "dialing", "waiting_agent", "in-progress", "answered", "agent_joined"]),
@@ -872,6 +877,7 @@ def resume_auto():
         AUTO_DIALER_SESSIONS[campaign_id] = _new_session(
             campaign_id, g.company_id, campaign.name,
             3, leads_remaining, bool(campaign.mobile_only),
+            user_email=getattr(g, 'user_email', None)
         )
         sess = AUTO_DIALER_SESSIONS[campaign_id]
     else:
@@ -919,7 +925,7 @@ def next_lead():
     # Encerra chamadas ativas no Twilio
     company = Company.query.get(g.company_id)
     try:
-        svc = TwilioService.from_company(company)
+        svc = TwilioService.from_company(company, current_user_email=sess.get("user_email") if sess else getattr(g, 'user_email', None))
         active = Call.query.filter(
             Call.campaign_id == campaign_id,
             Call.status.in_(["ringing", "dialing", "waiting_agent", "in-progress", "answered", "agent_joined"]),
@@ -989,7 +995,7 @@ def skip_phone():
 
     company = Company.query.get(g.company_id)
     try:
-        svc = TwilioService.from_company(company)
+        svc = TwilioService.from_company(company, current_user_email=sess.get("user_email") if sess else getattr(g, 'user_email', None))
         if not isinstance(sess.get("_cancelled_sids"), set):
             sess["_cancelled_sids"] = set()
         for item in list(ACTIVE_CONFERENCES_BY_AGENT.values()):

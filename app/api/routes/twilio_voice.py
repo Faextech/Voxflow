@@ -382,7 +382,7 @@ def browser_outgoing():
                 agent = Agent.query.get(agent_id)
                 if agent:
                     company = Company.query.get(agent.company_id)
-                    service = TwilioService.from_company(company)
+                    service = TwilioService.from_company(company, current_user_email=item.get("user_email"))
                 else:
                     service = TwilioService.from_env()
             else:
@@ -929,7 +929,9 @@ def end_bridge(agent_id):
         if not company:
             return jsonify({"error": "Empresa não encontrada"}), 404
 
-        service = TwilioService.from_company(company)
+        from app.services.call_bridge import ACTIVE_CONFERENCES_BY_AGENT
+        item = ACTIVE_CONFERENCES_BY_AGENT.get(agent_id) or {}
+        service = TwilioService.from_company(company, current_user_email=item.get("user_email") or getattr(g, 'user_email', None))
         agent_conf = f"agent_bridge_{agent_id}"
 
         # Busca a conferência pelo friendly name e encerra

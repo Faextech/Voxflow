@@ -264,7 +264,7 @@ def save_crm():
             from app.services.twilio_service import TwilioService
             company = Company.query.get(g.company_id)
             if company:
-                svc = TwilioService.from_company(company)
+                svc = TwilioService.from_company(company, current_user_email=getattr(g, 'user_email', None))
                 svc.client.calls(call.call_sid).update(status="completed")
                 # Não sobrescreve se for voicemail/no_answer
                 if call.status not in ("voicemail", "no_answer", "failed", "busy"):
@@ -377,7 +377,7 @@ def join_conference():
 
     try:
         company = Company.query.get(g.company_id)
-        service = TwilioService.from_company(company)
+        service = TwilioService.from_company(company, current_user_email=getattr(g, 'user_email', None))
 
         # TwiML: operador entra na conference iniciando a sala
         agent_twiml = (
@@ -524,7 +524,7 @@ def skip_phone():
                         from app.services.twilio_service import TwilioService
                         company = Company.query.get(g.company_id)
                         if company:
-                            svc = TwilioService.from_company(company)
+                            svc = TwilioService.from_company(company, current_user_email=getattr(g, 'user_email', None))
                             svc.client.calls(current_call.call_sid).update(status="completed")
                 except Exception as e_tw:
                     logger.warning(f"[SKIP_PHONE] Erro ao cancelar Twilio: {e_tw}")
