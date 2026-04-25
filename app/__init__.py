@@ -9,14 +9,12 @@ from config import config as app_config
 logger = logging.getLogger(__name__)
 
 
-def _sqlite_add_missing_columns(db):
+def _auto_add_missing_columns(db):
     """
-    Adiciona colunas que ainda não existem no SQLite (desenvolvimento).
-    Silencioso — não faz nada em produção (PostgreSQL já usa flask db upgrade).
+    Adiciona colunas que ainda não existem no banco de dados (SQLite/Postgres).
+    Útil para aplicar mudanças sem precisar do flask db upgrade no Railway.
     """
     db_url = str(db.engine.url)
-    if "sqlite" not in db_url:
-        return  # produção usa migrações Alembic normais
 
     inspector = inspect(db.engine)
     tables = inspector.get_table_names()
@@ -29,6 +27,7 @@ def _sqlite_add_missing_columns(db):
             "twilio_api_key":       "VARCHAR(255)",
             "twilio_api_secret":    "VARCHAR(512)",
             "twilio_twiml_app_sid": "VARCHAR(255)",
+            "credit_balance":       "NUMERIC(12, 4) DEFAULT 0",
         }
         for col, col_type in new_cols.items():
             if col not in existing:
@@ -118,10 +117,8 @@ def create_app():
         # Cria tabelas novas; não altera as que já existem
         db.create_all()
 
-        # Para SQLite em desenvolvimento: adiciona colunas novas sem precisar
-        # rodar `flask db upgrade` manualmente. Em produção (PostgreSQL), use
-        # `flask db upgrade` antes de subir a aplicação.
-        _sqlite_add_missing_columns(db)
+        # Auto-migration para colunas faltantes (útil em produção na Railway sem console)
+        _auto_add_missing_columns(db)
 
         # ── Startup cleanup — executa UMA VEZ por inicialização ───────────────
         # Quando o servidor reinicia, AUTO_DIALER_SESSIONS (dict em memória) é
