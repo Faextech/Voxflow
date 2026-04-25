@@ -4,7 +4,14 @@ pages_bp = Blueprint("pages", __name__)
 
 
 @pages_bp.route("/")
+def index():
+    """Landing page pública — rota raiz do site."""
+    return render_template("landing.html")
+
+
+@pages_bp.route("/app")
 def dashboard():
+    """Dashboard principal (requer login via JS)."""
     return render_template("dashboard.html")
 
 
@@ -20,7 +27,7 @@ def register_page():
 
 @pages_bp.route("/operacao")
 def operacao():
-    return redirect(url_for("pages.dashboard"))
+    return redirect("/app")
 
 
 @pages_bp.route("/crm")

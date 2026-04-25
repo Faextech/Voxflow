@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NexDial — Discador Inteligente para Vendas</title>
+<meta name="description" content="NexDial é o discador automático que acelera suas vendas. Mais chamadas, mais conversões, menos esforço.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #7c3aed;
+    --purple-light: #8b5cf6;
+    --purple-dark: #6d28d9;
+    --indigo: #4f46e5;
+    --cyan: #06b6d4;
+    --bg: #050816;
+    --bg2: #0a0f23;
+    --bg3: #0f172a;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --radius: 16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+  /* ── NAV ── */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 24px;backdrop-filter:blur(20px);background:rgba(5,8,22,.8);border-bottom:1px solid var(--border)}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{font-size:1.4rem;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .nav-cta{display:flex;gap:12px;align-items:center}
+  .btn-ghost{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.9rem;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.2s}
+  .btn-ghost:hover{border-color:var(--purple-light);color:#fff}
+  .btn-primary{padding:9px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;font-size:.9rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.2s;box-shadow:0 4px 20px rgba(124,58,237,.35)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,.5)}
+
+  /* ── HERO ── */
+  .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(124,58,237,.18) 0%,transparent 70%)}
+  .hero::after{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.08),transparent 70%);bottom:-200px;left:50%;transform:translateX(-50%)}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.1);font-size:.8rem;color:var(--purple-light);margin-bottom:28px}
+  .badge-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;line-height:1.1;letter-spacing:-2px;margin-bottom:24px}
+  .hero h1 span{background:linear-gradient(135deg,#8b5cf6 0%,#06b6d4 60%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .hero p{font-size:1.2rem;color:var(--muted);max-width:580px;margin:0 auto 48px;line-height:1.7}
+  .hero-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .btn-hero{padding:16px 36px;border-radius:12px;font-size:1rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;text-decoration:none;transition:.25s;display:inline-flex;align-items:center;gap:10px}
+  .btn-hero-primary{background:linear-gradient(135deg,var(--purple),var(--indigo));color:#fff;border:none;box-shadow:0 8px 32px rgba(124,58,237,.4)}
+  .btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(124,58,237,.6)}
+  .btn-hero-secondary{background:transparent;color:#fff;border:1px solid var(--border)}
+  .btn-hero-secondary:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.05)}
+
+  /* stats bar */
+  .stats-bar{display:flex;gap:48px;justify-content:center;flex-wrap:wrap;margin-top:72px;padding-top:48px;border-top:1px solid var(--border)}
+  .stat{text-align:center}
+  .stat-num{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .stat-label{font-size:.85rem;color:var(--muted);margin-top:4px}
+
+  /* ── SECTION ── */
+  section{padding:100px 24px}
+  .container{max-width:1200px;margin:0 auto}
+  .section-label{font-size:.8rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--purple-light);margin-bottom:12px}
+  .section-title{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1.2;letter-spacing:-1px;margin-bottom:16px}
+  .section-sub{font-size:1.05rem;color:var(--muted);line-height:1.7;max-width:540px}
+
+  /* ── FEATURES ── */
+  .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:64px}
+  .feature-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;transition:.3s;position:relative;overflow:hidden}
+  .feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,58,237,.6),transparent);opacity:0;transition:.3s}
+  .feature-card:hover{border-color:rgba(124,58,237,.3);transform:translateY(-4px);background:rgba(255,255,255,.06)}
+  .feature-card:hover::before{opacity:1}
+  .feature-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:20px}
+  .feature-card h3{font-size:1.1rem;font-weight:700;margin-bottom:10px}
+  .feature-card p{font-size:.9rem;color:var(--muted);line-height:1.65}
+
+  /* ── HOW IT WORKS ── */
+  .how-bg{background:var(--bg2)}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;margin-top:64px;counter-reset:steps}
+  .step{text-align:center;counter-increment:steps;position:relative}
+  .step::after{content:'';position:absolute;top:28px;left:calc(50% + 40px);width:calc(100% - 80px);height:1px;background:linear-gradient(90deg,var(--purple-light),transparent);display:none}
+  @media(min-width:768px){.step:not(:last-child)::after{display:block}}
+  .step-num{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--indigo));display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;margin:0 auto 20px;box-shadow:0 0 28px rgba(124,58,237,.4)}
+  .step h3{font-size:1rem;font-weight:700;margin-bottom:8px}
+  .step p{font-size:.87rem;color:var(--muted);line-height:1.6}
+
+  /* ── CTA ── */
+  .cta-section{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(79,70,229,.1));border:1px solid rgba(124,58,237,.2);border-radius:24px;padding:80px 48px;text-align:center;max-width:900px;margin:0 auto;position:relative;overflow:hidden}
+  .cta-section::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.15),transparent 70%)}
+  .cta-section h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-1px;margin-bottom:16px}
+  .cta-section p{color:var(--muted);font-size:1.05rem;margin-bottom:40px}
+
+  /* ── FOOTER ── */
+  footer{border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:var(--muted);font-size:.85rem}
+  footer span{color:var(--purple-light);font-weight:600}
+
+  /* ── FLOATING ORBS ── */
+  .orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;opacity:.35}
+  .orb-1{width:400px;height:400px;background:radial-gradient(circle,rgba(124,58,237,.5),transparent);top:-100px;right:-100px;animation:float1 8s ease-in-out infinite}
+  .orb-2{width:300px;height:300px;background:radial-gradient(circle,rgba(6,182,212,.4),transparent);bottom:10%;left:-80px;animation:float2 10s ease-in-out infinite}
+  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,30px)}}
+  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-20px)}}
+
+  @media(max-width:640px){
+    .stats-bar{gap:32px}
+    .cta-section{padding:48px 24px}
+    .nav-cta .btn-ghost{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo">⚡ NexDial</div>
+    <div class="nav-cta">
+      <a href="/login-page" class="btn-ghost">Entrar</a>
+      <a href="/login-page" class="btn-primary">Acessar Plataforma →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div style="position:relative;z-index:1;width:100%">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Plataforma em produção
+    </div>
+    <h1>Discador inteligente<br>para <span>times de vendas</span></h1>
+    <p>Automatize suas chamadas, qualifique leads em tempo real e escale suas vendas sem aumentar a equipe.</p>
+    <div class="hero-actions">
+      <a href="/login-page" class="btn-hero btn-hero-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Acessar Plataforma
+      </a>
+      <a href="#features" class="btn-hero btn-hero-secondary">Ver recursos</a>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num">3×</div><div class="stat-label">mais chamadas por hora</div></div>
+      <div class="stat"><div class="stat-num">100%</div><div class="stat-label">integrado ao Twilio</div></div>
+      <div class="stat"><div class="stat-num">Real‑time</div><div class="stat-label">status de chamadas</div></div>
+      <div class="stat"><div class="stat-num">CRM</div><div class="stat-label">pipeline integrado</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Recursos</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px">
+      <div>
+        <h2 class="section-title">Tudo que você precisa<br>para vender mais</h2>
+      </div>
+      <p class="section-sub">Do discador automático ao CRM, tudo em um só lugar para o seu time operar com máxima eficiência.</p>
+    </div>
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(124,58,237,.15)">📞</div>
+        <h3>Discador Automático</h3>
+        <p>Percorre todos os números do lead antes de avançar. Sem pular contatos, sem perder oportunidades.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(6,182,212,.12)">🎧</div>
+        <h3>Webphone Integrado</h3>
+        <p>Operadores atendem e fazem chamadas direto no navegador, sem precisar de telefone físico ou softphone externo.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(34,197,94,.12)">📊</div>
+        <h3>CRM & Pipeline</h3>
+        <p>Qualifique leads em tempo real durante a chamada. Pipeline visual com etapas personalizáveis por empresa.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(245,158,11,.12)">⚡</div>
+        <h3>Campanhas por Lote</h3>
+        <p>Importe sua lista, configure a campanha e deixe o sistema discar. Seu time só fala com quem atendeu.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(239,68,68,.12)">🔔</div>
+        <h3>Fila de Callback</h3>
+        <p>Agende retornos automáticos para leads que pediram para ligar depois. Nenhum contato se perde.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(79,70,229,.15)">🔐</div>
+        <h3>Multi-empresa</h3>
+        <p>Cada cliente com seus próprios dados, credenciais e configurações Twilio. Isolamento total por tenant.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-bg">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:16px">
+      <div class="section-label">Como funciona</div>
+      <h2 class="section-title">Em 4 passos simples</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Importe seus leads</h3>
+        <p>Suba uma planilha com seus contatos. O sistema normaliza e organiza automaticamente.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Configure a campanha</h3>
+        <p>Defina o nome, os leads, intervalo entre chamadas e se quer apenas celulares.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Ligue com 1 clique</h3>
+        <p>O discador liga automaticamente e conecta o operador apenas quando o lead atende.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Classifique e avance</h3>
+        <p>Qualifique o lead no popup, anote observações e o sistema já disca o próximo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section>
+  <div class="container">
+    <div class="cta-section">
+      <h2>Pronto para começar?</h2>
+      <p>Acesse a plataforma agora mesmo e comece a discar.</p>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+        <a href="/login-page" class="btn-hero btn-hero-primary" style="font-size:.95rem;padding:14px 32px">
+          Fazer Login
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2026 <span>NexDial</span> — Discador inteligente para times de vendas.</p>
+</footer>
+
+<script>
+  // Se já tiver token válido, redireciona direto pro dashboard
+  const token = localStorage.getItem('nexdial_token') || localStorage.getItem('token');
+  if (token) {
+    fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => { if (r.ok) window.location.href = '/'; })
+      .catch(() => {});
+  }
+</script>
+</body>
+</html>
