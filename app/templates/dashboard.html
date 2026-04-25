@@ -1075,6 +1075,30 @@
         body.light-mode .stat-label {
             color: #64748b !important;
         }
+        /* Theme Switch */
+        .theme-switch { position: relative; display: inline-block; width: 44px; height: 22px; margin: 0; }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .theme-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #1e293b; transition: .4s; border-radius: 34px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 4px;
+        }
+        .theme-slider .icon { font-size: 10px; line-height: 1; user-select: none; z-index: 1; }
+        .theme-slider::before {
+            position: absolute; content: ""; height: 16px; width: 16px;
+            left: 2px; bottom: 2px; background-color: #fff; transition: .4s;
+            border-radius: 50%; z-index: 2;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .theme-slider {
+            background-color: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        input:checked + .theme-slider::before {
+            transform: translateX(22px);
+            background-color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -1083,22 +1107,21 @@
             document.body.classList.add('light-mode');
         }
         function toggleTheme() {
-            if (document.body.classList.contains('light-mode')) {
-                document.body.classList.remove('light-mode');
-                localStorage.setItem('nexdial_theme', 'dark');
-                const btn = document.getElementById('themeToggleBtn');
-                if (btn) btn.innerText = '☀️ Modo Claro';
-            } else {
-                document.body.classList.add('light-mode');
-                localStorage.setItem('nexdial_theme', 'light');
-                const btn = document.getElementById('themeToggleBtn');
-                if (btn) btn.innerText = '🌙 Modo Escuro';
+            const cb = document.getElementById('themeCheckbox');
+            if (cb) {
+                if (cb.checked) {
+                    document.body.classList.add('light-mode');
+                    localStorage.setItem('nexdial_theme', 'light');
+                } else {
+                    document.body.classList.remove('light-mode');
+                    localStorage.setItem('nexdial_theme', 'dark');
+                }
             }
         }
         window.addEventListener('DOMContentLoaded', () => {
-            const btn = document.getElementById('themeToggleBtn');
-            if (btn) {
-                btn.innerText = document.body.classList.contains('light-mode') ? '🌙 Modo Escuro' : '☀️ Modo Claro';
+            const cb = document.getElementById('themeCheckbox');
+            if (cb) {
+                cb.checked = document.body.classList.contains('light-mode');
             }
         });
     </script>
@@ -1143,7 +1166,16 @@
             <div class="menu">
                 <button class="menu-link" data-section="users">Usuários</button>
                 <button class="menu-link admin-only" data-section="settings">Configurações</button>
-                <button id="themeToggleBtn" onclick="toggleTheme()" class="menu-link" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; border-radius:0;">🌙 Modo Escuro</button>
+                <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.05); padding:16px 8px 8px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:12px; font-weight:600; color:#5a6480;">Tema</span>
+                    <label class="theme-switch">
+                        <input type="checkbox" id="themeCheckbox" onchange="toggleTheme()">
+                        <span class="theme-slider">
+                            <span class="icon">🌙</span>
+                            <span class="icon" style="filter:grayscale(1) brightness(1.5);">☀️</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div style="margin-top:auto; padding:12px 16px; border-top:1px solid rgba(255,255,255,.05); font-size:12px; color:#5a6480; display:flex; justify-content:space-between; align-items:center;">
