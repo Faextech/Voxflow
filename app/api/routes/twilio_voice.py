@@ -384,9 +384,9 @@ def browser_outgoing():
                     company = Company.query.get(agent.company_id)
                     service = TwilioService.from_company(company, current_user_email=item.get("user_email"))
                 else:
-                    service = TwilioService.from_env()
+                    service = TwilioService.from_env(current_user_email=item.get("user_email"))
             else:
-                service = TwilioService.from_env()
+                service = TwilioService.from_env(current_user_email=item.get("user_email"))
 
             call = service.client.calls.create(
                 to=to_number_norm,

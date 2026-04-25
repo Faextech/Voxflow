@@ -88,8 +88,15 @@ class TwilioService:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_env(cls) -> "TwilioService":
-        """Lê credenciais do .env — usar apenas em desenvolvimento/fallback."""
+    def from_env(cls, current_user_email: str = None) -> "TwilioService":
+        """
+        Lê credenciais do .env/Railway — usar apenas em desenvolvimento ou para o usuário Master.
+        """
+        SUPREME_EMAIL = "allan.consultoriajba@gmail.com"
+        if os.getenv("FLASK_ENV") == "production" and current_user_email != SUPREME_EMAIL:
+            logger.error(f"[TWILIO] Acesso negado às credenciais Master para o usuário: {current_user_email}")
+            raise ValueError("Acesso não autorizado às credenciais globais da Twilio.")
+
         return cls(
             account_sid  = (os.getenv("TWILIO_ACCOUNT_SID")  or "").strip(),
             auth_token   = (os.getenv("TWILIO_AUTH_TOKEN")   or "").strip(),
