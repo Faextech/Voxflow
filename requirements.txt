@@ -7,7 +7,7 @@ Flask-Migrate==4.0.7
 # ─── Banco de Dados ──────────────────────────────────────────────────────────
 SQLAlchemy==2.0.48
 # PostgreSQL (produção — Railway, Supabase, Neon, RDS)
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 
 # ─── Autenticação e Segurança ────────────────────────────────────────────────
 PyJWT==2.10.1
