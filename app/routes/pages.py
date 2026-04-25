@@ -15,12 +15,12 @@ def dashboard():
     return render_template("dashboard.html")
 
 
-@pages_bp.route("/login-page")
+@pages_bp.route("/login")
 def login_page():
     return render_template("login.html")
 
 
-@pages_bp.route("/register-page")
+@pages_bp.route("/register")
 def register_page():
     return render_template("register.html")
 
