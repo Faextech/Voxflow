@@ -300,7 +300,8 @@
                     return;
                 }
 
-                localStorage.clear();
+                const keysToRemove = ['nexdial_token', 'token', 'user_id', 'company_id', 'nexdial_role', 'nexdial_user_name', 'user_email', 'agent_id'];
+                keysToRemove.forEach(k => localStorage.removeItem(k));
                 localStorage.setItem('nexdial_token', data.token);
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user_id', data.user_id);
