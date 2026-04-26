@@ -1,6 +1,10 @@
+import logging
+
 import pandas as pd
 from flask import Blueprint, request, jsonify, g
 from sqlalchemy import func
+
+logger = logging.getLogger(__name__)
 
 from app.auth import require_auth, require_role
 from app.extensions import db
@@ -396,7 +400,7 @@ def dial_next_lead(campaign_id):
     phone_to_call = normalize_phone_br(phone_to_call)
 
     try:
-        company = Company.query.get(g.company_id)
+        company = db.session.get(Company, g.company_id)
         service = TwilioService.from_company(company)
         status_callback_url = request.host_url.rstrip("/") + "/api/twilio/status"
 
@@ -485,7 +489,7 @@ def tick_campaign(campaign_id):
     phone_to_call = normalize_phone_br(phone_to_call)
 
     try:
-        company = Company.query.get(g.company_id)
+        company = db.session.get(Company, g.company_id)
         service = TwilioService.from_company(company)
         status_callback_url = request.host_url.rstrip("/") + "/api/twilio/status"
 
@@ -597,7 +601,6 @@ def create_lead():
                 first_stage = target_pipeline.stages[0]
 
         if target_pipeline and first_stage:
-            from app.models.deal import Deal
             deal = Deal(
                 company_id  = g.company_id,
                 pipeline_id = target_pipeline.id,
@@ -879,7 +882,6 @@ def reset_campaign_leads(campaign_id):
     
     # Marca as chamadas antigas como 'reset' para que o _phones_tried ignore elas,
     # permitindo que o discador disque todos os números novamente, mas sem deletar do histórico.
-    from app.models.call import Call
     Call.query.filter_by(
         campaign_id=campaign_id, company_id=g.company_id
     ).update({"status": "reset"})
@@ -948,7 +950,6 @@ def clear_all_leads():
 
     # Delete deals first (they depend on lead_id)
     try:
-        from app.models.deal import Deal
         Deal.query.filter_by(company_id=g.company_id).delete()
     except Exception:
         pass
