@@ -3026,11 +3026,13 @@
             const elapsed = formatElapsedTime(startDateString);
             if (document.getElementById('hubTimer')) document.getElementById('hubTimer').textContent = elapsed;
             if (document.getElementById('premiumTimer')) document.getElementById('premiumTimer').textContent = elapsed;
+            if (document.getElementById('manualTimer')) document.getElementById('manualTimer').textContent = elapsed;
 
             hubTimerInterval = setInterval(() => {
                 const elapsedNow = formatElapsedTime(startDateString);
                 if (document.getElementById('hubTimer')) document.getElementById('hubTimer').textContent = elapsedNow;
                 if (document.getElementById('premiumTimer')) document.getElementById('premiumTimer').textContent = elapsedNow;
+                if (document.getElementById('manualTimer')) document.getElementById('manualTimer').textContent = elapsedNow;
             }, 1000);
         }
 
@@ -3859,15 +3861,90 @@ async function deleteLead(leadId) {
         }
         window.hangupCallOnly = hangupCallOnly;
 
+        // ── POPUP DE LIGAÇÃO MANUAL ────────────────────────────────────────────
+        function openManualCallPopup(data) {
+            const lead = data.lead || {};
+            const name  = lead.name  || data.lead_name    || 'Lead';
+            const phone = lead.phone || data.phone_number || '—';
+            const el = (id) => document.getElementById(id);
+
+            if (el('manualLeadName'))  el('manualLeadName').textContent  = name;
+            if (el('manualLeadPhone')) el('manualLeadPhone').textContent = phone;
+            if (el('manualQualification')) el('manualQualification').value = '';
+            if (el('manualNotes'))         el('manualNotes').value         = '';
+            if (el('manualTimer'))         el('manualTimer').textContent   = '00:00:00';
+
+            pendingConferenceData        = data;
+            currentPopupConferenceName   = data.conference_name;
+
+            el('manualCallPopup').classList.add('active');
+            if (typeof window.resumeTwilioAudioPipeline === 'function') window.resumeTwilioAudioPipeline();
+            startHubTimer(data.answered_at || data.started_at);
+        }
+
+        function closeManualCallPopup() {
+            const p = document.getElementById('manualCallPopup');
+            if (p) p.classList.remove('active');
+            stopHubTimer();
+        }
+        window.closeManualCallPopup = closeManualCallPopup;
+
+        async function hangupManualCall() {
+            try {
+                const conf = pendingConferenceData?.conference_name || currentPopupConferenceName;
+                const agId = pendingConferenceData?.agent_id || (typeof getAgentId === 'function' ? getAgentId() : 0);
+                await authFetch('/api/dialer/hangup-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conference_name: conf, agent_id: agId })
+                });
+            } catch(e) { console.error('Erro ao desligar chamada manual:', e); }
+            closeManualCallPopup();
+            if (typeof window.dismissPendingConference === 'function') window.dismissPendingConference();
+        }
+        window.hangupManualCall = hangupManualCall;
+
+        async function saveManualCRM() {
+            const el = (id) => document.getElementById(id);
+            const qualification = el('manualQualification')?.value || '';
+            const notes         = el('manualNotes')?.value         || '';
+            const leadId  = pendingConferenceData?.lead_id  || null;
+            const callId  = pendingConferenceData?.call_id  || null;
+            const agentId = pendingConferenceData?.agent_id || null;
+            if (!leadId) { alert('Nenhum lead ativo para salvar.'); return; }
+            const btn = el('manualSaveBtn');
+            try {
+                if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+                const res = await authFetch('/api/operator/workspace/save_crm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId, lead_id: leadId, call_id: callId, qualification, disposition: qualification, notes })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
+                if (btn) { btn.textContent = '✓ Salvo!'; setTimeout(() => closeManualCallPopup(), 1200); }
+            } catch(e) {
+                if (btn) { btn.disabled = false; btn.textContent = 'Salvar Atendimento'; }
+                alert('Erro ao salvar: ' + e.message);
+            }
+        }
+        window.saveManualCRM = saveManualCRM;
+
         // --- Event Listeners vinculados ao webphone-modern.js ---
         window.addEventListener('nexdial:incoming_call', (e) => {
             console.log("Dashboard: Recebeu evento nexdial:incoming_call", e.detail);
-            openIncomingCallPopup(e.detail);
+            const d = e.detail;
+            if (!d.campaign_id) {
+                openManualCallPopup(d);
+            } else {
+                openIncomingCallPopup(d);
+            }
         });
 
         window.addEventListener('nexdial:call_ended', () => {
             console.log("Dashboard: Recebeu evento nexdial:call_ended");
             closeIncomingCallPopup();
+            closeManualCallPopup();
         });
 
         // Countdown de classificação após lead desligar
@@ -3989,6 +4066,82 @@ async function deleteLead(leadId) {
          OVERLAY: INCOMING CALL (GLASSMORPHISM PREMIUM)
          ══════════════════════════════════════════════════════════════════ -->
 
+
+    <!-- ── POPUP LIGAÇÃO MANUAL ─────────────────────────────────────── -->
+    <style>
+    .mcall-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center}
+    .mcall-overlay.active{display:flex}
+    .mcall-modal{background:#1e293b;border-radius:18px;width:400px;max-width:95vw;box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+    .mcall-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#0f172a;border-bottom:1px solid rgba(255,255,255,.07)}
+    .mcall-live-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.3);animation:mcall-pulse 1.4s ease-in-out infinite}
+    @keyframes mcall-pulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.3)}50%{box-shadow:0 0 0 6px rgba(34,197,94,.1)}}
+    .mcall-header-left{display:flex;align-items:center;gap:8px}
+    .mcall-header-title{color:#f8fafc;font-size:13px;font-weight:700;letter-spacing:.06em}
+    .mcall-header-sub{color:#94a3b8;font-size:11px;font-weight:500}
+    .mcall-close-btn{background:none;border:none;color:#64748b;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;line-height:1;transition:color .2s}
+    .mcall-close-btn:hover{color:#f8fafc}
+    .mcall-body{padding:20px 20px 18px}
+    .mcall-lead-block{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .mcall-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
+    .mcall-lead-name{font-size:16px;font-weight:700;color:#f8fafc;line-height:1.2}
+    .mcall-lead-phone{font-size:13px;color:#94a3b8;margin-top:2px}
+    .mcall-timer{text-align:center;font-size:34px;font-weight:700;color:#f8fafc;letter-spacing:.04em;margin:4px 0 14px;font-variant-numeric:tabular-nums}
+    .mcall-hangup-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:#ef4444;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;margin-bottom:18px}
+    .mcall-hangup-btn:hover{background:#dc2626}
+    .mcall-divider{border:none;border-top:1px solid rgba(255,255,255,.07);margin:0 0 16px}
+    .mcall-crm-label{font-size:11px;font-weight:600;color:#64748b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+    .mcall-select,.mcall-textarea{width:100%;background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#f8fafc;font-size:13px;padding:9px 11px;margin-bottom:10px;box-sizing:border-box;outline:none;transition:border-color .2s}
+    .mcall-select:focus,.mcall-textarea:focus{border-color:#3b82f6}
+    .mcall-textarea{height:72px;resize:vertical;font-family:inherit}
+    .mcall-save-btn{width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s}
+    .mcall-save-btn:hover:not(:disabled){background:#16a34a}
+    .mcall-save-btn:disabled{opacity:.6;cursor:not-allowed}
+    </style>
+    <div id="manualCallPopup" class="mcall-overlay" onclick="if(event.target===this){}">
+        <div class="mcall-modal">
+            <div class="mcall-header">
+                <div class="mcall-header-left">
+                    <div class="mcall-live-dot"></div>
+                    <div>
+                        <div class="mcall-header-title">LIGAÇÃO MANUAL</div>
+                    </div>
+                </div>
+                <button class="mcall-close-btn" onclick="closeManualCallPopup()">✕</button>
+            </div>
+            <div class="mcall-body">
+                <div class="mcall-lead-block">
+                    <div class="mcall-avatar">📞</div>
+                    <div>
+                        <div class="mcall-lead-name" id="manualLeadName">—</div>
+                        <div class="mcall-lead-phone" id="manualLeadPhone">—</div>
+                    </div>
+                </div>
+                <div class="mcall-timer" id="manualTimer">00:00:00</div>
+                <button class="mcall-hangup-btn" onclick="hangupManualCall()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7 2 2 0 011.72 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-3.33-2.67m-2.67-3.34a19.79 19.79 0 01-3.07-8.63A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
+                    Desligar
+                </button>
+                <hr class="mcall-divider">
+                <div class="mcall-crm-label">Resultado da Ligação</div>
+                <select id="manualQualification" class="mcall-select">
+                    <option value="">Selecione o resultado...</option>
+                    <option value="atendeu">Atendeu — Positivo</option>
+                    <option value="reuniao_agendada">Reunião Agendada</option>
+                    <option value="proposta_enviada">Proposta Enviada</option>
+                    <option value="ganho">Ganho / Fechamento</option>
+                    <option value="sem_interesse">Sem Interesse</option>
+                    <option value="retornar_depois">Retornar Depois</option>
+                    <option value="caixa_postal">Caixa Postal</option>
+                    <option value="nao_atendeu">Não Atendeu</option>
+                    <option value="numero_invalido">Número Inválido</option>
+                    <option value="perdido">Perdido</option>
+                </select>
+                <div class="mcall-crm-label">Anotações</div>
+                <textarea id="manualNotes" class="mcall-textarea" placeholder="Resumo do atendimento..."></textarea>
+                <button id="manualSaveBtn" class="mcall-save-btn" onclick="saveManualCRM()">Salvar Atendimento</button>
+            </div>
+        </div>
+    </div>
 
     <div id="premiumIncomingCallPopup" class="premium-overlay" onclick="if(typeof window.resumeTwilioAudioPipeline==='function')window.resumeTwilioAudioPipeline()">
         <div class="premium-modal">
