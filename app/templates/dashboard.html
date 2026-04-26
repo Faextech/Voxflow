@@ -487,8 +487,10 @@
         .topbar {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
             padding: 14px 20px; margin-bottom: 24px; box-shadow: var(--shadow);
+            display: flex; align-items: center; justify-content: space-between;
         }
         .topbar h2 { font-size: 18px; font-weight: 700; }
+        .topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 
 
         /* ── CAMPAIGN CARDS ── */
@@ -1436,11 +1438,11 @@
                         <div class="hub-card">
                             <small>CRM rápido do atendimento</small>
 
-                            <p style="margin-top:12px;"><strong>Lead ID:</strong> <span id="leadIdView">-</span></p>
-                            <p><strong>Nome:</strong> <span id="leadNameView">-</span></p>
-                            <p><strong>Empresa / Cargo:</strong> <span id="leadCompanyView">-</span></p>
-                            <p><strong>Status do lead:</strong> <span id="leadStatusView">-</span></p>
-                            <p><strong>Call ID:</strong> <span id="callIdView">-</span></p>
+                            <p style="margin-top:12px; margin-bottom:4px;"><strong>Lead ID:</strong> <span id="leadIdView">-</span></p>
+                            <p style="margin-bottom:4px;"><strong>Nome:</strong> <span id="leadNameView">-</span></p>
+                            <p style="margin-bottom:4px;"><strong>Empresa / Cargo:</strong> <span id="leadCompanyView">-</span></p>
+                            <p style="margin-bottom:4px;"><strong>Status do lead:</strong> <span id="leadStatusView">-</span></p>
+                            <p style="margin-bottom:4px;"><strong>Call ID:</strong> <span id="callIdView">-</span></p>
 
                             <div id="leadPhonesView" style="margin-top: 14px;">
                                 <span class="muted">Nenhum telefone carregado</span>
@@ -1700,6 +1702,8 @@
             </section>
 
             <section id="section-import" class="content-section">
+                <div style="max-width:780px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
+
                 <div class="panel">
                     <div class="panel-header">
                         <div>
@@ -1708,37 +1712,44 @@
                         </div>
                     </div>
 
-                    <form id="import-form">
-                        <div class="form-grid">
-                            <div class="field" style="display:none;">
-                                <label>Empresa ID</label>
-                                <input type="number" id="import-company-id" value="1" required>
-                                <script>(function(){var c=localStorage.getItem('company_id');if(c)document.getElementById('import-company-id').value=c;})();</script>
-                            </div>
-                            <div class="field" style="grid-column:1/-1;">
-                                <label>Campanha</label>
-                                <select id="import-campaign-id" required></select>
-                            </div>
+                    <form id="import-form" style="padding:24px;">
+                        <div style="display:none;">
+                            <input type="number" id="import-company-id" value="1" required>
+                            <script>(function(){var c=localStorage.getItem('company_id');if(c)document.getElementById('import-company-id').value=c;})();</script>
+                        </div>
+
+                        <div class="field" style="margin-bottom:16px;">
+                            <label>Campanha <span style="color:#ef4444;">*</span></label>
+                            <select id="import-campaign-id" required></select>
+                        </div>
+
+                        <div class="form-grid" style="margin-bottom:16px;">
                             <div class="field">
-                                <label>Pipeline do CRM (Opcional)</label>
+                                <label>Pipeline do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
                                 <select id="import-pipeline-id">
-                                    <option value="">Usar padrão da campanha</option>
+                                    <option value="">(Nenhuma / Usar padrão)</option>
                                 </select>
                             </div>
                             <div class="field">
-                                <label>Estágio do CRM (Opcional)</label>
+                                <label>Estágio do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
                                 <select id="import-stage-id">
                                     <option value="">Escolha a pipeline primeiro</option>
                                 </select>
                             </div>
-                            <div class="field" style="grid-column: 1 / -1;">
-                                <label>Arquivo</label>
-                                <input type="file" id="import-file" accept=".csv,.xlsx" required>
+                        </div>
+
+                        <div class="field" style="margin-bottom:24px;">
+                            <label>Arquivo <span style="color:#ef4444;">*</span></label>
+                            <div style="border:2px dashed var(--border); border-radius:10px; padding:28px; text-align:center; background:var(--bg-secondary); transition:border-color 0.2s;">
+                                <div style="font-size:32px; margin-bottom:8px;">&#128196;</div>
+                                <div style="font-size:14px; color:var(--text-secondary); margin-bottom:12px;">Arraste o arquivo aqui ou clique para selecionar</div>
+                                <input type="file" id="import-file" accept=".csv,.xlsx" required style="display:block; margin:0 auto; max-width:280px;">
+                                <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Formatos aceitos: .csv e .xlsx</div>
                             </div>
                         </div>
 
                         <div class="actions-row">
-                            <button type="submit" class="btn btn-primary">Importar leads</button>
+                            <button type="submit" class="btn btn-primary" style="padding:10px 28px;">&#8593; Importar leads</button>
                         </div>
 
                         <div id="import-message" class="message"></div>
@@ -1752,10 +1763,15 @@
                             <p>Use esses cabeçalhos para o sistema importar corretamente.</p>
                         </div>
                     </div>
-                    <div class="empty">
-                        name, email, company_name, job_title, notes, numero_1, numero_2, numero_3, numero_4, numero_5, numero_6, numero_7, numero_8
+                    <div style="padding:20px;">
+                        <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; padding:14px 18px; font-family:monospace; font-size:13px; color:var(--accent); overflow-x:auto;">
+                            name, email, company_name, job_title, notes, numero_1, numero_2, numero_3, numero_4, numero_5, numero_6, numero_7, numero_8
+                        </div>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">&#8505;&#65039; A primeira linha do arquivo deve conter exatamente esses cabeçalhos. Apenas <strong>name</strong> e <strong>numero_1</strong> são obrigatórios.</p>
                     </div>
                 </div>
+
+                </div><!-- /max-width wrapper -->
             </section>
 
             <section id="section-reports" class="content-section">
@@ -1919,66 +1935,76 @@
 
             <!-- ── USUÁRIOS ── -->
             <section id="section-users" class="content-section">
+                <div style="max-width:860px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
+
                 <div class="panel">
                     <div class="panel-header">
                         <div><h3>Usuários</h3><p>Gerencie os operadores e administradores da conta.</p></div>
                         <button class="btn btn-primary" onclick="openCreateUserModal()">+ Novo usuário</button>
                     </div>
-                    <div id="users-list"><p class="empty">Carregando...</p></div>
+                    <div id="users-list" style="padding:8px 0;"><p class="empty">Carregando...</p></div>
                 </div>
 
                 <div class="panel">
                     <div class="panel-header">
                         <div><h3>Meu perfil</h3><p>Altere seus dados de acesso.</p></div>
                     </div>
-                    <div class="form-grid">
-                        <div class="field">
-                            <label>Nome</label>
-                            <input type="text" id="profile-name" placeholder="Seu nome">
+                    <div style="padding:24px; max-width:500px;">
+                        <div style="display:flex; flex-direction:column; gap:16px;">
+                            <div class="field">
+                                <label>Nome</label>
+                                <input type="text" id="profile-name" placeholder="Seu nome">
+                            </div>
+                            <div class="field">
+                                <label>Email</label>
+                                <input type="email" id="profile-email" placeholder="email@empresa.com" readonly style="opacity:.6">
+                            </div>
+                            <div class="field">
+                                <label>Nova senha</label>
+                                <input type="password" id="profile-password" placeholder="Deixe em branco para manter">
+                            </div>
+                            <div class="field">
+                                <label>Confirmar senha</label>
+                                <input type="password" id="profile-password-confirm" placeholder="Repita a nova senha">
+                            </div>
                         </div>
-                        <div class="field">
-                            <label>Email</label>
-                            <input type="email" id="profile-email" placeholder="email@empresa.com" readonly style="opacity:.6">
+                        <div class="actions-row" style="margin-top:20px;">
+                            <button class="btn btn-primary" onclick="saveProfile()">Salvar perfil</button>
                         </div>
-                        <div class="field">
-                            <label>Nova senha</label>
-                            <input type="password" id="profile-password" placeholder="Deixe em branco para manter">
-                        </div>
-                        <div class="field">
-                            <label>Confirmar senha</label>
-                            <input type="password" id="profile-password-confirm" placeholder="Repita a nova senha">
-                        </div>
+                        <div id="profile-message" class="message"></div>
                     </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="saveProfile()">Salvar perfil</button>
-                    </div>
-                    <div id="profile-message" class="message"></div>
                 </div>
+
+                </div><!-- /max-width wrapper -->
             </section>
 
             <!-- ── CONFIGURAÇÕES ── -->
             <section id="section-settings" class="content-section">
+                <div style="max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
+
                 <div class="panel">
                     <div class="panel-header">
                         <div><h3>Configurações da conta</h3><p>Dados da empresa e integrações.</p></div>
                     </div>
-                    <div class="form-grid">
-                        <div class="field">
-                            <label>Nome da empresa</label>
-                            <input type="text" id="settings-company-name" placeholder="Minha Empresa Ltda">
+                    <div style="padding:24px;">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label>Nome da empresa</label>
+                                <input type="text" id="settings-company-name" placeholder="Minha Empresa Ltda">
+                            </div>
+                            <div class="field">
+                                <label>Segmento</label>
+                                <input type="text" id="settings-segment" placeholder="Ex: Tecnologia, Saúde...">
+                            </div>
                         </div>
-                        <div class="field">
-                            <label>Segmento</label>
-                            <input type="text" id="settings-segment" placeholder="Ex: Tecnologia, Saúde...">
+                        <div class="actions-row" style="margin-top:16px;">
+                            <button class="btn btn-primary" onclick="saveCompanySettings()">Salvar</button>
                         </div>
+                        <div id="settings-message" class="message"></div>
                     </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="saveCompanySettings()">Salvar</button>
-                    </div>
-                    <div id="settings-message" class="message"></div>
                 </div>
 
-                <div class="panel">
+                <div class="panel" style="display:none;">
                     <div class="panel-header">
                         <div><h3>Integração Twilio</h3><p>Configurações de telefonia para o discador e webphone.</p></div>
                     </div>
@@ -2011,7 +2037,7 @@
                     <div class="panel-header">
                         <div><h3>Painel de Conhecimento</h3><p>Guias, treinamentos e documentação do NexDial.</p></div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:24px 24px 16px;">
                         <div style="background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.04)); border:1px solid rgba(59,130,246,0.2); border-radius:14px; padding:18px 20px;">
                             <div style="font-size:28px; margin-bottom:10px;">🎓</div>
                             <div style="font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Guia de Treinamento</div>
@@ -2029,7 +2055,7 @@
                             </button>
                         </div>
                     </div>
-                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:14px 16px; font-size:12px; color:#4b5563; line-height:1.6;">
+                    <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text-secondary); line-height:1.6; margin:0 24px 24px;">
                         💡 O guia de treinamento pode ser reaberto a qualquer momento nesta seção. Ele ensina o fluxo real de operação do NexDial, incluindo criação de campanhas, importação de leads, uso do Call Hub e automações do CRM.
                     </div>
                 </div>
@@ -2038,7 +2064,7 @@
                     <div class="panel-header">
                         <div><h3>Suporte</h3><p>Precisa de ajuda? Abra um chamado.</p></div>
                     </div>
-                    <div class="form-grid">
+                    <div style="padding:24px;">
                         <div class="field">
                             <label>Assunto</label>
                             <input type="text" id="support-subject" placeholder="Resumo do problema">
@@ -2057,25 +2083,28 @@
                             <textarea id="support-description" placeholder="Descreva o problema em detalhes..."></textarea>
                         </div>
                     </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="submitSupportTicket()">Enviar chamado</button>
-                        <a href="/suporte" class="btn btn-secondary" style="margin-left: 10px;">Ver meus chamados</a>
+                        <div class="actions-row" style="margin-top:20px;">
+                            <button class="btn btn-primary" onclick="submitSupportTicket()">Enviar chamado</button>
+                            <a href="/suporte" class="btn btn-secondary" style="margin-left: 10px;">Ver meus chamados →</a>
+                        </div>
+                        <div id="support-message" class="message"></div>
                     </div>
-                    <div id="support-message" class="message"></div>
                 </div>
 
                 <div class="panel" style="border:1px solid rgba(239,68,68,0.2);">
                     <div class="panel-header">
-                        <div><h3 style="color:#ef4444;">Zona de Perigo</h3><p>Ações destrutivas para sua conta.</p></div>
+                        <div><h3 style="color:#ef4444;">Zona de Perigo</h3><p style="color:var(--text-secondary);">Ações destrutivas para sua conta.</p></div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.05); padding:16px 20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.05); margin:20px 24px 24px; padding:16px 20px; border-radius:12px; border:1px solid rgba(239,68,68,0.15);">
                         <div>
                             <div style="font-weight:600; color:#f87171; margin-bottom:4px;">Apagar todos os dados do sistema</div>
-                            <div style="font-size:13px; color:var(--muted);">Isso apagará permanentemente todos os leads, chamadas, negócios (deals) e campanhas. Configurações de integração e pipeline serão mantidas.</div>
+                            <div style="font-size:13px; color:var(--text-secondary);">Isso apagará permanentemente todos os leads, chamadas, negócios (deals) e campanhas.</div>
                         </div>
-                        <button class="btn btn-primary" style="background:#ef4444; color:white; border:none; padding:8px 16px; font-weight:600;" onclick="promptWipeData()">Apagar Dados</button>
+                        <button class="btn btn-danger" style="white-space:nowrap; margin-left:24px;" onclick="promptWipeData()">Apagar Dados</button>
                     </div>
                 </div>
+
+                </div><!-- /max-width wrapper -->
             </section>
 
             <!-- ── CRÉDITO ── -->
@@ -2474,6 +2503,7 @@
         menuLinks.forEach(button => {
             button.addEventListener('click', () => {
                 showSection(button.dataset.section);
+                history.pushState(null, null, '#' + button.dataset.section);
             });
         });
 
@@ -3747,6 +3777,11 @@ async function deleteLead(leadId) {
 
             // Carregar etapas da pipeline no select
             loadPopupStages();
+            
+            // Iniciar o timer do popup
+            if (data.answered_at || data.started_at) {
+                startHubTimer(data.answered_at || data.started_at);
+            }
 
             if (typeof window.resumeTwilioAudioPipeline === 'function') {
                 window.resumeTwilioAudioPipeline();
@@ -3792,6 +3827,7 @@ async function deleteLead(leadId) {
                 clearInterval(pendingConferenceTimer);
                 pendingConferenceTimer = null;
             }
+            stopHubTimer(); // Stop the timer when popup closes
         }
 
         function dismissPendingConference() {

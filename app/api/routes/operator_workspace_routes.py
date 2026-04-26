@@ -192,9 +192,18 @@ def save_crm():
         from app.models.pipeline import PipelineStage
         from app.services.crm_service import move_to_stage
 
+        # Busca o deal em aberto deste lead
+        deal_to_check = Deal.query.filter_by(lead_id=lead.id, company_id=g.company_id, status="open").order_by(Deal.created_at.desc()).first()
+        
+        # Salva o historico de anotações no deal também
+        if deal_to_check:
+            if deal_to_check.notes and deal_to_check.notes.strip():
+                deal_to_check.notes = f"{deal_to_check.notes}\n{note_block}"
+            else:
+                deal_to_check.notes = note_block
+
         # Se o operador não selecionou um stage específico, tenta deduzir pelo nome da qualification
         if qualification and not stage_id:
-            deal_to_check = Deal.query.filter_by(lead_id=lead.id, company_id=g.company_id, status="open").order_by(Deal.created_at.desc()).first()
             if deal_to_check and deal_to_check.pipeline_id:
                 qual_lower = qualification.lower().strip()
                 # Mapeamento heurístico comum de "qualification" -> "stage name"
@@ -221,16 +230,9 @@ def save_crm():
                 id=stage_id, company_id=g.company_id
             ).first()
 
-            if target_stage:
-                deal = (
-                    Deal.query
-                    .filter_by(lead_id=lead.id, company_id=g.company_id, status="open")
-                    .order_by(Deal.created_at.desc())
-                    .first()
-                )
-                if deal:
-                    move_to_stage(deal, target_stage, triggered_by="agent")
-                    deal_moved = {"deal_id": deal.id, "stage": target_stage.name}
+            if target_stage and deal_to_check:
+                move_to_stage(deal_to_check, target_stage, triggered_by="agent")
+                deal_moved = {"deal_id": deal_to_check.id, "stage": target_stage.name}
     except Exception as e:
         logger.warning(f"[SAVE_CRM] Erro ao mover pipeline: {e}")
 

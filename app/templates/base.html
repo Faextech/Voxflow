@@ -36,52 +36,47 @@
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if session.get('user_id') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-home"></i> Início
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api/leads">
-                                <i class="fas fa-address-book"></i> Leads
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api/calls">
-                                <i class="fas fa-phone-volume"></i> Chamadas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/credito" id="nav-credito">
-                                <i class="fas fa-wallet"></i>
-                                <span id="nav-saldo" class="badge bg-success ms-1">...</span>
-                            </a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user-circle"></i> {{ session.get('user_name', 'Usuário') }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                                <li><a class="dropdown-item" href="/credito"><i class="fas fa-wallet"></i> Meu Crédito</a></li>
-                                <li><a class="dropdown-item" href="/profile"><i class="fas fa-cog"></i> Configurações</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/login">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link btn btn-primary text-white ms-2 px-3" href="/register">Registrar</a>
-                        </li>
-                    {% endif %}
+                <ul class="navbar-nav ms-auto" id="navbar-auth-links">
+                    <!-- rendered by JS based on JWT token -->
                 </ul>
             </div>
         </div>
     </nav>
+
+    <script>
+    (function(){
+        const token = localStorage.getItem('nexdial_token') || localStorage.getItem('token') || '';
+        const nav = document.getElementById('navbar-auth-links');
+        if (!nav) return;
+        if (token) {
+            nav.innerHTML = `
+                <li class="nav-item">
+                    <a class="nav-link" href="/app"><i class="fas fa-th-large"></i> Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/suporte"><i class="fas fa-life-ring"></i> Suporte</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/credito"><i class="fas fa-wallet"></i>
+                        <span id="nav-saldo" class="badge bg-success ms-1">...</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/login" onclick="localStorage.removeItem('nexdial_token'); return true;"><i class="fas fa-sign-out-alt"></i> Sair</a>
+                </li>
+            `;
+        } else {
+            nav.innerHTML = `
+                <li class="nav-item">
+                    <a class="nav-link" href="/login">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn btn-primary text-white ms-2 px-3" href="/register">Registrar</a>
+                </li>
+            `;
+        }
+    })();
+    </script>
 
     <div class="container-fluid mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
