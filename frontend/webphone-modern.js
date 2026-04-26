@@ -9,7 +9,7 @@ let isConnectingBridge = false; // Trava para evitar múltiplas conexões à pon
 let bridgeReconnectTimeout = null;
 
 // Cooldown para evitar loops de limpeza
-let lastLeadIdCooldown = null;
+let lastCallIdCooldown = null;
 let lastLeadTimestampCooldown = 0;
 const COOLDOWN_MS = 1800;
 
@@ -817,7 +817,7 @@ async function dismissPendingConference() {
   log("Popup minimizado/fechado pelo operador.");
   // Marca esta chamada como dispensada: o popup não reabre enquanto a chamada ainda estiver ativa.
   // Quando o lead desligar (!has_call), o flag é limpo sem abrir grace period.
-  _dismissedCallId = pendingConferenceData?.call_id ?? null;
+  _dismissedLeadId = pendingConferenceData?.call_id ?? null;
   hidePendingConferencePopup(false);
   
   // Apenas fecha o modal visualmente no dashboard
@@ -1412,9 +1412,9 @@ async function pollPendingConference() {
 
     // 1. Verificação de chamada finalizada (has_call = false)
     if (!data?.has_call) {
-      if (_dismissedCallId !== null) {
+      if (_dismissedLeadId !== null) {
           // Operador já dispensou o popup durante a chamada: não abre grace, apenas limpa
-          _dismissedCallId = null;
+          _dismissedLeadId = null;
       } else if (popupOpen && !_graceActive) {
           // Popup ainda estava aberto: inicia grace period para classificar
           conferenceAnswerInProgress = false;
@@ -1447,12 +1447,12 @@ async function pollPendingConference() {
       }
 
       // Operador fechou popup durante chamada ativa: não reabre enquanto for a mesma chamada
-      if (currentCallId && currentCallId === _dismissedCallId) {
+      if (currentCallId && currentCallId === _dismissedLeadId) {
         return;
       }
       // Nova chamada chegou: limpa o flag de dispensado
-      if (currentCallId && currentCallId !== _dismissedCallId) {
-        _dismissedCallId = null;
+      if (currentCallId && currentCallId !== _dismissedLeadId) {
+        _dismissedLeadId = null;
       }
 
       const isNewForPopup = currentPopupConferenceName !== conferenceName;
