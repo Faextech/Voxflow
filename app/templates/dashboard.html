@@ -3576,23 +3576,26 @@ async function deleteLead(leadId) {
 
         // Carrega etapas da pipeline no select do popup
         async function loadPopupStages() {
-            const sel = document.getElementById('premiumStageId');
-            if (!sel) return;
+            const selectors = ['premiumStageId', 'manualStageId'];
+            const sels = selectors.map(id => document.getElementById(id)).filter(Boolean);
+            if (!sels.length) return;
             try {
                 const resp = await authFetch('/api/crm/pipelines');
                 if (!resp.ok) return;
                 const pipelines = await resp.json();
-                sel.innerHTML = '<option value="">Manter etapa atual...</option>';
-                pipelines.forEach(p => {
-                    const group = document.createElement('optgroup');
-                    group.label = p.name;
-                    (p.stages || []).forEach(s => {
-                        const opt = document.createElement('option');
-                        opt.value = s.id;
-                        opt.textContent = s.name;
-                        group.appendChild(opt);
+                sels.forEach(sel => {
+                    sel.innerHTML = '<option value="">Manter etapa atual...</option>';
+                    pipelines.forEach(p => {
+                        const group = document.createElement('optgroup');
+                        group.label = p.name;
+                        (p.stages || []).forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.id;
+                            opt.textContent = s.name;
+                            group.appendChild(opt);
+                        });
+                        sel.appendChild(group);
                     });
-                    sel.appendChild(group);
                 });
             } catch (e) { /* silencioso */ }
         }
@@ -3879,9 +3882,11 @@ async function deleteLead(leadId) {
 
             if (!alreadyOpen) {
                 // Primeira abertura: limpa campos CRM, mostra popup e inicia timer
+                if (el('manualStageId'))       el('manualStageId').value       = '';
                 if (el('manualQualification')) el('manualQualification').value = '';
                 if (el('manualNotes'))         el('manualNotes').value         = '';
                 popup.classList.add('active');
+                loadPopupStages();
                 if (typeof window.resumeTwilioAudioPipeline === 'function') window.resumeTwilioAudioPipeline();
                 // answered_at vem do backend; fallback para now() se ausente
                 startHubTimer(data.answered_at || data.started_at || new Date().toISOString());
@@ -3915,6 +3920,7 @@ async function deleteLead(leadId) {
             const el = (id) => document.getElementById(id);
             const qualification = el('manualQualification')?.value || '';
             const notes         = el('manualNotes')?.value         || '';
+            const stageId       = el('manualStageId')?.value       || null;
             const leadId  = pendingConferenceData?.lead_id  || null;
             const callId  = pendingConferenceData?.call_id  || null;
             const agentId = pendingConferenceData?.agent_id || null;
@@ -3922,10 +3928,12 @@ async function deleteLead(leadId) {
             const btn = el('manualSaveBtn');
             try {
                 if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+                const payload = { agent_id: agentId, lead_id: leadId, call_id: callId, qualification, disposition: qualification, notes };
+                if (stageId) payload.stage_id = parseInt(stageId, 10);
                 const res = await authFetch('/api/operator/workspace/save_crm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ agent_id: agentId, lead_id: leadId, call_id: callId, qualification, disposition: qualification, notes })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
@@ -4129,6 +4137,10 @@ async function deleteLead(leadId) {
                     Desligar
                 </button>
                 <hr class="mcall-divider">
+                <div class="mcall-crm-label">Mover para Etapa</div>
+                <select id="manualStageId" class="mcall-select">
+                    <option value="">Manter etapa atual...</option>
+                </select>
                 <div class="mcall-crm-label">Resultado da Ligação</div>
                 <select id="manualQualification" class="mcall-select">
                     <option value="">Selecione o resultado...</option>
