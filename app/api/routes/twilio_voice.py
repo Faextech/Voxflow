@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 from twilio.twiml.voice_response import Dial, VoiceResponse
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ from app.services.call_bridge import (
     clear_pending_conference,
 )
 from app.services.twilio_service import TwilioService
+from app.auth import require_auth
 
 twilio_voice_bp = Blueprint("twilio_voice", __name__, url_prefix="/api/twilio")
 
@@ -913,6 +914,90 @@ def pending_call(agent_id):
         "lead": lead_data,
         "audio_bridged": bool(item.get("audio_bridged"))
     }), 200
+
+
+@twilio_voice_bp.route("/manual-call", methods=["POST"])
+@require_auth
+def manual_call():
+    """
+    Dispara ligação manual conectando o lead à ponte persistente do agente.
+    Não usa device.connect() — o agente já está na ponte, só precisa discar o lead via REST.
+    """
+    from app.models.user import User
+    from app.services.call_bridge import register_pending_conference
+    from app.services.twilio_service import normalize_phone_br
+
+    data = request.get_json(force=True) or {}
+    agent_id = _safe_int(data.get("agent_id"))
+    to_number = (data.get("to") or data.get("phone") or "").strip()
+    lead_id = _safe_int(data.get("lead_id"))
+
+    if not agent_id:
+        return jsonify({"error": "agent_id obrigatório"}), 400
+    if not to_number:
+        return jsonify({"error": "Número de destino obrigatório"}), 400
+
+    to_norm = normalize_phone_br(to_number)
+    if not to_norm or len(to_norm) < 10:
+        return jsonify({"error": "Número de telefone inválido"}), 400
+
+    agent = Agent.query.filter_by(id=agent_id, company_id=g.company_id).first()
+    if not agent:
+        return jsonify({"error": "Operador não encontrado"}), 404
+
+    company = Company.query.get(g.company_id)
+    try:
+        service = TwilioService.from_company(company, current_user_email=getattr(g, "user_email", None))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 500
+
+    conf_name = f"agent_bridge_{agent_id}"
+    base_url = _base_url()
+    conf_url = f"{base_url}/api/twilio/conference-events"
+    status_url = f"{base_url}/api/twilio/status"
+
+    lead_twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response><Dial>'
+        f'<Conference'
+        f' startConferenceOnEnter="true"'
+        f' endConferenceOnExit="true"'
+        f' beep="false"'
+        f' participantLabel="lead_manual"'
+        f' statusCallback="{conf_url}"'
+        f' statusCallbackMethod="POST"'
+        f' statusCallbackEvent="join leave"'
+        f'>{conf_name}</Conference>'
+        '</Dial></Response>'
+    )
+
+    try:
+        call = service.client.calls.create(
+            to=to_norm,
+            from_=service.twilio_number,
+            twiml=lead_twiml,
+            status_callback=f"{status_url}?c={conf_name}",
+            status_callback_event=["initiated", "ringing", "answered", "completed"],
+            status_callback_method="POST",
+        )
+    except Exception as exc:
+        logger.error("[MANUAL-CALL] erro ao discar %s: %s", to_norm, exc)
+        return jsonify({"error": f"Erro ao discar: {exc}"}), 500
+
+    register_pending_conference(
+        conference_name=conf_name,
+        agent_id=agent_id,
+        lead_id=lead_id or 0,
+        company_id=g.company_id,
+        phone_number=to_norm,
+        lead_name="Ligação Manual",
+        campaign_id=None,
+        lead_call_sid=call.sid,
+        user_email=getattr(g, "user_email", None),
+    )
+
+    logger.info("[MANUAL-CALL] agent=%s to=%s conf=%s sid=%s", agent_id, to_norm, conf_name, call.sid)
+    return jsonify({"ok": True, "call_sid": call.sid, "conference": conf_name}), 200
 
 
 @twilio_voice_bp.route("/end-bridge/<int:agent_id>", methods=["POST"])

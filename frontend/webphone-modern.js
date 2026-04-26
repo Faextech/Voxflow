@@ -1158,19 +1158,27 @@ async function makeCall() {
     const phoneNumber = sanitizePhone(getDialNumber());
     if (!phoneNumber) throw new Error("digite um número para ligar");
 
+    const agentId = getAgentId();
+    if (!agentId) throw new Error("operador não identificado");
+
     setCallStatus("discando...");
     log(`Iniciando chamada para ${phoneNumber}...`);
 
-    const params = { To: phoneNumber };
+    const body = { to: phoneNumber, agent_id: String(agentId) };
     const leadId = currentWorkspace?.current_lead?.id;
-    const agentId = getAgentId();
+    if (leadId) body.lead_id = String(leadId);
 
-    if (leadId) params.lead_id = String(leadId);
-    if (agentId) params.agent_id = String(agentId);
+    const resp = await fetch("/api/twilio/manual-call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ..._authHeaders() },
+      body: JSON.stringify(body),
+    });
 
-    activeCall = await device.connect({ params, rtcConstraints: DEFAULT_RTC_AUDIO });
-    bindCallEvents(activeCall, "chamada de saída");
-    log(`Solicitação de chamada enviada para ${phoneNumber}.`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "Erro ao ligar");
+
+    log(`Chamada discada para ${phoneNumber}. Aguardando atendimento...`);
+    setCallStatus("chamando...");
   } catch (error) {
     console.error(error);
     setCallStatus("falha");
