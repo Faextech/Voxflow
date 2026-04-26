@@ -379,14 +379,17 @@ def browser_outgoing():
         try:
             if agent_id:
                 from app.models.agent import Agent
+                from app.models.user import User
                 agent = Agent.query.get(agent_id)
                 if agent:
+                    _usr = User.query.get(agent.user_id) if getattr(agent, "user_id", None) else None
+                    _user_email = _usr.email if _usr else None
                     company = Company.query.get(agent.company_id)
-                    service = TwilioService.from_company(company, current_user_email=item.get("user_email"))
+                    service = TwilioService.from_company(company, current_user_email=_user_email)
                 else:
-                    service = TwilioService.from_env(current_user_email=item.get("user_email"))
+                    service = TwilioService.from_env(current_user_email=None)
             else:
-                service = TwilioService.from_env(current_user_email=item.get("user_email"))
+                service = TwilioService.from_env(current_user_email=None)
 
             call = service.client.calls.create(
                 to=to_number_norm,
