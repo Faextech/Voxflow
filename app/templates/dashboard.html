@@ -270,7 +270,7 @@
         }
 
         /* Inputs */
-        .input, select, textarea {
+        input[type="text"], input[type="email"], input[type="number"], input[type="password"], input[type="date"], input[type="datetime-local"], select, textarea, .input {
             background: var(--bg-primary);
             border: 1px solid var(--border);
             color: var(--text-primary);
@@ -280,9 +280,11 @@
             width: 100%;
             outline: none;
             transition: border-color 0.2s;
+            font-family: 'Inter', sans-serif;
         }
-        .input:focus, select:focus, textarea:focus {
+        input[type="text"]:focus, input[type="email"]:focus, input[type="number"]:focus, input[type="password"]:focus, input[type="date"]:focus, input[type="datetime-local"]:focus, select:focus, textarea:focus, .input:focus {
             border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
 
         /* Badges */
@@ -1396,19 +1398,19 @@
                                 <input id="dialNumber" type="text" class="input" placeholder="Digite o número">
                             </div>
 
-                            <div class="hub-actions" style="margin-top:16px;">
-                                <button class="btn btn-secondary" onclick="pressKey('1')">1</button>
-                                <button class="btn btn-secondary" onclick="pressKey('2')">2</button>
-                                <button class="btn btn-secondary" onclick="pressKey('3')">3</button>
-                                <button class="btn btn-secondary" onclick="pressKey('4')">4</button>
-                                <button class="btn btn-secondary" onclick="pressKey('5')">5</button>
-                                <button class="btn btn-secondary" onclick="pressKey('6')">6</button>
-                                <button class="btn btn-secondary" onclick="pressKey('7')">7</button>
-                                <button class="btn btn-secondary" onclick="pressKey('8')">8</button>
-                                <button class="btn btn-secondary" onclick="pressKey('9')">9</button>
-                                <button class="btn btn-secondary" onclick="pressKey('*')">*</button>
-                                <button class="btn btn-secondary" onclick="pressKey('0')">0</button>
-                                <button class="btn btn-secondary" onclick="pressKey('#')">#</button>
+                            <div class="hub-actions" style="margin-top:16px; display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('1')">1</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('2')">2</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('3')">3</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('4')">4</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('5')">5</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('6')">6</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('7')">7</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('8')">8</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('9')">9</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('*')">*</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('0')">0</button>
+                                <button class="btn btn-secondary" style="height:48px; font-size:18px; justify-content:center;" onclick="pressKey('#')">#</button>
                             </div>
 
                             <div class="hub-actions" style="margin-top:16px;">
@@ -1499,7 +1501,7 @@
                         </div>
                     </div>
 
-                    <form id="lead-form">
+                    <form id="lead-form" style="padding: 20px;">
                         <div class="form-grid-3">
                             <div class="field">
                                 <label>Empresa ID</label>
@@ -1616,7 +1618,7 @@
                     <div class="panel-header">
                         <div><h3>Campanhas</h3><p>Crie e gerencie campanhas de discagem.</p></div>
                     </div>
-                    <form id="campaign-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <form id="campaign-form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; padding:20px;">
                         <div class="field" style="flex:1; min-width:200px;">
                             <label>Nome da campanha</label>
                             <input type="text" id="campaign-name" placeholder="Ex: Base Março 2026" required>
@@ -1655,8 +1657,8 @@
                         </div>
                         <button class="btn btn-secondary" onclick="reloadCampaigns()" style="font-size:12px; padding:8px 14px;">Atualizar</button>
                     </div>
-                    <div id="campaigns-list-container">
-                        <p style="color:#888; font-size:13px; padding:20px 0;">Carregando campanhas…</p>
+                    <div id="campaigns-list-container" style="padding: 20px;">
+                        <p style="color:#888; font-size:13px; text-align:center;">Carregando campanhas…</p>
                     </div>
                 </div>
 
@@ -2139,27 +2141,27 @@
                                 <div style="padding:0 0 8px">
                                     <p style="font-size:12px;color:#8892a4;margin-bottom:12px">Selecione o valor:</p>
                                     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="cr-quick-btns">
-                                        <button onclick="crSelecionarValor(50, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 50</button>
-                                        <button onclick="crSelecionarValor(100, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 100</button>
-                                        <button onclick="crSelecionarValor(200, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 200</button>
-                                        <button onclick="crSelecionarValor(500, this)" style="flex:1;min-width:80px;padding:10px;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:600">R$ 500</button>
+                                        <button onclick="crSelecionarValor(50, this)" style="flex:1;min-width:80px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:14px;font-weight:600">R$ 50</button>
+                                        <button onclick="crSelecionarValor(100, this)" style="flex:1;min-width:80px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:14px;font-weight:600">R$ 100</button>
+                                        <button onclick="crSelecionarValor(200, this)" style="flex:1;min-width:80px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:14px;font-weight:600">R$ 200</button>
+                                        <button onclick="crSelecionarValor(500, this)" style="flex:1;min-width:80px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:14px;font-weight:600">R$ 500</button>
                                     </div>
                                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-                                        <span style="color:#8892a4;font-size:13px">R$</span>
+                                        <span style="color:var(--text-secondary);font-size:13px">R$</span>
                                         <input type="number" id="cr-custom-amount" placeholder="Outro valor" min="10" step="10"
-                                            style="flex:1;background:#1a2035;border:1px solid #2a3040;border-radius:8px;color:#e2e8f0;padding:10px;font-size:14px;outline:none"
+                                            style="flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);padding:10px;font-size:14px;outline:none"
                                             oninput="crAtualizarCustom(this.value)">
                                     </div>
                                     <button onclick="crIniciarPIX()" id="cr-btn-pix"
                                         style="width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:600">
                                         📱 Pagar via PIX
                                     </button>
-                                    <p style="text-align:center;font-size:11px;color:#8892a4;margin-top:6px">Crédito adicionado automaticamente após pagamento</p>
+                                    <p style="text-align:center;font-size:11px;color:var(--text-secondary);margin-top:6px">Crédito adicionado automaticamente após pagamento</p>
                                 </div>
                             </div>
 
                             <!-- Info Twilio -->
-                            <div class="panel" style="background:#1a2035;border:1px solid #2a3040">
+                            <div class="panel" style="background:var(--bg-secondary);border:1px solid var(--border)">
                                 <div style="padding:4px 0">
                                     <p style="font-size:12px;font-weight:600;color:#8892a4;margin-bottom:8px">ℹ️ Sobre o sistema de crédito</p>
                                     <p style="font-size:12px;color:#5a6480;line-height:1.6">
@@ -2176,7 +2178,7 @@
 
                     <!-- Modal PIX inline -->
                     <div id="cr-pix-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)crFecharPIX()">
-                        <div style="background:#1e2536;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative">
+                        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative">
                             <button onclick="crFecharPIX()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#8892a4;font-size:20px;cursor:pointer">✕</button>
 
                             <div id="cr-pix-loading">
@@ -2190,10 +2192,10 @@
                                 <img id="cr-pix-qr" src="" alt="QR Code" style="max-width:200px;border-radius:8px;margin-bottom:16px">
                                 <p style="font-size:12px;color:#8892a4;margin-bottom:6px">Código copia e cola:</p>
                                 <div style="display:flex;gap:6px;margin-bottom:16px">
-                                    <input id="cr-pix-code" type="text" readonly style="flex:1;background:#0f1420;border:1px solid #2a3040;border-radius:6px;color:#e2e8f0;padding:8px;font-size:11px;font-family:monospace">
+                                    <input id="cr-pix-code" type="text" readonly style="flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px;font-size:11px;font-family:monospace">
                                     <button onclick="crCopiarPIX()" style="background:#2a3040;border:none;border-radius:6px;color:#e2e8f0;padding:8px 12px;cursor:pointer">📋</button>
                                 </div>
-                                <div style="background:#1a2035;border-radius:8px;padding:12px;font-size:12px;color:#8892a4;margin-bottom:12px">
+                                <div style="background:var(--bg-secondary);border-radius:8px;padding:12px;font-size:12px;color:var(--text-secondary);margin-bottom:12px">
                                     ✅ Crédito adicionado automaticamente após confirmação do pagamento
                                 </div>
                                 <div id="cr-pix-aguardando" style="color:#8892a4;font-size:12px">
@@ -4651,11 +4653,11 @@ async function deleteLead(leadId) {
             const dotColor  = _statusColor(c.status);
 
             return `
-            <div style="border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:20px 22px; margin-bottom:14px;
-                        background:linear-gradient(135deg,rgba(15,17,30,.9),rgba(10,12,22,.9));
-                        transition:border-color .2s;"
-                 onmouseenter="this.style.borderColor='rgba(59,130,246,.3)'"
-                 onmouseleave="this.style.borderColor='rgba(255,255,255,.08)'">
+            <div style="border:1px solid var(--border); border-radius:16px; padding:20px 22px; margin-bottom:14px;
+                        background:var(--bg-card); box-shadow:var(--shadow);
+                        transition:border-color .2s, box-shadow .2s;"
+                 onmouseenter="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 4px 12px rgba(37,99,235,0.1)'"
+                 onmouseleave="this.style.borderColor='var(--border)'; this.style.boxShadow='var(--shadow)'">
 
                 <div style="display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
                     <!-- Info -->
@@ -6450,7 +6452,7 @@ async function deleteLead(leadId) {
                         recharge:'Recarga PIX', manual_recharge:'Recarga manual',
                         call_debit:'Chamada', bonus:'Bônus', adjustment:'Ajuste'
                     }[tx.type] || tx.type;
-                    return `<tr style="border-bottom:1px solid #1a2035">
+                    return `<tr style="border-bottom:1px solid var(--border)">
                         <td style="padding:10px 12px;color:#8892a4;font-size:12px">${date}</td>
                         <td style="padding:10px 12px"><span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${isCredit?'rgba(34,197,94,.15)':'rgba(239,68,68,.12)'};color:${color}">${icon} ${typeLabel}</span></td>
                         <td style="padding:10px 12px;color:#c8d0e0;font-size:12px">${tx.description || '—'}</td>
@@ -6506,9 +6508,9 @@ async function deleteLead(leadId) {
             document.getElementById('cr-custom-amount').value = '';
             const isLight = document.body.classList.contains('light-mode');
             document.querySelectorAll('#cr-quick-btns button').forEach(b => {
-                b.style.borderColor = isLight ? '#cbd5e1' : '#2a3040';
-                b.style.background  = isLight ? '#ffffff' : '#1a2035';
-                b.style.color       = isLight ? '#0f172a' : '#e2e8f0';
+                b.style.borderColor = 'var(--border)';
+                b.style.background  = 'var(--bg-secondary)';
+                b.style.color       = 'var(--text-primary)';
             });
             if (btn) {
                 btn.style.borderColor = '#22c55e';
@@ -6522,9 +6524,9 @@ async function deleteLead(leadId) {
             if (!isNaN(v) && v >= 1) {
                 _crAmount = v;
                 document.querySelectorAll('#cr-quick-btns button').forEach(b => {
-                    b.style.borderColor = '#2a3040';
-                    b.style.background  = '#1a2035';
-                    b.style.color       = '#e2e8f0';
+                    b.style.borderColor = 'var(--border)';
+                    b.style.background  = 'var(--bg-secondary)';
+                    b.style.color       = 'var(--text-primary)';
                 });
             }
         };
