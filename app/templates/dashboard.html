@@ -3719,12 +3719,13 @@ async function deleteLead(leadId) {
             // Carregar etapas da pipeline no select
             loadPopupStages();
             
-            // Iniciar o timer do popup (apenas se for novo ou se o status mudar para atendido)
-            if (data.answered_at || data.started_at) {
-                if (window._currentTimerCallId !== data.call_id) {
-                    window._currentTimerCallId = data.call_id;
-                    startHubTimer(data.answered_at || data.started_at);
-                }
+            // Iniciar o timer assim que o lead atendeu.
+            // answered_at vem do backend; se ausente, usa now() como fallback seguro.
+            const _timerAnswered = ['answered_waiting_agent','answered_awaiting_amd','agent_joining','agent_joined','answered'];
+            const _timerStart = data.answered_at || data.started_at || (_timerAnswered.includes(st) ? new Date().toISOString() : null);
+            if (_timerStart && window._currentTimerCallId !== data.call_id) {
+                window._currentTimerCallId = data.call_id;
+                startHubTimer(_timerStart);
             }
 
             if (typeof window.resumeTwilioAudioPipeline === 'function') {
@@ -3867,19 +3868,25 @@ async function deleteLead(leadId) {
             const name  = lead.name  || data.lead_name    || 'Lead';
             const phone = lead.phone || data.phone_number || '—';
             const el = (id) => document.getElementById(id);
+            const popup = el('manualCallPopup');
+            const alreadyOpen = popup?.classList.contains('active');
 
             if (el('manualLeadName'))  el('manualLeadName').textContent  = name;
             if (el('manualLeadPhone')) el('manualLeadPhone').textContent = phone;
-            if (el('manualQualification')) el('manualQualification').value = '';
-            if (el('manualNotes'))         el('manualNotes').value         = '';
-            if (el('manualTimer'))         el('manualTimer').textContent   = '00:00:00';
 
-            pendingConferenceData        = data;
-            currentPopupConferenceName   = data.conference_name;
+            pendingConferenceData      = data;
+            currentPopupConferenceName = data.conference_name;
 
-            el('manualCallPopup').classList.add('active');
-            if (typeof window.resumeTwilioAudioPipeline === 'function') window.resumeTwilioAudioPipeline();
-            startHubTimer(data.answered_at || data.started_at);
+            if (!alreadyOpen) {
+                // Primeira abertura: limpa campos CRM, mostra popup e inicia timer
+                if (el('manualQualification')) el('manualQualification').value = '';
+                if (el('manualNotes'))         el('manualNotes').value         = '';
+                popup.classList.add('active');
+                if (typeof window.resumeTwilioAudioPipeline === 'function') window.resumeTwilioAudioPipeline();
+                // answered_at vem do backend; fallback para now() se ausente
+                startHubTimer(data.answered_at || data.started_at || new Date().toISOString());
+            }
+            // Se já está aberto, apenas atualiza os dados — NÃO reinicia o timer
         }
 
         function closeManualCallPopup() {

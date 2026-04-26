@@ -912,7 +912,8 @@ def pending_call(agent_id):
         "campaign_id": item.get("campaign_id"),
         "webphone_connected": webphone_connected,
         "lead": lead_data,
-        "audio_bridged": bool(item.get("audio_bridged"))
+        "audio_bridged": bool(item.get("audio_bridged")),
+        "answered_at": item.get("lead_answered_at"),
     }), 200
 
 
