@@ -623,6 +623,8 @@ def create_lead():
 def list_leads():
     campaign_id = request.args.get("campaign_id", type=int)
     status      = request.args.get("status")
+    page        = request.args.get("page", 1, type=int)
+    per_page    = request.args.get("per_page", 20, type=int)
 
     query = Lead.query.filter(Lead.company_id == g.company_id)
 
@@ -631,8 +633,16 @@ def list_leads():
     if status:
         query = query.filter(Lead.status == status)
 
-    leads = query.order_by(Lead.created_at.desc()).all()
-    return jsonify([serialize_lead(l) for l in leads]), 200
+    # Paginação
+    pagination = query.order_by(Lead.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        "leads": [serialize_lead(l) for l in pagination.items],
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "current_page": pagination.page,
+        "per_page": per_page
+    }), 200
 
 
 @leads_bp.route("/lead/<int:lead_id>", methods=["GET"])

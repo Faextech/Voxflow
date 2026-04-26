@@ -183,7 +183,7 @@
             overflow-y: auto;
             color: var(--text-secondary);
         }
-        .panel { padding: 0; }
+        .panel { padding: 0; margin-bottom: 24px; }
         .panel-header {
             padding: 16px 20px;
             border-bottom: 1px solid var(--border);
@@ -403,10 +403,21 @@
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         
-        .content-section { display: none; }
+        .content-section { display: none; padding: 24px 0; }
         .content-section.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+
+        /* Common Wrapper for all sections */
+        .section-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
         /* Layout Fixes for internal elements */
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .gap-2 { gap: 8px; }
@@ -1160,10 +1171,10 @@
                 </a>
 
                 <div class="sidebar-section-label">Financeiro</div>
-                <button class="menu-link" data-section="credito">
+                <a href="/credito" class="menu-link" style="text-decoration:none;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                     Meu Crédito
-                </button>
+                </a>
 
                 <div class="sidebar-section-label">Sistema</div>
                 <button class="menu-link" data-section="users">
@@ -1329,6 +1340,7 @@
                             <p id="monitor-call-attempt">Tentativa: —</p>
                             <p id="monitor-call-created">Data: —</p>
                         </div>
+                    </div>
                 </div>
             </section>
 
@@ -1566,7 +1578,7 @@
                     </form>
                 </div>
 
-                <div class="panel">
+                <div class="panel" style="margin-top: 24px;">
                     <div class="panel-header">
                         <div>
                             <h3>Base de leads</h3>
@@ -1616,6 +1628,16 @@
                             </thead>
                             <tbody id="leads-table"></tbody>
                         </table>
+                    </div>
+
+                    <div id="leads-pagination" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-top:1px solid var(--border);">
+                        <div style="font-size:13px; color:var(--text-secondary);" id="leads-count-info">
+                            Mostrando 0 de 0 leads
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-secondary" id="btn-leads-prev" onclick="changeLeadsPage(-1)" disabled>Anterior</button>
+                            <button class="btn btn-secondary" id="btn-leads-next" onclick="changeLeadsPage(1)" disabled>Próximo</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1667,10 +1689,8 @@
                         <button class="btn btn-secondary" onclick="reloadCampaigns()" style="font-size:12px; padding:8px 14px;">Atualizar</button>
                     </div>
                     <div id="campaigns-list-container" style="padding: 20px;">
-                        <p style="color:#888; font-size:13px; text-align:center;">Carregando campanhas…</p>
                     </div>
                 </div>
-
             </section>
 
             <section id="section-calls" class="content-section">
@@ -1702,7 +1722,6 @@
             </section>
 
             <section id="section-import" class="content-section">
-                <div style="max-width:780px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
 
                 <div class="panel">
                     <div class="panel-header">
@@ -1770,8 +1789,6 @@
                         <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">&#8505;&#65039; A primeira linha do arquivo deve conter exatamente esses cabeçalhos. Apenas <strong>name</strong> e <strong>numero_1</strong> são obrigatórios.</p>
                     </div>
                 </div>
-
-                </div><!-- /max-width wrapper -->
             </section>
 
             <section id="section-reports" class="content-section">
@@ -1930,12 +1947,10 @@
                         </div>
                     </div>
                 </div>
-
             </section>
 
             <!-- ── USUÁRIOS ── -->
             <section id="section-users" class="content-section">
-                <div style="max-width:860px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
 
                 <div class="panel">
                     <div class="panel-header">
@@ -1975,13 +1990,9 @@
                     </div>
                 </div>
 
-                </div><!-- /max-width wrapper -->
             </section>
 
-            <!-- ── CONFIGURAÇÕES ── -->
             <section id="section-settings" class="content-section">
-                <div style="max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
-
                 <div class="panel">
                     <div class="panel-header">
                         <div><h3>Configurações da conta</h3><p>Dados da empresa e integrações.</p></div>
@@ -2089,195 +2100,26 @@
                         </div>
                         <div id="support-message" class="message"></div>
                     </div>
-                </div>
 
-                <div class="panel" style="border:1px solid rgba(239,68,68,0.2);">
-                    <div class="panel-header">
-                        <div><h3 style="color:#ef4444;">Zona de Perigo</h3><p style="color:var(--text-secondary);">Ações destrutivas para sua conta.</p></div>
+                <div class="panel" style="border:1px solid rgba(239,68,68,0.2); overflow: hidden;">
+                    <div class="panel-header" style="border-bottom: 1px solid rgba(239,68,68,0.1); background: rgba(239,68,68,0.02);">
+                        <div><h3 style="color:#ef4444;">Zona de Perigo</h3><p style="color:var(--text-secondary);">Ações permanentes e irreversíveis.</p></div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.05); margin:20px 24px 24px; padding:16px 20px; border-radius:12px; border:1px solid rgba(239,68,68,0.15);">
-                        <div>
-                            <div style="font-weight:600; color:#f87171; margin-bottom:4px;">Apagar todos os dados do sistema</div>
-                            <div style="font-size:13px; color:var(--text-secondary);">Isso apagará permanentemente todos os leads, chamadas, negócios (deals) e campanhas.</div>
+                    <div style="padding: 24px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.05); padding:20px; border-radius:12px; border:1px solid rgba(239,68,68,0.15); flex-wrap: wrap; gap: 16px;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <div style="font-weight:600; color:#f87171; margin-bottom:4px; font-size: 15px;">Apagar todos os dados do sistema</div>
+                                <div style="font-size:13px; color:var(--text-secondary); line-height: 1.5;">Isso apagará permanentemente todos os leads, chamadas, negócios (deals) e campanhas vinculados a esta empresa. Esta ação não pode ser desfeita.</div>
+                            </div>
+                            <button class="btn btn-danger" style="white-space:nowrap; padding: 10px 24px; font-weight: 600;" onclick="promptWipeData()">Apagar Dados</button>
                         </div>
-                        <button class="btn btn-danger" style="white-space:nowrap; margin-left:24px;" onclick="promptWipeData()">Apagar Dados</button>
                     </div>
                 </div>
 
-                </div><!-- /max-width wrapper -->
             </section>
 
-            <!-- ── CRÉDITO ── -->
-            <section id="section-credito" class="content-section">
-                <style>
-                /* Crédito section — billing.html identical style */
-                .cr-stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-                .cr-stat-card {
-                    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-                    box-shadow: var(--shadow); padding: 22px;
-                    display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden;
-                }
-                .cr-stat-card::before {
-                    content: ''; position: absolute; top: 0; right: 0;
-                    width: 70px; height: 70px; border-radius: 50%; transform: translate(20px, -20px);
-                }
-                .cr-stat-card.green::before { background: rgba(22,163,74,0.07); }
-                .cr-stat-card.blue::before  { background: rgba(37,99,235,0.07); }
-                .cr-stat-card.purple::before{ background: rgba(139,92,246,0.07); }
-                .cr-stat-icon { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:6px; }
-                .cr-stat-icon.green { background:rgba(22,163,74,0.1);color:#16a34a; }
-                .cr-stat-icon.blue  { background:rgba(37,99,235,0.1);color:#2563eb; }
-                .cr-stat-icon.purple{ background:rgba(139,92,246,0.1);color:#7c3aed; }
-                .cr-stat-label { font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em; }
-                .cr-stat-value { font-size:30px;font-weight:800;color:var(--text-primary);line-height:1;margin:2px 0; }
-                .cr-stat-sub   { font-size:12px;color:var(--text-secondary); }
-                .cr-recharge-card { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:22px; }
-                .cr-recharge-title { font-size:14px;font-weight:700;color:var(--text-primary);margin:0 0 16px;display:flex;align-items:center;gap:6px; }
-                .cr-quick-amounts { display:flex;gap:8px;margin-bottom:14px; }
-                .cr-quick-btn {
-                    flex:1;padding:10px 6px;text-align:center;
-                    background:var(--bg-secondary);border:1.5px solid var(--border);border-radius:8px;
-                    font-size:14px;font-weight:700;color:var(--text-primary);cursor:pointer;transition:all 0.2s;font-family:inherit;
-                }
-                .cr-quick-btn:hover { border-color:#16a34a;color:#16a34a;background:rgba(22,163,74,0.05); }
-                .cr-quick-btn.selected { border-color:#16a34a!important;background:rgba(22,163,74,0.1)!important;color:#16a34a!important; }
-                .cr-amount-wrap { display:flex;margin-bottom:14px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color 0.2s; }
-                .cr-amount-wrap:focus-within { border-color:var(--accent); }
-                .cr-amount-prefix { padding:10px 14px;background:var(--bg-secondary);font-weight:700;font-size:14px;color:var(--text-secondary);border-right:1.5px solid var(--border); }
-                .cr-amount-input { flex:1;padding:10px 14px;border:none;outline:none;font-size:14px;font-weight:600;background:var(--bg-card);color:var(--text-primary);font-family:inherit; }
-                .cr-btn-pix {
-                    width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;
-                    background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;
-                    font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;
-                    transition:opacity 0.2s;box-shadow:0 4px 12px rgba(22,163,74,0.25);font-family:inherit;
-                }
-                .cr-btn-pix:hover { opacity:0.92; }
-                .cr-pix-hint { text-align:center;font-size:11px;color:var(--text-secondary);margin-top:8px; }
-                .cr-txs-panel { background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-top:20px; }
-                .cr-txs-header { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
-                .cr-txs-title { font-size:15px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:8px; }
-                .cr-filter-group { display:flex;gap:4px; }
-                .cr-filter-btn { padding:6px 14px;border-radius:6px;border:1.5px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit; }
-                .cr-filter-btn:hover { background:var(--bg-secondary); }
-                .cr-filter-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
-                .cr-table { width:100%;border-collapse:collapse;font-size:13px; }
-                .cr-table th { background:var(--bg-secondary);color:var(--text-secondary);font-weight:600;text-align:left;padding:12px 16px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:0.05em; }
-                .cr-table td { padding:14px 16px;border-bottom:1px solid var(--border);color:var(--text-primary); }
-                .cr-table tr:last-child td { border-bottom:none; }
-                .cr-table tbody tr:hover td { background:var(--bg-secondary); }
-                </style>
 
-                <!-- Stat Cards -->
-                <div class="cr-stat-cards">
-                    <div class="cr-stat-card green">
-                        <div class="cr-stat-icon green">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        </div>
-                        <div class="cr-stat-label">Saldo disponível</div>
-                        <div class="cr-stat-value" id="cr2-balance">—</div>
-                        <div class="cr-stat-sub" id="cr2-cost-min"></div>
-                        <div id="cr2-status" style="margin-top:8px;"></div>
-                    </div>
-                    <div class="cr-stat-card blue">
-                        <div class="cr-stat-icon blue">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                        </div>
-                        <div class="cr-stat-label">Últimos 30 dias</div>
-                        <div class="cr-stat-value" id="cr2-spent">—</div>
-                        <div class="cr-stat-sub" id="cr2-calls"></div>
-                    </div>
-                    <div class="cr-recharge-card">
-                        <p class="cr-recharge-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#16a34a"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                            Recarregar crédito
-                        </p>
-                        <div class="cr-quick-amounts">
-                            <button class="cr-quick-btn" data-cr-amount="50">R$ 50</button>
-                            <button class="cr-quick-btn" data-cr-amount="100">R$ 100</button>
-                            <button class="cr-quick-btn" data-cr-amount="200">R$ 200</button>
-                            <button class="cr-quick-btn" data-cr-amount="500">R$ 500</button>
-                        </div>
-                        <div class="cr-amount-wrap">
-                            <span class="cr-amount-prefix">R$</span>
-                            <input type="number" class="cr-amount-input" id="cr2-custom-amount" placeholder="Outro valor" min="10" step="10">
-                        </div>
-                        <button class="cr-btn-pix" onclick="cr2IniciarPIX()">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                            Pagar via PIX
-                        </button>
-                        <p class="cr-pix-hint">Mínimo R$ 10,00 · Crédito instantâneo após confirmação</p>
-                    </div>
-                </div>
 
-                <!-- Transactions -->
-                <div class="cr-txs-panel">
-                    <div class="cr-txs-header">
-                        <div class="cr-txs-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-secondary)"><path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/></svg>
-                            Histórico de Transações
-                        </div>
-                        <div class="cr-filter-group">
-                            <button class="cr-filter-btn active" id="cr2-filter-all" onclick="cr2Filtrar('all')">Todos</button>
-                            <button class="cr-filter-btn" id="cr2-filter-recharge" onclick="cr2Filtrar('recharge')">Recargas</button>
-                            <button class="cr-filter-btn" id="cr2-filter-calls" onclick="cr2Filtrar('call_debit')">Chamadas</button>
-                        </div>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table class="cr-table">
-                            <thead>
-                                <tr>
-                                    <th style="padding-left:20px;">Data</th>
-                                    <th>Tipo</th>
-                                    <th>Descrição</th>
-                                    <th style="text-align:right;">Valor</th>
-                                    <th style="text-align:right;padding-right:20px;">Saldo após</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cr2-txs-body">
-                                <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">
-                                    <div class="shimmer" style="width:24px;height:24px;border-radius:50%;display:inline-block;margin-right:8px;"></div>
-                                    Carregando...
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="text-align:center;padding:16px;border-top:1px solid var(--border);display:none;" id="cr2-load-more">
-                        <button onclick="cr2CarregarMais()" style="border:1.5px solid var(--border);border-radius:8px;padding:8px 24px;color:var(--text-secondary);background:transparent;font-size:13px;cursor:pointer;font-weight:600;">Carregar mais</button>
-                    </div>
-                </div>
-
-                <!-- PIX Modal -->
-                <div id="cr2-pix-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;align-items:center;justify-content:center;" onclick="if(event.target===this)cr2FecharPIX()">
-                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;position:relative;">
-                        <button onclick="cr2FecharPIX()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer;">✕</button>
-                        <div id="cr2-pix-loading">
-                            <div style="width:40px;height:40px;border:3px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
-                            <p style="color:var(--text-secondary);">Gerando código PIX...</p>
-                        </div>
-                        <div id="cr2-pix-content" style="display:none;">
-                            <h3 style="margin-bottom:4px;">Pagar via PIX</h3>
-                            <p style="color:#16a34a;font-size:22px;font-weight:700;margin-bottom:16px;" id="cr2-pix-valor"></p>
-                            <img id="cr2-pix-qr" src="" alt="QR Code" style="max-width:200px;border-radius:8px;margin-bottom:16px;">
-                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">Código copia e cola:</p>
-                            <div style="display:flex;gap:6px;margin-bottom:16px;">
-                                <input id="cr2-pix-code" type="text" readonly style="flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px;font-size:11px;font-family:monospace;">
-                                <button onclick="cr2CopiarPIX()" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:8px 12px;cursor:pointer;">📋</button>
-                            </div>
-                            <div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:12px;font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
-                                ✅ Crédito adicionado automaticamente após confirmação do pagamento
-                            </div>
-                            <div id="cr2-pix-aguardando" style="color:var(--text-secondary);font-size:12px;">
-                                <span style="display:inline-block;width:10px;height:10px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:6px;vertical-align:middle;"></span>
-                                Aguardando confirmação...
-                            </div>
-                        </div>
-                        <div id="cr2-pix-error" style="display:none;">
-                            <p style="color:#ef4444;margin-bottom:12px;" id="cr2-pix-error-msg"></p>
-                            <button onclick="cr2IniciarPIX()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;">Tentar novamente</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
         </main>
     </div>
@@ -2532,8 +2374,11 @@
 
         menuLinks.forEach(button => {
             button.addEventListener('click', () => {
-                showSection(button.dataset.section);
-                history.pushState(null, null, '#' + button.dataset.section);
+                const section = button.dataset.section;
+                if (section) {
+                    showSection(section);
+                    history.pushState(null, null, '#' + section);
+                }
             });
         });
 
@@ -2617,11 +2462,24 @@
         }
 
         function formatElapsedTime(startDateString) {
-            if (!startDateString) return '00:00:00';
-            const start = new Date(startDateString);
-            const now = new Date();
-            const diff = Math.max(0, Math.floor((now - start) / 1000));
-            return formatDuration(diff);
+            if (!startDateString || startDateString === 'None') return '00:00:00';
+            try {
+                // Normalizar data (tratar como local se não tiver timezone)
+                const isoStr = startDateString.toString().trim();
+                const start = new Date(isoStr);
+                
+                if (isNaN(start.getTime())) {
+                    console.warn("[TIMER] Invalid date received:", startDateString);
+                    return '00:00:00';
+                }
+                
+                const now = new Date();
+                const diff = Math.max(0, Math.floor((now - start) / 1000));
+                return formatDuration(diff);
+            } catch(e) {
+                console.error("[TIMER] Error:", e, "Input:", startDateString);
+                return '00:00:00';
+            }
         }
 
         function getCurrentCampaignId() {
@@ -2676,9 +2534,12 @@
             return await response.json();
         }
 
-        async function fetchLeads() {
-            const response = await authFetch('/api/leads');
-            if (!response.ok) return [];
+        let currentLeadsPage = 1;
+
+        async function fetchLeads(page = 1) {
+            currentLeadsPage = page;
+            const response = await authFetch(`/api/leads?page=${page}&per_page=20`);
+            if (!response.ok) return { leads: [], total: 0, pages: 0 };
             return await response.json();
         }
 
@@ -2769,42 +2630,59 @@
         // renderCampaigns is defined in the bottom script block (overrides this placeholder)
         function renderCampaigns(campaigns) { /* overridden below */ }
 
-        function renderLeads(leads) {
+        async function changeLeadsPage(delta) {
+            const newPage = currentLeadsPage + delta;
+            if (newPage < 1) return;
+            const data = await fetchLeads(newPage);
+            renderLeads(data);
+        }
+
+        function renderLeads(data) {
+            const leads = Array.isArray(data) ? data : (data.leads || []);
+            const total = data.total || leads.length;
+            const pages = data.pages || 1;
+            const currentPage = data.current_page || currentLeadsPage;
+
             const tbody = document.getElementById('leads-table');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             if (!leads.length) {
                 tbody.innerHTML = `<tr><td colspan="5">Nenhum lead cadastrado.</td></tr>`;
+                const info = document.getElementById('leads-count-info');
+                if (info) info.textContent = 'Mostrando 0 de 0 leads';
                 return;
             }
 
             leads.forEach(lead => {
-    tbody.innerHTML += `
-        <tr>
-            <td>${lead.name || '—'}</td>
-            <td>${lead.company_name || '—'}</td>
-            <td>${formatPhones(lead)}</td>
-            <td>${statusBadge(lead.status || 'new')}</td>
-            <td>
-                <div style="display:flex; gap:6px;">
-                    <button class="btn btn-primary" onclick="dialLead(${lead.id})">
-                        Ligar
-                    </button>
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${lead.name || '—'}</td>
+                    <td>${lead.company_name || '—'}</td>
+                    <td>${formatPhones(lead)}</td>
+                    <td>${statusBadge(lead.status || 'new')}</td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-primary" onclick="dialLead(${lead.id})">Ligar</button>
+                            <button onclick="editLead(${lead.id})" style="background:#6c5ce7;color:white;padding:6px 10px;border:none;border-radius:6px;">Editar</button>
+                            <button onclick="deleteLead(${lead.id})" style="background:#d63031;color:white;padding:6px 10px;border:none;border-radius:6px;">Apagar</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
 
-                    <button onclick="editLead(${lead.id})"
-                        style="background:#6c5ce7;color:white;padding:6px 10px;border:none;border-radius:6px;">
-                        Editar
-                    </button>
-
-                    <button onclick="deleteLead(${lead.id})"
-                        style="background:#d63031;color:white;padding:6px 10px;border:none;border-radius:6px;">
-                        Apagar
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `;
-});
+            const info = document.getElementById('leads-count-info');
+            if (info) {
+                const start = ((currentPage - 1) * 20) + 1;
+                const end = Math.min(start + leads.length - 1, total);
+                info.textContent = `Mostrando ${start}-${end} de ${total} leads (Página ${currentPage} de ${pages})`;
+            }
+            
+            const btnPrev = document.getElementById('btn-leads-prev');
+            const btnNext = document.getElementById('btn-leads-next');
+            if (btnPrev) btnPrev.disabled = currentPage <= 1;
+            if (btnNext) btnNext.disabled = currentPage >= pages;
         }
 
         async function exportLeadsCSV() {
@@ -3088,6 +2966,26 @@
 
             document.getElementById('hubLeadName').textContent = lead.name || 'Sem lead ativo';
             document.getElementById('hubLeadCompany').textContent = `Empresa: ${lead.company || '—'}`;
+            
+            if (call.answered_at) {
+                // Update immediate
+                document.getElementById('hubTimer').textContent = formatElapsedTime(call.answered_at);
+                
+                // Start local interval if not already running
+                if (window._timerInterval) clearInterval(window._timerInterval);
+                window._timerInterval = setInterval(() => {
+                    const timerEl = document.getElementById('hubTimer');
+                    if (timerEl && call.answered_at) {
+                        timerEl.textContent = formatElapsedTime(call.answered_at);
+                    } else {
+                        clearInterval(window._timerInterval);
+                    }
+                }, 1000);
+            } else {
+                if (window._timerInterval) clearInterval(window._timerInterval);
+                document.getElementById('hubTimer').textContent = '00:00:00';
+            }
+
             document.getElementById('hubLeadJob').textContent = `Cargo: ${lead.job || '—'}`;
             document.getElementById('hubLeadPhone').textContent = `Telefone: ${lead.phone || call.phone || '—'}`;
             document.getElementById('hubLeadNotes').textContent = `Observações: ${lead.notes || '—'}`;
@@ -3110,12 +3008,17 @@
             document.getElementById('hubNotes').value = '';
 
             overlay.classList.add('active');
-            startHubTimer(call.answered_at || call.started_at);
+            if (window._currentTimerCallId !== call.id) {
+                window._currentTimerCallId = call.id;
+                startHubTimer(call.answered_at || call.started_at);
+            }
         }
 
         function closeCallHub() {
             document.getElementById('callHubOverlay').classList.remove('active');
             stopHubTimer();
+            window._currentTimerCallId = null;
+            window._lastTimerAnsweredAt = null;
         }
 
         function startHubTimer(startDateString) {
@@ -3152,15 +3055,21 @@
                 const callId = data.call?.id;
                 const callStatus = (data.call?.status || '').toLowerCase();
 
-               if (["in_progress", "answered"].includes(callStatus)) {
-    if (hubOpenedForCallId !== callId) {
-        openCallHub(data);
-    } else {
-        currentHubCall = data;
-        document.getElementById('hubCallStatusText').textContent = `Status: ${data.call.status || '—'}`;
-        document.getElementById('hubSummaryAnsweredAt').textContent = `Atendida em: ${formatDate(data.call.answered_at)}`;
-    }
-} else {
+                if (["in_progress", "answered", "in-progress"].includes(callStatus)) {
+                    if (hubOpenedForCallId !== callId) {
+                        openCallHub(data);
+                    } else {
+                        currentHubCall = data;
+                        document.getElementById('hubCallStatusText').textContent = `Status: ${data.call.status || '—'}`;
+                        document.getElementById('hubSummaryAnsweredAt').textContent = `Atendida em: ${formatDate(data.call.answered_at)}`;
+                        
+                        // Atualiza timer se foi atendida
+                        if (data.call.answered_at && window._lastTimerAnsweredAt !== data.call.answered_at) {
+                            window._lastTimerAnsweredAt = data.call.answered_at;
+                            startHubTimer(data.call.answered_at);
+                        }
+                    }
+                } else {
     if (hubOpenedForCallId === callId) {
         closeCallHub();
         currentHubCall = null;
@@ -3334,17 +3243,17 @@
 
         async function loadAllData() {
             try {
-                const [metrics, campaigns, leads, calls, pipelines] = await Promise.all([
+                const [metrics, campaigns, leadsData, calls, pipelines] = await Promise.all([
                     fetchMetrics(),
                     fetchCampaigns(),
-                    fetchLeads(),
+                    fetchLeads(1),
                     fetchCalls(),
                     fetchPipelines()
                 ]);
 
                 renderMetrics(metrics);
                 renderCampaigns(campaigns);
-                renderLeads(leads);
+                renderLeads(leadsData);
                 renderCalls(calls);
                 populateCampaignSelects(campaigns);
                 populatePipelineSelects(pipelines);
@@ -3808,9 +3717,12 @@ async function deleteLead(leadId) {
             // Carregar etapas da pipeline no select
             loadPopupStages();
             
-            // Iniciar o timer do popup
+            // Iniciar o timer do popup (apenas se for novo ou se o status mudar para atendido)
             if (data.answered_at || data.started_at) {
-                startHubTimer(data.answered_at || data.started_at);
+                if (window._currentTimerCallId !== data.call_id) {
+                    window._currentTimerCallId = data.call_id;
+                    startHubTimer(data.answered_at || data.started_at);
+                }
             }
 
             if (typeof window.resumeTwilioAudioPipeline === 'function') {
@@ -6706,6 +6618,10 @@ async function deleteLead(leadId) {
 
         /* navigateTo called from dash-credit-card onclick */
         window.navigateTo = function(section) {
+            if (section === 'credito') {
+                window.location.href = '/credito';
+                return;
+            }
             if (window.switchSection) window.switchSection(section);
             else if (typeof showSection === 'function') showSection(section);
         };
