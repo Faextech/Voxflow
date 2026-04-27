@@ -4845,7 +4845,25 @@ async function deleteLead(leadId) {
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='dist/webphone.js') }}"></script>
+    <script>
+        // Sincroniza os nomes de token para garantir compatibilidade com o bundle antigo/novo
+        (function() {
+            const token = localStorage.getItem('voxflow_token') || localStorage.getItem('token');
+            if (token) {
+                localStorage.setItem('nexdial_token', token);
+                console.log("Token sincronizado para o Webphone.");
+            }
+        })();
+
+        // Captura erros globais para exibir no log do webphone
+        window.addEventListener('error', function(e) {
+            if (e.filename && e.filename.includes('webphone')) {
+                const logBox = document.getElementById('logBox');
+                if (logBox) logBox.innerHTML += `<div style="color:#ef4444;">❌ Erro no Script: ${e.message}</div>`;
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='dist/webphone.js', v='1.0.2') }}"></script>
 
     <!-- ══════════════════════════════════════════════════════════════════
          SCRIPT: campanhas + discador overlay + auto-init
