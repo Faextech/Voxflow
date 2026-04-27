@@ -17,6 +17,26 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 
+def _fetch_twilio_balance_real():
+    """
+    Busca o saldo REAL da conta Twilio master via API.
+    Retorna (balance_str, currency, error_msg).
+    """
+    try:
+        from twilio.rest import Client
+        sid   = (os.getenv('TWILIO_ACCOUNT_SID') or '').strip()
+        token = (os.getenv('TWILIO_AUTH_TOKEN')  or '').strip()
+        if not sid or not token:
+            return None, None, 'TWILIO_ACCOUNT_SID ou TWILIO_AUTH_TOKEN não configurados'
+        client = Client(sid, token)
+        balance = client.api.v2010.balance.fetch()
+        logger.info('[TWILIO] Saldo real buscado: %s %s', balance.balance, balance.currency)
+        return balance.balance, balance.currency, None
+    except Exception as exc:
+        logger.error('[TWILIO] Erro ao buscar saldo real: %s', exc)
+        return None, None, str(exc)
+
+
 def _require_superadmin(f):
     from functools import wraps
     @wraps(f)
@@ -176,8 +196,13 @@ def add_credit(company_id):
 def list_available_numbers():
     area_code = request.args.get('area_code', '11')
     from app.services.twilio_subaccount_service import search_available_numbers
-    numbers = search_available_numbers(area_code=area_code)
-    return jsonify(numbers)
+    result = search_available_numbers(area_code=area_code)
+    # result pode ser list (sucesso) ou dict {'numbers': [], 'error': '...'}
+    if isinstance(result, dict):
+        # Retorna com status 207 para que o frontend saiba que houve problema
+        status = 200 if result.get('numbers') else 502
+        return jsonify(result), status
+    return jsonify(result)
 
 
 @admin_bp.route('/companies/<int:company_id>/twilio-numbers', methods=['GET'])
@@ -339,7 +364,6 @@ def admin_dashboard():
     today = date.today()
     first_day = today.replace(day=1)
 
-    # Raw SQL to avoid ORM subquery that selects ALL columns (breaks when any column is missing)
     with db.engine.connect() as conn:
         total_companies = conn.execute(text("SELECT COUNT(*) FROM companies")).scalar() or 0
 
@@ -367,11 +391,177 @@ def admin_dashboard():
             {"first_day": first_day}
         ).scalar() or 0
 
+    # ── Saldo REAL da conta Twilio master ─────────────────────────────────────
+    twilio_balance, twilio_currency, twilio_error = _fetch_twilio_balance_real()
+
     return jsonify({
-        'total_companies': total_companies,
-        'master_balance': master_balance,
+        'total_companies':      total_companies,
+        'master_balance':       master_balance,
         'total_clients_credit': float(total_clients_credit),
-        'calls_today': calls_today,
-        'monthly_revenue': abs(float(monthly_revenue)),
+        'calls_today':          calls_today,
+        'monthly_revenue':      abs(float(monthly_revenue)),
         'total_credit_platform': master_balance + float(total_clients_credit),
+        # Saldo real da conta Twilio (USD) — None se falhou
+        'twilio_balance':       twilio_balance,
+        'twilio_currency':      twilio_currency or 'USD',
+        'twilio_error':         twilio_error,
     })
+
+
+# ── Diagnóstico Twilio ────────────────────────────────────────────────────────
+
+@admin_bp.route('/twilio-diagnostics', methods=['GET'])
+@require_auth
+@require_role('superadmin')
+def twilio_diagnostics():
+    """
+    Testa TODAS as integrações Twilio e retorna status real de cada uma.
+    Use para diagnosticar problemas em produção.
+    """
+    import os
+    result = {}
+
+    # 1. Variáveis de ambiente
+    env_vars = [
+        'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN',
+        'TWILIO_API_KEY', 'TWILIO_API_SECRET',
+        'TWILIO_TWIML_APP_SID', 'TWILIO_PHONE_NUMBER',
+        'PUBLIC_BASE_URL', 'BASE_URL', 'FERNET_KEY',
+        'TWILIO_BUNDLE_SID', 'TWILIO_ADDRESS_SID',
+    ]
+    result['env_vars'] = {}
+    for var in env_vars:
+        val = os.getenv(var)
+        if val:
+            # Mostra só os primeiros e últimos chars (segurança)
+            display = val[:6] + '...' + val[-4:] if len(val) > 10 else '***'
+            result['env_vars'][var] = {'set': True, 'preview': display}
+        else:
+            result['env_vars'][var] = {'set': False, 'preview': 'NÃO CONFIGURADO'}
+
+    # 2. Teste do client Twilio
+    try:
+        from twilio.rest import Client
+        sid   = (os.getenv('TWILIO_ACCOUNT_SID') or '').strip()
+        token = (os.getenv('TWILIO_AUTH_TOKEN')  or '').strip()
+        client = Client(sid, token)
+
+        # 2a. Saldo real
+        try:
+            bal = client.api.v2010.balance.fetch()
+            result['twilio_balance'] = {
+                'ok': True,
+                'balance': bal.balance,
+                'currency': bal.currency,
+            }
+        except Exception as e:
+            result['twilio_balance'] = {'ok': False, 'error': str(e)}
+
+        # 2b. TwiML App
+        twiml_app_sid = (os.getenv('TWILIO_TWIML_APP_SID') or '').strip()
+        if twiml_app_sid:
+            try:
+                app = client.applications(twiml_app_sid).fetch()
+                result['twiml_app'] = {
+                    'ok': True,
+                    'sid': app.sid,
+                    'friendly_name': app.friendly_name,
+                    'voice_url': app.voice_url,
+                    'voice_method': app.voice_method,
+                }
+                public_url = (os.getenv('PUBLIC_BASE_URL') or '').strip()
+                if public_url and public_url not in (app.voice_url or ''):
+                    result['twiml_app']['warning'] = (
+                        f'voice_url ({app.voice_url}) NÃO contém PUBLIC_BASE_URL ({public_url}). '
+                        'O webphone NÃO vai funcionar em produção! '
+                        'Use POST /api/admin/update-twiml-app para corrigir.'
+                    )
+            except Exception as e:
+                result['twiml_app'] = {'ok': False, 'sid': twiml_app_sid, 'error': str(e)}
+        else:
+            result['twiml_app'] = {'ok': False, 'error': 'TWILIO_TWIML_APP_SID não configurado'}
+
+        # 2c. Números disponíveis (BR) — busca rápida
+        try:
+            nums = client.available_phone_numbers('BR').local.list(limit=2)
+            result['available_numbers'] = {
+                'ok': True,
+                'count': len(nums),
+                'sample': [n.phone_number for n in nums],
+            }
+        except Exception as e:
+            result['available_numbers'] = {'ok': False, 'error': str(e)}
+
+        # 2d. API Key/Secret (gera token de teste)
+        api_key    = (os.getenv('TWILIO_API_KEY')    or '').strip()
+        api_secret = (os.getenv('TWILIO_API_SECRET') or '').strip()
+        if api_key and api_secret:
+            try:
+                from twilio.jwt.access_token import AccessToken
+                test_token = AccessToken(sid, api_key, api_secret, identity='test_diag', ttl=60)
+                test_token.to_jwt()
+                result['access_token_generation'] = {'ok': True}
+            except Exception as e:
+                result['access_token_generation'] = {'ok': False, 'error': str(e)}
+        else:
+            result['access_token_generation'] = {'ok': False, 'error': 'TWILIO_API_KEY ou TWILIO_API_SECRET não configurados'}
+
+    except Exception as e:
+        result['twilio_client'] = {'ok': False, 'error': str(e)}
+
+    # 3. FERNET_KEY (criptografia de credenciais)
+    fernet_key = os.getenv('FERNET_KEY')
+    if fernet_key:
+        try:
+            from cryptography.fernet import Fernet
+            Fernet(fernet_key.encode())
+            result['fernet'] = {'ok': True}
+        except Exception as e:
+            result['fernet'] = {'ok': False, 'error': str(e)}
+    else:
+        result['fernet'] = {'ok': False, 'error': 'FERNET_KEY não configurado'}
+
+    result['public_base_url'] = os.getenv('PUBLIC_BASE_URL') or 'NÃO CONFIGURADO'
+    result['flask_env']       = os.getenv('FLASK_ENV')       or 'NÃO CONFIGURADO'
+
+    return jsonify(result)
+
+
+@admin_bp.route('/update-twiml-app', methods=['POST'])
+@require_auth
+@require_role('superadmin')
+def update_twiml_app():
+    """
+    Atualiza a voice_url do TwiML App para apontar para PUBLIC_BASE_URL.
+    Necessário quando o app foi criado apontando para localhost.
+    """
+    try:
+        from twilio.rest import Client
+        sid        = (os.getenv('TWILIO_ACCOUNT_SID')  or '').strip()
+        token      = (os.getenv('TWILIO_AUTH_TOKEN')   or '').strip()
+        app_sid    = (os.getenv('TWILIO_TWIML_APP_SID') or '').strip()
+        public_url = (os.getenv('PUBLIC_BASE_URL') or os.getenv('BASE_URL') or '').strip().rstrip('/')
+
+        if not all([sid, token, app_sid, public_url]):
+            return jsonify({'error': 'TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_TWIML_APP_SID e PUBLIC_BASE_URL são obrigatórios'}), 400
+
+        client = Client(sid, token)
+        new_voice_url    = f'{public_url}/api/twilio/browser-outgoing'
+        new_status_cb    = f'{public_url}/api/twilio/status'
+
+        app = client.applications(app_sid).update(
+            voice_url=new_voice_url,
+            voice_method='POST',
+            status_callback=new_status_cb,
+            status_callback_method='POST',
+        )
+        logger.info('[ADMIN] TwiML App %s atualizado: voice_url=%s', app_sid, new_voice_url)
+        return jsonify({
+            'ok': True,
+            'app_sid': app.sid,
+            'voice_url': app.voice_url,
+            'status_callback': app.status_callback,
+        })
+    except Exception as e:
+        logger.error('[ADMIN] Erro ao atualizar TwiML App: %s', e)
+        return jsonify({'ok': False, 'error': str(e)}), 500

@@ -165,42 +165,66 @@ def create_twiml_app(company: Company) -> Optional[str]:
         return None
 
 
-def search_available_numbers(area_code: str = "11", country: str = "BR", limit: int = 5) -> list:
-    """Retorna uma lista de números disponíveis para compra na Twilio.
-    Sempre usa a conta master para garantir acesso sem restrições de bundle regulatório.
+def search_available_numbers(area_code: str = "11", country: str = "BR", limit: int = 5):
     """
-    client = _master_client()
+    Retorna números disponíveis para compra na Twilio.
+    Sempre usa a conta master para garantir acesso sem restrições de bundle regulatório.
 
+    Retorna:
+      - list[dict]  em caso de sucesso (pode ser lista vazia se não há números)
+      - dict {'numbers': list, 'error': str}  em caso de falha na chamada Twilio
+    """
+    last_error = None
     results = []
+
+    try:
+        client = _master_client()
+    except RuntimeError as e:
+        logger.error("[TWILIO] Credenciais master não configuradas: %s", e)
+        return {"numbers": [], "error": str(e)}
+
     try:
         # 1. Tenta Local com DDD
         try:
             available = client.available_phone_numbers(country).local.list(area_code=area_code, limit=limit)
             results.extend(available)
+            logger.info("[TWILIO] Busca Local DDD=%s: %d resultado(s)", area_code, len(results))
         except Exception as e:
-            logger.warning(f"[TWILIO] Erro na busca Local DDD {area_code}: {e}")
-        
+            last_error = str(e)
+            logger.warning("[TWILIO] Erro na busca Local DDD %s: %s", area_code, e)
+
         # 2. Se não achou muitos, tenta Mobile com DDD
         if len(results) < limit:
             try:
                 mobile = client.available_phone_numbers(country).mobile.list(area_code=area_code, limit=limit - len(results))
                 results.extend(mobile)
+                logger.info("[TWILIO] Busca Mobile DDD=%s: +%d resultado(s)", area_code, len(mobile))
             except Exception as e:
-                logger.warning(f"[TWILIO] Erro na busca Mobile DDD {area_code}: {e}")
+                last_error = str(e)
+                logger.warning("[TWILIO] Erro na busca Mobile DDD %s: %s", area_code, e)
 
         # 3. Se ainda não achou NADA, tenta sem DDD (geral no país)
         if not results:
-            logger.info(f"[TWILIO] Sem números no DDD {area_code}, buscando em todo o país {country}")
+            logger.info("[TWILIO] Sem números no DDD %s, buscando em todo o país %s", area_code, country)
             try:
                 any_local = client.available_phone_numbers(country).local.list(limit=limit)
                 results.extend(any_local)
+                logger.info("[TWILIO] Busca geral %s: %d resultado(s)", country, len(results))
             except Exception as e:
-                logger.warning(f"[TWILIO] Erro na busca Local geral: {e}")
+                last_error = str(e)
+                logger.warning("[TWILIO] Erro na busca Local geral: %s", e)
 
-        return [{"phone_number": n.phone_number, "friendly_name": n.friendly_name} for n in results]
+        numbers_list = [{"phone_number": n.phone_number, "friendly_name": n.friendly_name} for n in results]
+
+        if not numbers_list and last_error:
+            # Retorna dict com erro para o frontend mostrar a causa real
+            return {"numbers": [], "error": last_error}
+
+        return numbers_list
+
     except TwilioRestException as e:
-        logger.error(f"[TWILIO] Erro crítico ao buscar números: {e}")
-        return []
+        logger.error("[TWILIO] Erro crítico ao buscar números: %s (code=%s)", e, getattr(e, 'code', 'N/A'))
+        return {"numbers": [], "error": f"Twilio error {getattr(e, 'code', '')}: {e.msg}"}
 
 
 def _ensure_address_in_subaccount(company: Company, sub_client: Client) -> Optional[str]:
