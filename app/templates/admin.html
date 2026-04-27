@@ -480,7 +480,10 @@
     let companies = [];
     async function loadCompanies() {
         const r = await API('/api/admin/companies');
-        if (!r.ok) return;
+        if (!r.ok) {
+            document.getElementById('companiesTable').innerHTML = `<p style="padding:20px;color:#f87171;font-size:13px;">Erro ao carregar clientes (HTTP ${r.status}). Verifique o console.</p>`;
+            return;
+        }
         companies = await r.json();
         document.getElementById('companiesCount').textContent = companies.length + ' empresas';
         renderCompaniesTable();
@@ -589,15 +592,16 @@
     }
 
     async function loadInvites() {
-        const r = await API('/api/admin/invites');
+        const r = await API('/api/admin/invite-codes');
+        if (!r.ok) return;
         const invites = await r.json();
-        document.getElementById('invitesTable').innerHTML = `<table><thead><tr><th>Código</th><th>Usado por</th><th>Expira</th></tr></thead><tbody>${invites.map(i=>`<tr><td>${i.code}</td><td>${i.used_by_email||'—'}</td><td>${i.expires_at?new Date(i.expires_at).toLocaleDateString():'—'}</td></tr>`).join('')}</tbody></table>`;
+        document.getElementById('invitesTable').innerHTML = `<table><thead><tr><th>Código</th><th>Usado por</th><th>Expira</th></tr></thead><tbody>${invites.map(i=>`<tr><td>${i.code}</td><td>${i.used_by_company_name||'—'}</td><td>${i.expires_at?new Date(i.expires_at).toLocaleDateString():'—'}</td></tr>`).join('')}</tbody></table>`;
     }
 
     function openGenerateInvite() { openModal('inviteModal'); }
     async function generateInvite() {
         const days = document.getElementById('inviteExpires').value;
-        const r = await API('/api/admin/invites', { method: 'POST', body: JSON.stringify({ expires_in_days: days ? parseInt(days) : null }) });
+        const r = await API('/api/admin/invite-codes', { method: 'POST', body: JSON.stringify({ expires_in_days: days ? parseInt(days) : null }) });
         const d = await r.json();
         document.getElementById('generatedCode').textContent = d.code;
         document.getElementById('generatedCodeBox').style.display = 'block';

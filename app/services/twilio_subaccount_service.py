@@ -165,13 +165,11 @@ def create_twiml_app(company: Company) -> Optional[str]:
         return None
 
 
-def search_available_numbers(company: Company, area_code: str = "11", country: str = "BR", limit: int = 5) -> list:
-    """Retorna uma lista de números disponíveis para compra na Twilio."""
-    if not company.twilio_subaccount_sid:
-        client = _master_client()
-    else:
-        creds = company.get_twilio_credentials()
-        client = Client(creds["account_sid"], creds["auth_token"])
+def search_available_numbers(area_code: str = "11", country: str = "BR", limit: int = 5) -> list:
+    """Retorna uma lista de números disponíveis para compra na Twilio.
+    Sempre usa a conta master para garantir acesso sem restrições de bundle regulatório.
+    """
+    client = _master_client()
 
     results = []
     try:
@@ -205,48 +203,80 @@ def search_available_numbers(company: Company, area_code: str = "11", country: s
         return []
 
 
+def _ensure_address_in_subaccount(company: Company, sub_client: Client) -> Optional[str]:
+    """
+    Garante que a subconta tem um endereço cadastrado na Twilio.
+    Usa os dados regulatórios da empresa. Retorna o address_sid ou None.
+    """
+    try:
+        existing = sub_client.addresses.list(limit=1)
+        if existing:
+            return existing[0].sid
+
+        # Constrói endereço a partir dos dados regulatórios da empresa
+        street = (company.reg_address or "Rua Sem Endereço, 1").strip()[:200]
+        customer_name = (company.reg_name or company.name or "Cliente VoxFlow").strip()[:100]
+
+        address = sub_client.addresses.create(
+            customer_name=customer_name,
+            street=street,
+            city="São Paulo",
+            region="SP",
+            postal_code="01310-100",
+            iso_country="BR",
+            friendly_name=f"VoxFlow - {company.name}",
+        )
+        logger.info(f"[TWILIO] Endereço criado na subconta {company.twilio_subaccount_sid}: {address.sid}")
+        return address.sid
+    except TwilioRestException as e:
+        logger.warning(f"[TWILIO] Não foi possível criar endereço na subconta: {e}")
+        return None
+
+
 def provision_phone_number(company: Company, area_code: str = "11", country: str = "BR", specific_number: str = None) -> Optional[str]:
     """
-    Compra e provisiona um número Twilio na subconta da empresa.
-    Se 'specific_number' for fornecido, tenta comprar exatamente esse.
+    Compra e provisiona um número Twilio usando a conta master com bundle e endereço aprovados.
+    Números BR exigem bundle regulatório aprovado — compramos na master que já possui o bundle.
+    O número fica salvo no banco vinculado à empresa; o roteamento por webhook identifica a empresa.
     """
-    if not company.twilio_subaccount_sid:
-        raise ValueError("Empresa não tem subconta Twilio configurada")
-
-    creds = company.get_twilio_credentials()
-    sub_client = Client(creds["account_sid"], creds["auth_token"])
+    master = _master_client()
     backend_url = os.getenv("PUBLIC_BASE_URL") or os.getenv("BASE_URL") or "http://localhost:5000"
+    bundle_sid  = os.getenv("TWILIO_BUNDLE_SID")
+    address_sid = os.getenv("TWILIO_ADDRESS_SID")
 
     try:
         target_number = specific_number
-        
+
         if not target_number:
-            # 1. Busca número disponível se nenhum for especificado
-            available = sub_client.available_phone_numbers(country).local.list(
-                area_code=area_code, limit=1
-            )
+            available = master.available_phone_numbers(country).local.list(area_code=area_code, limit=1)
             if not available:
-                logger.warning(f"[TWILIO] Nenhum número disponível no DDD {area_code} ({country})")
-                available = sub_client.available_phone_numbers(country).local.list(limit=1)
-                if not available: return None
+                available = master.available_phone_numbers(country).local.list(limit=1)
+            if not available:
+                return {"error": "Nenhum número disponível no Brasil no momento"}
             target_number = available[0].phone_number
 
-        # 2. Compra o número
-        purchased = sub_client.incoming_phone_numbers.create(
+        purchase_params = dict(
             phone_number=target_number,
             voice_url=f"{backend_url}/api/twilio/voice",
             voice_method="POST",
             status_callback=f"{backend_url}/api/twilio/status",
             status_callback_method="POST",
         )
+        if bundle_sid:
+            purchase_params["bundle_sid"] = bundle_sid
+        if address_sid:
+            purchase_params["address_sid"] = address_sid
+
+        purchased = master.incoming_phone_numbers.create(**purchase_params)
 
         company.twilio_number = purchased.phone_number
         db.session.commit()
-        logger.info(f"[TWILIO] Número {purchased.phone_number} comprado para empresa {company.id}")
+        logger.info(f"[TWILIO] Número {purchased.phone_number} comprado (master) para empresa {company.id}")
         return purchased.phone_number
 
     except TwilioRestException as e:
-        msg = f"Erro Twilio {e.code}: {e.msg}" if hasattr(e, 'code') else str(e)
+        code = getattr(e, 'code', None)
+        msg = f"Erro Twilio {code}: {e.msg}" if code else str(e)
         logger.error(f"[TWILIO] Erro ao provisionar número {specific_number or 'auto'}: {msg}")
         return {"error": msg}
 

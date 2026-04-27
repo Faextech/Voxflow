@@ -32,6 +32,12 @@ class Company(db.Model):
     twilio_subaccount_sid = db.Column(db.String(255), nullable=True)
 
     # ------------------------------------------------------------------
+    # Billing (adicionados via migration d9e5f4a1b832)
+    # ------------------------------------------------------------------
+    credit_balance  = db.Column(db.Numeric(12, 4), nullable=False, default=0, server_default="0")
+    cost_per_minute = db.Column(db.Numeric(8,  4), nullable=False, default=0.35, server_default="0.35")
+
+    # ------------------------------------------------------------------
     # Informações Regulatórias (Identity Verification)
     # ------------------------------------------------------------------
     reg_type          = db.Column(db.String(50),  nullable=True)

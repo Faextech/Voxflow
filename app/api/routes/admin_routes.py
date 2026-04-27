@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import string
 from datetime import datetime, timedelta
@@ -101,6 +102,7 @@ def get_company(company_id):
         'credit_balance': float(company.credit_balance or 0),
         'cost_per_minute': float(company.cost_per_minute or 0),
         'twilio_subaccount_sid': company.twilio_subaccount_sid,
+        'twilio_number': company.twilio_number,
         'reg_type': company.reg_type,
         'reg_name': company.reg_name,
         'reg_tax_id': company.reg_tax_id,
@@ -173,18 +175,8 @@ def add_credit(company_id):
 @require_role('superadmin')
 def list_available_numbers():
     area_code = request.args.get('area_code', '11')
-    company_id = request.args.get('company_id')
-    
-    company = None
-    if company_id:
-        company = Company.query.get(company_id)
-        
-    # Se não passar company_id, usamos a master apenas para a busca
-    if not company:
-        company = Company.query.get(1)
-
     from app.services.twilio_subaccount_service import search_available_numbers
-    numbers = search_available_numbers(company, area_code=area_code)
+    numbers = search_available_numbers(area_code=area_code)
     return jsonify(numbers)
 
 
