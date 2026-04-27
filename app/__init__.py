@@ -60,6 +60,19 @@ def _auto_add_missing_columns(db):
             if col not in existing:
                 pending.append(f"ALTER TABLE campaigns ADD COLUMN {col} {col_type}")
 
+    if "calls" in tables:
+        existing = {col["name"] for col in inspector.get_columns("calls")}
+        new_cols = {
+            "amd_result":    "VARCHAR(50)",
+            "amd_recovered": "BOOLEAN DEFAULT FALSE",
+            "hangup_cause":  "VARCHAR(100)",
+            "ringing_at":    "TIMESTAMP",
+            "answered_by":   "VARCHAR(50)",
+        }
+        for col, col_type in new_cols.items():
+            if col not in existing:
+                pending.append(f"ALTER TABLE calls ADD COLUMN {col} {col_type}")
+
     if "deals" in tables:
         existing = {col["name"] for col in inspector.get_columns("deals")}
         if "notes" not in existing:
