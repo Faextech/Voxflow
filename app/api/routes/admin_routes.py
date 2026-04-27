@@ -333,30 +333,39 @@ def delete_invite_code(code_id):
 @require_auth
 @require_role('superadmin')
 def admin_dashboard():
-    from app.models.call import Call
-    from sqlalchemy import func
+    from sqlalchemy import text
     from datetime import date
 
-    total_companies = Company.query.count()
-
-    # Master é a empresa do superadmin logado
-    master_company = Company.query.get_or_404(g.company_id)
-    master_balance = float(master_company.credit_balance)
-
-    # Crédito na plataforma (soma de todas as outras empresas exceto a master)
-    total_clients_credit = db.session.query(func.sum(Company.credit_balance)).filter(Company.id != master_company.id).scalar() or 0
-
     today = date.today()
-    calls_today = Call.query.filter(
-        func.date(Call.created_at) == today
-    ).count()
-
-    # Receita bruta do mês: soma de débitos de chamada no mês atual de TODOS os clientes
     first_day = today.replace(day=1)
-    monthly_revenue = db.session.query(func.sum(CreditTransaction.amount)).filter(
-        CreditTransaction.type == 'call_debit',
-        CreditTransaction.created_at >= first_day,
-    ).scalar() or 0
+
+    # Raw SQL to avoid ORM subquery that selects ALL columns (breaks when any column is missing)
+    with db.engine.connect() as conn:
+        total_companies = conn.execute(text("SELECT COUNT(*) FROM companies")).scalar() or 0
+
+        row = conn.execute(
+            text("SELECT credit_balance FROM companies WHERE id = :cid"),
+            {"cid": g.company_id}
+        ).fetchone()
+        master_balance = float(row[0]) if row and row[0] is not None else 0.0
+
+        total_clients_credit = conn.execute(
+            text("SELECT COALESCE(SUM(credit_balance), 0) FROM companies WHERE id != :cid"),
+            {"cid": g.company_id}
+        ).scalar() or 0
+
+        calls_today = conn.execute(
+            text("SELECT COUNT(*) FROM calls WHERE DATE(created_at) = :today"),
+            {"today": today}
+        ).scalar() or 0
+
+        monthly_revenue = conn.execute(
+            text("""
+                SELECT COALESCE(SUM(amount), 0) FROM credit_transactions
+                WHERE type = 'call_debit' AND created_at >= :first_day
+            """),
+            {"first_day": first_day}
+        ).scalar() or 0
 
     return jsonify({
         'total_companies': total_companies,
@@ -364,6 +373,5 @@ def admin_dashboard():
         'total_clients_credit': float(total_clients_credit),
         'calls_today': calls_today,
         'monthly_revenue': abs(float(monthly_revenue)),
-        # Mantendo para compatibilidade com frontend antigo se necessário
         'total_credit_platform': master_balance + float(total_clients_credit),
     })
