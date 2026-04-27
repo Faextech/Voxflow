@@ -28,6 +28,13 @@ def _auto_add_missing_columns(db):
             "twilio_api_secret":    "VARCHAR(512)",
             "twilio_twiml_app_sid": "VARCHAR(255)",
             "credit_balance":       "NUMERIC(12, 4) DEFAULT 0",
+            "cost_per_minute":      "NUMERIC(8, 4) DEFAULT 0.35",
+            "twilio_subaccount_sid": "VARCHAR(255)",
+            "reg_type":             "VARCHAR(50)",
+            "reg_name":             "VARCHAR(255)",
+            "reg_tax_id":           "VARCHAR(50)",
+            "reg_address":          "TEXT",
+            "reg_document_path":    "VARCHAR(512)",
         }
         for col, col_type in new_cols.items():
             if col not in existing:
