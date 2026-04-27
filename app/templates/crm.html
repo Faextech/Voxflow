@@ -797,7 +797,7 @@ async function authFetch(url, opts = {}) {
   const token = getToken();
   opts.headers = { ...(opts.headers || {}), 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
   const res = await fetch(url, opts);
-  if (res.status === 401) { window.location.href = '/login-page'; }
+  if (res.status === 401) { window.location.href = '/login'; }
   return res;
 }
 function toast(msg, type = 'success') {

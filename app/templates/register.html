@@ -4,120 +4,304 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro - NexDial</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --brand-500: #22c55e;
+            --brand-600: #16a34a;
+            --navy-800: #1e3a8a;
+            --navy-900: #0f1f5c;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
-        .box {
-            background: #111827;
-            padding: 30px;
-            border-radius: 15px;
-            width: 340px;
-            box-shadow: 0 0 25px rgba(0,0,0,0.3);
+        .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 32px 32px;
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        .hero-gradient {
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 40vh;
+            background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%);
+            z-index: 0;
+        }
+
+        .login-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 48px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+            color: var(--navy-800);
+            margin-right: 8px;
+        }
+
+        .logo span {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--navy-900);
+            letter-spacing: -0.025em;
         }
 
         h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
             text-align: center;
+            color: var(--navy-900);
+        }
+
+        p.subtitle {
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
             margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
         }
 
         input {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-radius: 8px;
-            border: none;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--brand-500);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            background: #7c3aed;
+            padding: 14px;
+            background: var(--brand-500);
             color: white;
-            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
         }
 
         button:hover {
-            background: #6d28d9;
+            background: var(--brand-600);
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(34, 197, 94, 0.3);
         }
 
-        .link {
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer-links {
+            margin-top: 32px;
             text-align: center;
-            margin-top: 12px;
+            font-size: 0.9rem;
+            color: var(--muted);
         }
 
-        .link a {
-            color: #7c3aed;
+        .footer-links a {
+            color: var(--brand-600);
             text-decoration: none;
+            font-weight: 700;
         }
 
-        .error {
-            color: red;
-            font-size: 14px;
-            margin-bottom: 10px;
-            text-align: center;
+        .footer-links a:hover {
+            text-decoration: underline;
         }
 
-        .success {
-            color: #22c55e;
-            font-size: 14px;
-            margin-bottom: 10px;
+        .error-msg {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            display: none;
             text-align: center;
+            font-weight: 500;
         }
+
+        .success-msg {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+            display: none;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.8);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-
 <body>
-    <div class="box">
-        <h2>Criar conta</h2>
+    <div class="hero-gradient"></div>
+    <div class="bg-pattern"></div>
 
-        <div id="error" class="error"></div>
-        <div id="success" class="success"></div>
+    <div class="login-card">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.19 12 19.79 19.79 0 0 1 1.12 3.33A2 2 0 0 1 3.11 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span>NexDial</span>
+        </div>
 
-        <input type="text" id="name" placeholder="Nome">
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Senha">
-        <input type="text" id="company" placeholder="Nome da empresa">
+        <h2>Criar sua conta</h2>
+        <p class="subtitle">Preencha os dados abaixo para começar.</p>
 
-        <button onclick="register()">Cadastrar</button>
+        <div id="error" class="error-msg"></div>
+        <div id="success" class="success-msg"></div>
 
-        <div class="link">
-            <a href="/login-page">Já tenho conta</a>
+        <div class="form-group">
+            <label for="name">Nome completo</label>
+            <input type="text" id="name" placeholder="Seu nome" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">E-mail corporativo</label>
+            <input type="email" id="email" placeholder="seu@email.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+
+        <div class="form-group">
+            <label for="company">Nome da empresa</label>
+            <input type="text" id="company" placeholder="Sua empresa" required>
+        </div>
+
+        <button id="register-btn" onclick="register()">
+            <span id="btn-text">Cadastrar na Plataforma</span>
+            <div id="spinner" class="loading-spinner"></div>
+        </button>
+
+        <div class="footer-links">
+            Já tem uma conta? <a href="/login">Entrar</a>
         </div>
     </div>
 
     <script>
         async function register() {
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
+            const name     = document.getElementById('name').value.trim();
+            const email    = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const company = document.getElementById('company').value;
+            const company  = document.getElementById('company').value.trim();
 
-            const errorDiv = document.getElementById('error');
+            const errorDiv   = document.getElementById('error');
             const successDiv = document.getElementById('success');
+            const btnText    = document.getElementById('btn-text');
+            const spinner    = document.getElementById('spinner');
+            const btn        = document.getElementById('register-btn');
 
-            errorDiv.innerText = '';
-            successDiv.innerText = '';
+            // Reset
+            errorDiv.style.display   = 'none';
+            successDiv.style.display = 'none';
+            errorDiv.innerText       = '';
+            successDiv.innerText     = '';
+
+            if (!name || !email || !password || !company) {
+                errorDiv.innerText       = 'Preencha todos os campos';
+                errorDiv.style.display   = 'block';
+                return;
+            }
+
+            // Loading state
+            btnText.style.display  = 'none';
+            spinner.style.display  = 'block';
+            btn.disabled           = true;
 
             try {
                 const response = await fetch('/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        name: name,
-                        email: email,
-                        password: password,
+                        name:         name,
+                        email:        email,
+                        password:     password,
                         company_name: company
                     })
                 });
@@ -125,20 +309,34 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    errorDiv.innerText = data.error || 'Erro no cadastro';
+                    errorDiv.innerText       = data.error || 'Erro no cadastro';
+                    errorDiv.style.display   = 'block';
+                    btnText.style.display    = 'block';
+                    spinner.style.display    = 'none';
+                    btn.disabled             = false;
                     return;
                 }
 
-                successDiv.innerText = 'Conta criada com sucesso!';
+                successDiv.innerText       = 'Conta criada com sucesso! Redirecionando…';
+                successDiv.style.display   = 'block';
 
                 setTimeout(() => {
-                    window.location.href = '/login-page';
+                    window.location.href = '/login';
                 }, 1500);
 
             } catch (err) {
-                errorDiv.innerText = 'Erro ao conectar com o servidor';
+                errorDiv.innerText       = 'Erro ao conectar com o servidor';
+                errorDiv.style.display   = 'block';
+                btnText.style.display    = 'block';
+                spinner.style.display    = 'none';
+                btn.disabled             = false;
             }
         }
+
+        // Atalho para Enter
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') register();
+        });
     </script>
 </body>
 </html>
