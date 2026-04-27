@@ -41,9 +41,11 @@ twilio_*.txt
 credentials.txt
 
 # Dist
-dist/
+# (Ignorando dist na raiz se houver, mas garantindo que o app/static/dist vai pro git)
+/dist/
 build/
 *.egg-info/
+!app/static/dist/
 
 # Node
 node_modules/
