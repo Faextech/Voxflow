@@ -801,7 +801,13 @@ def start_auto():
     campaign.status = "running"
     db.session.commit()
 
-    ok, msg = dial_next_in_session(campaign_id, g.company_id)
+    try:
+        ok, msg = dial_next_in_session(campaign_id, g.company_id)
+    except Exception as e:
+        logger.error(f"[START] Erro interno: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"error": f"Erro interno ao iniciar: {str(e)}"}), 500
+
     return jsonify({
         "message":    "Discador automático iniciado",
         "ok":         ok,
