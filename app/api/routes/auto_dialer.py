@@ -752,10 +752,11 @@ def start_auto():
     except (KeyError, TypeError, ValueError):
         return jsonify({"error": "campaign_id inválido"}), 400
 
-    interval_sec = int(body.get("interval_seconds", 3))
-    campaign = Campaign.query.filter_by(id=campaign_id, company_id=g.company_id).first()
-    if not campaign:
-        return jsonify({"error": "Campanha não encontrada"}), 404
+    try:
+        interval_sec = int(body.get("interval_seconds", 3))
+        campaign = Campaign.query.filter_by(id=campaign_id, company_id=g.company_id).first()
+        if not campaign:
+            return jsonify({"error": "Campanha não encontrada"}), 404
 
     dialable_statuses = [
         "new", "novo", "tentativa", "tentando", "retry", "callback",
@@ -808,6 +809,11 @@ def start_auto():
         "first_dial": msg,
         "session":    _session_for_json(AUTO_DIALER_SESSIONS[campaign_id]),
     }), 200
+
+    except Exception as e:
+        logger.error(f"[START] Erro interno: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"error": f"Erro interno ao iniciar: {str(e)}"}), 500
 
 
 @auto_dialer_bp.route("/stop", methods=["POST"])
