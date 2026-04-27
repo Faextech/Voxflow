@@ -347,27 +347,26 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
         _advance(campaign_id, company_id, delay=0)
         return
 
-    # A pedido do cliente: SEMPRE pausa a campanha para aguardar classificação do operador
-    # (seja answered, no_answer, busy, etc. que não pulou para o próximo phone acima)
-    logger.info("[EVENT] Chamada %s encerrada (disposition=%s) → Pausando campanha para aguardar classificação do operador", call_sid, disposition)
-    sess["status"] = "paused"
+    # Chamada atendida: pausa para o operador classificar (salvar resultado e avançar via popup)
+    if disposition == "answered":
+        logger.info("[EVENT] Chamada %s atendida → Pausando para classificação do operador", call_sid)
+        sess["status"] = "paused"
+        sess["current_call_sid"] = None
+        try:
+            from app.models.campaign import Campaign
+            campaign = Campaign.query.get(campaign_id)
+            if campaign:
+                campaign.status = "paused"
+                db.session.commit()
+        except Exception as exc:
+            logger.error("[EVENT] Erro ao pausar campanha no DB: %s", exc)
+        return
+
+    # Chamada não atendida (no_answer, busy, failed, voicemail sem force_advance) sem mais números:
+    # avança automaticamente para o próximo lead sem pausar.
+    logger.info("[EVENT] Chamada %s encerrada (%s) sem mais números → avançando para próximo lead", call_sid, disposition)
     sess["current_call_sid"] = None
-    
-    # Atualizar status da campanha no DB para "paused"
-    try:
-        from app.models.campaign import Campaign
-        campaign = Campaign.query.get(campaign_id)
-        if campaign:
-            campaign.status = "paused"
-            db.session.commit()
-    except Exception as exc:
-        logger.error("[EVENT] Erro ao pausar campanha no DB: %s", exc)
-
-    # Não avançamos automaticamente. O frontend (/classified) que vai retomar a campanha.
-    return
-
-    logger.info("[EVENT] Chamada %s encerrada (%s) → próxima em %ss", call_sid, disposition, delay)
-    _advance(campaign_id, company_id, delay=delay)
+    _advance(campaign_id, company_id, delay=delay if delay else 2)
 
 
 # ── Advance ───────────────────────────────────────────────────────────────────
@@ -1117,7 +1116,8 @@ def skip_phone():
         "ok":             ok,
         "msg":            msg,
         "lead_id":        lead.id,
-        "lead_name":      lead.name,
+        "lead_name":      sess.get("current_lead_name") or lead.name,
+        "phone":          sess.get("current_lead_phone") or "",
         "has_next_phone": True,
         "session":        _session_for_json(sess),
     }), 200

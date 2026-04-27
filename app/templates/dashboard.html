@@ -5077,6 +5077,10 @@ async function deleteLead(leadId) {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) { alert(data.error || 'Erro ao iniciar discador'); return; }
+        if (data.ok === false) { 
+            alert(data.first_dial || data.message || 'Erro ao iniciar primeira chamada.');
+            return;
+        }
         _dialerCampaignId = campaignId;
         _updateDialerOverlayUI(data.session);
         _showDialerOverlay();
@@ -5253,7 +5257,7 @@ async function deleteLead(leadId) {
     }
 
     function _updateDialerOverlayUI(session) {
-        if (!session) return;
+        if (!session || Object.keys(session).length === 0) return;
         const done  = session.leads_done  || 0;
         const total = session.leads_total || 0;
         const pct   = total ? Math.round((done / total) * 100) : 0;
