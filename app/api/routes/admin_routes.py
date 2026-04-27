@@ -29,7 +29,8 @@ def _fetch_twilio_balance_real():
         if not sid or not token:
             return None, None, 'TWILIO_ACCOUNT_SID ou TWILIO_AUTH_TOKEN não configurados'
         client = Client(sid, token)
-        balance = client.api.v2010.balance.fetch()
+        # O caminho correto na maioria das versões do SDK é account.balance.fetch()
+        balance = client.api.v2010.account.balance.fetch()
         logger.info('[TWILIO] Saldo real buscado: %s %s', balance.balance, balance.currency)
         return balance.balance, balance.currency, None
     except Exception as exc:
