@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Suporte - NexDial{% endblock %}
+{% block title %}Suporte - VoxFlow{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -309,7 +309,7 @@
         }
     }
 
-    const token = localStorage.getItem('nexdial_token');
+    const token = localStorage.getItem('voxflow_token');
     if (!token) {
         window.location.href = '/login';
     }
@@ -355,7 +355,7 @@
 
     // API Calls wrappers
     async function apiCall(endpoint, options = {}) {
-        const token = localStorage.getItem('nexdial_token');
+        const token = localStorage.getItem('voxflow_token');
         const headers = {
             'Content-Type': 'application/json',
             ...(token ? {'Authorization': `Bearer ${token}`} : {})

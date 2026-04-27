@@ -58,7 +58,7 @@ def normalize_phone_br(phone: str) -> str:
 
 # Saldo mínimo para iniciar qualquer chamada (cobre ~1 minuto ao custo padrão)
 # Evita iniciar chamadas quando o saldo está quase zerado e não cobriria nem o atendimento
-_MIN_BALANCE_BRL = Decimal("0.50")
+_MIN_BALANCE_BRL = Decimal("2.00")
 
 
 class TwilioService:

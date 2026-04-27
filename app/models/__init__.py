@@ -7,6 +7,7 @@ from app.models.agent import Agent
 from app.models.pipeline import Pipeline, PipelineStage
 from app.models.support import SupportTicket, TicketMessage
 from app.models.billing import CreditTransaction
+from app.models.invite_code import InviteCode
 
 __all__ = [
     'Company',
@@ -18,4 +19,5 @@ __all__ = [
     'Pipeline',
     'PipelineStage',
     'CreditTransaction',
+    'InviteCode',
 ]

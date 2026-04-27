@@ -73,7 +73,7 @@ def create_app():
     app.config.from_object(app_config)
 
     flask_env = os.getenv("FLASK_ENV", "development")
-    logger.info("[STARTUP] NexDial iniciando — env=%s", flask_env.upper())
+    logger.info("[STARTUP] VoxFlow iniciando — env=%s", flask_env.upper())
 
     # extensões
     db.init_app(app)
@@ -114,6 +114,7 @@ def create_app():
         from app.models.notification import Notification
         from app.models.support import SupportTicket, TicketMessage
         from app.models.billing import CreditTransaction
+        from app.models.invite_code import InviteCode
         # Cria tabelas novas; não altera as que já existem
         db.create_all()
 
@@ -154,13 +155,24 @@ def create_app():
         except Exception as _startup_err:
             logger.warning("[STARTUP] cleanup falhou (inofensivo): %s", _startup_err)
 
+        # ── Garante superadmin ────────────────────────────────────────────────
+        try:
+            _superadmin_email = os.getenv("SUPERADMIN_EMAIL", "allan.consultoriajba@gmail.com").lower()
+            _su = User.query.filter_by(email=_superadmin_email).first()
+            if _su and _su.role != "superadmin":
+                _su.role = "superadmin"
+                db.session.commit()
+                logger.info("[STARTUP] Usuário %s promovido a superadmin", _superadmin_email)
+        except Exception as _su_err:
+            logger.warning("[STARTUP] Promoção de superadmin falhou (inofensivo): %s", _su_err)
+
 
     @app.route('/health', methods=['GET'])
     def health():
         from datetime import datetime
         return {
             'status': 'ok',
-            'message': 'NexDial operacional',
+            'message': 'VoxFlow operacional',
             'env': os.getenv('FLASK_ENV', 'development'),
             'timestamp': datetime.utcnow().isoformat(),
         }, 200

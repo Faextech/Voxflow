@@ -1,4 +1,5 @@
-from datetime import timedelta
+import logging
+from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, make_response, redirect, request, current_app, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,7 +8,10 @@ from app.extensions import db
 from app.models import Company, User
 from app.models.agent import Agent
 from app.models.pipeline import Pipeline, PipelineStage
+from app.models.invite_code import InviteCode
 from app.auth import generate_jwt_token
+
+logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -20,9 +24,17 @@ def register():
     email        = (data.get('email') or '').strip().lower()
     password     = data.get('password')
     company_name = data.get('company_name', 'Minha Empresa')
+    invite_code  = (data.get('invite_code') or '').strip()
 
     if not email or not password:
         return jsonify({'error': 'Email e senha são obrigatórios'}), 400
+
+    if not invite_code:
+        return jsonify({'error': 'Código de convite é obrigatório'}), 400
+
+    invite = InviteCode.query.filter_by(code=invite_code).first()
+    if not invite or not invite.is_valid():
+        return jsonify({'error': 'Código de convite inválido ou já utilizado'}), 403
 
     # Verifica se email já está em uso (email é unique na tabela users)
     if User.query.filter_by(email=email).first():
@@ -83,6 +95,20 @@ def register():
     db.session.commit()
     # ─────────────────────────────────────────────────────────────────────────
 
+    # Marca convite como utilizado
+    invite.used = True
+    invite.used_by_company_id = company.id
+    invite.used_at = datetime.utcnow()
+    db.session.commit()
+
+    # Cria subconta Twilio automaticamente (falha silenciosa — admin cria manualmente se necessário)
+    try:
+        from app.services.twilio_subaccount_service import create_subaccount
+        create_subaccount(company)
+        logger.info(f"[REGISTER] Subconta Twilio criada para empresa {company.id}")
+    except Exception as e:
+        logger.error(f"[REGISTER] Falha ao criar subconta Twilio empresa {company.id}: {e}")
+
     return jsonify({
         'message':    'Conta criada com sucesso',
         'company_id': company.id,
@@ -141,7 +167,7 @@ def login():
 
     # Cookie HttpOnly: o browser envia automaticamente; JS não consegue ler
     resp.set_cookie(
-        'nexdial_token',
+        'voxflow_token',
         token,
         httponly  = True,
         secure    = is_production,   # False em dev (HTTP), True em prod (HTTPS)
@@ -155,5 +181,5 @@ def login():
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
     resp = make_response(redirect(url_for('pages.login_page')))
-    resp.delete_cookie('nexdial_token')
+    resp.delete_cookie('voxflow_token')
     return resp

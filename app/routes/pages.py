@@ -48,3 +48,8 @@ def support_page():
 @pages_bp.route("/credito")
 def billing_page():
     return render_template("billing.html")
+
+
+@pages_bp.route("/admin")
+def admin_panel():
+    return render_template("admin.html")

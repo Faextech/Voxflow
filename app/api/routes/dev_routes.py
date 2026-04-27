@@ -85,7 +85,7 @@ def create_agent_full():
         # 1) COMPANY
         company = Company()
         _fill_required_fields(company)
-        _set_if_exists(company, "name", "Empresa Teste NexDial")
+        _set_if_exists(company, "name", "Empresa Teste VoxFlow")
         _set_if_exists(company, "plan", "basic")
 
         db.session.add(company)

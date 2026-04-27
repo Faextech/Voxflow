@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Crédito — NexDial</title>
+    <title>Meu Crédito — VoxFlow</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -325,12 +325,12 @@
 <body>
     <script>
         (function() {
-            const saved = localStorage.getItem('nexdial_theme');
+            const saved = localStorage.getItem('voxflow_theme');
             if (saved === 'dark') document.documentElement.classList.add('dark');
         })();
         function toggleTheme() {
             const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('nexdial_theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('voxflow_theme', isDark ? 'dark' : 'light');
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = isDark;
         }
@@ -338,7 +338,7 @@
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = document.documentElement.classList.contains('dark');
 
-            const token = localStorage.getItem('nexdial_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+            const token = localStorage.getItem('voxflow_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
             if (token) {
                 try {
                     const p = JSON.parse(atob(token.split('.')[1]));
@@ -364,7 +364,7 @@
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.03 1.18 2 2 0 012 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
                 </div>
                 <div>
-                    <div class="sidebar-brand-name">NexDial</div>
+                    <div class="sidebar-brand-name">VoxFlow</div>
                     <div class="sidebar-brand-tag">Plataforma de discagem</div>
                 </div>
             </div>

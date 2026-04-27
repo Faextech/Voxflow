@@ -32,12 +32,13 @@ class Company(db.Model):
     twilio_subaccount_sid = db.Column(db.String(255), nullable=True)
 
     # ------------------------------------------------------------------
-    # Billing / Crédito
+    # Informações Regulatórias (Identity Verification)
     # ------------------------------------------------------------------
-    # Saldo atual em reais (sempre >= 0 ou pode ir negativo com margem)
-    credit_balance = db.Column(db.Numeric(12, 4), nullable=False, default=0)
-    # Custo por minuto de chamada em reais (definido pelo admin)
-    cost_per_minute = db.Column(db.Numeric(8, 4), nullable=False, default=0.35)
+    reg_type          = db.Column(db.String(50),  nullable=True)
+    reg_name          = db.Column(db.String(255), nullable=True)
+    reg_tax_id        = db.Column(db.String(50),  nullable=True)
+    reg_address       = db.Column(db.Text,        nullable=True)
+    reg_document_path = db.Column(db.String(512), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
@@ -151,7 +152,7 @@ class Company(db.Model):
     def has_credit(self) -> bool:
         return self.get_balance() > 0
 
-    def add_credit(self, amount: float, description: str = "Recarga", payment_id: str = None, payment_method: str = None):
+    def add_credit(self, amount: float, description: str = "Recarga", payment_id: str = None, payment_method: str = None, tx_type: str = "recharge"):
         """Adiciona crédito e registra a transação. Retorna a transação criada."""
         from app.models.billing import CreditTransaction
         from decimal import Decimal
@@ -159,16 +160,54 @@ class Company(db.Model):
         self.credit_balance = Decimal(str(self.get_balance())) + Decimal(str(amount))
         tx = CreditTransaction(
             company_id=self.id,
-            type="recharge",
+            type=tx_type,
             amount=Decimal(str(amount)),
             balance_after=self.credit_balance,
             description=description,
             payment_id=payment_id,
             payment_method=payment_method,
-            payment_status="approved" if payment_id else None,
+            payment_status="approved" if (payment_id or tx_type == "transfer_in") else None,
         )
         db.session.add(tx)
         return tx
+
+    def transfer_credit(self, target_company, amount: float, description: str = None):
+        """
+        Transfere crédito desta empresa para outra.
+        Debita daqui (transfer_out) e credita lá (transfer_in).
+        """
+        from app.models.billing import CreditTransaction
+        from decimal import Decimal
+
+        amount_dec = Decimal(str(amount))
+        if self.credit_balance < amount_dec:
+            raise ValueError("Saldo insuficiente na conta master")
+
+        # 1. Debita da master
+        self.credit_balance -= amount_dec
+        tx_out = CreditTransaction(
+            company_id=self.id,
+            type="transfer_out",
+            amount=-amount_dec,
+            balance_after=self.credit_balance,
+            description=description or f"Transferência para {target_company.name}",
+            payment_status="approved"
+        )
+        db.session.add(tx_out)
+
+        # 2. Credita no cliente
+        target_company.credit_balance = Decimal(str(target_company.get_balance())) + amount_dec
+        tx_in = CreditTransaction(
+            company_id=target_company.id,
+            type="transfer_in",
+            amount=amount_dec,
+            balance_after=target_company.credit_balance,
+            description=description or f"Recebido de {self.name}",
+            payment_status="approved"
+        )
+        db.session.add(tx_in)
+
+        return tx_out, tx_in
 
     def debit_call(self, duration_seconds: int, call_sid: str = None):
         """Debita custo de chamada e registra a transação. Retorna a transação."""

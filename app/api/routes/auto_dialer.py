@@ -1,5 +1,5 @@
 """
-Discador Automático — NexDial
+Discador Automático — VoxFlow
 
 Estados:
   running  → entre chamadas, buscando próximo lead

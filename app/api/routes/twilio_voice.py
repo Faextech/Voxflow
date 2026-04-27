@@ -107,7 +107,7 @@ def _get_conference_name_param():
         or _get_request_value("ConferenceName")
         or _get_request_value("ConfName")
         or _get_request_value("conf")
-        or _get_request_value("nexdial_conference")
+        or _get_request_value("voxflow_conference")
         or _get_request_value("NdConf")
     )
 
@@ -1456,10 +1456,21 @@ def voice():
             )
             return browser_outgoing()
 
-    # Vamos mockar o agent_id = 1, e tenant_id = 1
-    # Em produção isso depende de qual número foi ligado
-    agent_id = 1
-    company_id = 1
+    # Identifica a empresa pelo número chamado (To)
+    from app.services.twilio_service import normalize_phone_br
+    to_ph_norm = normalize_phone_br(to_ph)
+    company = Company.query.filter_by(twilio_number=to_ph_norm).first()
+    
+    if not company:
+        # Fallback para o Master (Allan) se não encontrar a empresa pelo número
+        company = Company.query.get(1)
+
+    company_id = company.id if company else 1
+    
+    # Identifica o primeiro agente disponível da empresa para receber a chamada inbound
+    # Em um fluxo real, isso usaria uma fila ou regra de roteamento
+    agent = Agent.query.filter_by(company_id=company_id, status='active').first()
+    agent_id = agent.id if agent else 1
     
     conf_name = f"inbound_{call_sid}"
     public_base_url = (os.getenv("PUBLIC_BASE_URL") or "").strip()

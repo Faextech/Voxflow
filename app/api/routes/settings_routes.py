@@ -148,3 +148,42 @@ def wipe_company_data():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Erro ao apagar dados: {str(e)}"}), 500
+@settings_bp.route("/regulatory", methods=["GET"])
+@require_auth
+@require_role("admin")
+def get_regulatory_settings():
+    company = Company.query.get(g.company_id)
+    return jsonify({
+        "reg_type": company.reg_type or "business",
+        "reg_name": company.reg_name or "",
+        "reg_tax_id": company.reg_tax_id or "",
+        "reg_address": company.reg_address or "",
+        "has_document": bool(company.reg_document_path)
+    }), 200
+
+@settings_bp.route("/regulatory", methods=["POST"])
+@require_auth
+@require_role("admin")
+def update_regulatory_settings():
+    company = Company.query.get(g.company_id)
+    
+    # Se houver arquivo (Multipart form data)
+    if 'document' in request.files:
+        import os
+        file = request.files['document']
+        if file.filename:
+            os.makedirs('storage/regulatory', exist_ok=True)
+            path = os.path.join('storage/regulatory', f"doc_{company.id}_{file.filename}")
+            file.save(path)
+            company.reg_document_path = path
+
+    # Dados do form (Multipart ou JSON)
+    data = request.form if request.form else (request.get_json(silent=True) or {})
+    
+    company.reg_type = data.get('reg_type') or data.get('type')
+    company.reg_name = data.get('reg_name') or data.get('name')
+    company.reg_tax_id = data.get('reg_tax_id') or data.get('tax_id')
+    company.reg_address = data.get('reg_address') or data.get('address')
+    
+    db.session.commit()
+    return jsonify({"message": "Informações de identidade atualizadas com sucesso."}), 200

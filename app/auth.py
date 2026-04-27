@@ -82,7 +82,7 @@ def require_auth(f):
 
     Lê o token de (em ordem de prioridade):
       1. Header  →  Authorization: Bearer <token>
-      2. Cookie  →  nexdial_token  (HttpOnly, definido no login)
+      2. Cookie  →  voxflow_token  (HttpOnly, definido no login)
 
     Popula flask.g com:
       g.user_id    – int
@@ -98,7 +98,7 @@ def require_auth(f):
             token = auth_header[7:].strip()
 
         if not token:
-            token = request.cookies.get('nexdial_token')
+            token = request.cookies.get('voxflow_token')
 
         # Aceita _token como query param (para downloads via window.location)
         if not token:
@@ -133,21 +133,17 @@ def require_role(*roles):
     """
     Decorator factory que restringe acesso por role.
     DEVE ser empilhado APÓS @require_auth (depende de g.user_role).
-
-    Uso:
-        @require_auth
-        @require_role('admin')
-        def rota_admin(): ...
-
-        @require_auth
-        @require_role('admin', 'agent')
-        def rota_compartilhada(): ...
+    superadmin tem acesso a tudo que admin tem.
     """
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
             current_role = getattr(g, 'user_role', 'none')
-            if current_role not in roles:
+            # superadmin herda permissões de admin
+            effective_roles = set(roles)
+            if 'admin' in effective_roles:
+                effective_roles.add('superadmin')
+            if current_role not in effective_roles:
                 logger.error(f"Acesso negado. Role required: {roles}, actual: {current_role}, user_id: {getattr(g, 'user_id', 'none')}")
                 return jsonify({
                     'error': f"Acesso restrito a: {', '.join(roles)}"

@@ -2,7 +2,7 @@
 Gerencia subcontas Twilio por empresa (modelo master account + subaccounts).
 
 Fluxo:
-1. Admin cria empresa no NexDial
+1. Admin cria empresa no VoxFlow
 2. Sistema cria automaticamente uma subconta Twilio para esse cliente
 3. Todas as chamadas da empresa usam a subconta isolada
 4. Relatórios e custos ficam separados por subconta
@@ -35,31 +35,32 @@ def create_subaccount(company: Company) -> dict:
     Retorna dict com os dados da subconta criada.
     """
     if company.twilio_subaccount_sid:
-        logger.warning(
-            f"[TWILIO] Empresa {company.id} já possui subconta: {company.twilio_subaccount_sid}"
-        )
-        return {"subaccount_sid": company.twilio_subaccount_sid, "already_exists": True}
+        logger.info(f"[TWILIO] Empresa {company.id} já possui subconta: {company.twilio_subaccount_sid}")
+        # Tenta buscar credenciais se estiverem vazias
+        creds = company.get_twilio_credentials()
+        if creds.get("auth_token"):
+            return {"subaccount_sid": company.twilio_subaccount_sid, "auth_token": creds["auth_token"]}
 
     client = _master_client()
     try:
         subaccount = client.api.v2010.accounts.create(
-            friendly_name=f"NexDial - {company.name}"
+            friendly_name=f"VoxFlow - {company.name}"
         )
         logger.info(f"[TWILIO] Subconta criada: {subaccount.sid} para empresa {company.id}")
     except TwilioRestException as e:
         logger.error(f"[TWILIO] Erro ao criar subconta: {e}")
         raise
 
-    # Cria API Key dentro da subconta (para uso no webphone)
+    # Cria API Key dentro da subconta (para uso no webphone/Voice SDK)
     sub_client = Client(subaccount.sid, subaccount.auth_token)
+    api_key_sid = None
+    api_key_secret = None
     try:
-        api_key = sub_client.new_keys.create(friendly_name=f"NexDial-Key-{company.id}")
+        api_key = sub_client.new_keys.create(friendly_name=f"VoxFlow-Key-{company.id}")
         api_key_sid = api_key.sid
         api_key_secret = api_key.secret
     except TwilioRestException as e:
         logger.warning(f"[TWILIO] Não foi possível criar API Key na subconta: {e}")
-        api_key_sid = None
-        api_key_secret = None
 
     # Persiste na empresa
     company.twilio_subaccount_sid = subaccount.sid
@@ -73,6 +74,7 @@ def create_subaccount(company: Company) -> dict:
 
     return {
         "subaccount_sid": subaccount.sid,
+        "auth_token": subaccount.auth_token,
         "friendly_name": subaccount.friendly_name,
         "status": subaccount.status,
         "api_key_sid": api_key_sid,
@@ -137,40 +139,203 @@ def get_subaccount_usage(company: Company, start_date: str, end_date: str) -> li
         return []
 
 
-def provision_phone_number(company: Company, area_code: str = "11", country: str = "BR") -> Optional[str]:
+def create_twiml_app(company: Company) -> Optional[str]:
+    """Cria um TwiML App na subconta da empresa para uso com Voice SDK."""
+    if not company.twilio_subaccount_sid:
+        return None
+
+    creds = company.get_twilio_credentials()
+    sub_client = Client(creds["account_sid"], creds["auth_token"])
+    backend_url = os.getenv("PUBLIC_BASE_URL") or os.getenv("BASE_URL") or "http://localhost:5000"
+
+    try:
+        app = sub_client.applications.create(
+            friendly_name=f"VoxFlow App - {company.name}",
+            voice_url=f"{backend_url}/api/twilio/browser-outgoing",
+            voice_method="POST",
+            status_callback=f"{backend_url}/api/twilio/status-callback",
+            status_callback_method="POST"
+        )
+        company.twilio_twiml_app_sid = app.sid
+        db.session.commit()
+        logger.info(f"[TWILIO] TwiML App {app.sid} criado para empresa {company.id}")
+        return app.sid
+    except TwilioRestException as e:
+        logger.error(f"[TWILIO] Erro ao criar TwiML App: {e}")
+        return None
+
+
+def search_available_numbers(company: Company, area_code: str = "11", country: str = "BR", limit: int = 5) -> list:
+    """Retorna uma lista de números disponíveis para compra na Twilio."""
+    if not company.twilio_subaccount_sid:
+        client = _master_client()
+    else:
+        creds = company.get_twilio_credentials()
+        client = Client(creds["account_sid"], creds["auth_token"])
+
+    results = []
+    try:
+        # 1. Tenta Local com DDD
+        try:
+            available = client.available_phone_numbers(country).local.list(area_code=area_code, limit=limit)
+            results.extend(available)
+        except Exception as e:
+            logger.warning(f"[TWILIO] Erro na busca Local DDD {area_code}: {e}")
+        
+        # 2. Se não achou muitos, tenta Mobile com DDD
+        if len(results) < limit:
+            try:
+                mobile = client.available_phone_numbers(country).mobile.list(area_code=area_code, limit=limit - len(results))
+                results.extend(mobile)
+            except Exception as e:
+                logger.warning(f"[TWILIO] Erro na busca Mobile DDD {area_code}: {e}")
+
+        # 3. Se ainda não achou NADA, tenta sem DDD (geral no país)
+        if not results:
+            logger.info(f"[TWILIO] Sem números no DDD {area_code}, buscando em todo o país {country}")
+            try:
+                any_local = client.available_phone_numbers(country).local.list(limit=limit)
+                results.extend(any_local)
+            except Exception as e:
+                logger.warning(f"[TWILIO] Erro na busca Local geral: {e}")
+
+        return [{"phone_number": n.phone_number, "friendly_name": n.friendly_name} for n in results]
+    except TwilioRestException as e:
+        logger.error(f"[TWILIO] Erro crítico ao buscar números: {e}")
+        return []
+
+
+def provision_phone_number(company: Company, area_code: str = "11", country: str = "BR", specific_number: str = None) -> Optional[str]:
     """
     Compra e provisiona um número Twilio na subconta da empresa.
-    Retorna o número provisionado ou None em caso de erro.
+    Se 'specific_number' for fornecido, tenta comprar exatamente esse.
     """
     if not company.twilio_subaccount_sid:
         raise ValueError("Empresa não tem subconta Twilio configurada")
 
     creds = company.get_twilio_credentials()
     sub_client = Client(creds["account_sid"], creds["auth_token"])
-
-    backend_url = os.getenv("BASE_URL", "http://localhost:5000")
+    backend_url = os.getenv("PUBLIC_BASE_URL") or os.getenv("BASE_URL") or "http://localhost:5000"
 
     try:
-        available = sub_client.available_phone_numbers(country).local.list(
-            area_code=area_code, limit=1
-        )
-        if not available:
-            logger.warning(f"[TWILIO] Nenhum número disponível no DDD {area_code}")
-            return None
+        target_number = specific_number
+        
+        if not target_number:
+            # 1. Busca número disponível se nenhum for especificado
+            available = sub_client.available_phone_numbers(country).local.list(
+                area_code=area_code, limit=1
+            )
+            if not available:
+                logger.warning(f"[TWILIO] Nenhum número disponível no DDD {area_code} ({country})")
+                available = sub_client.available_phone_numbers(country).local.list(limit=1)
+                if not available: return None
+            target_number = available[0].phone_number
 
+        # 2. Compra o número
         purchased = sub_client.incoming_phone_numbers.create(
-            phone_number=available[0].phone_number,
+            phone_number=target_number,
             voice_url=f"{backend_url}/api/twilio/voice",
             voice_method="POST",
-            status_callback=f"{backend_url}/api/twilio/status-callback",
+            status_callback=f"{backend_url}/api/twilio/status",
             status_callback_method="POST",
         )
 
         company.twilio_number = purchased.phone_number
         db.session.commit()
-        logger.info(f"[TWILIO] Número {purchased.phone_number} provisionado para empresa {company.id}")
+        logger.info(f"[TWILIO] Número {purchased.phone_number} comprado para empresa {company.id}")
         return purchased.phone_number
 
     except TwilioRestException as e:
-        logger.error(f"[TWILIO] Erro ao provisionar número: {e}")
-        return None
+        msg = f"Erro Twilio {e.code}: {e.msg}" if hasattr(e, 'code') else str(e)
+        logger.error(f"[TWILIO] Erro ao provisionar número {specific_number or 'auto'}: {msg}")
+        return {"error": msg}
+
+
+def list_subaccount_numbers(company: Company) -> list:
+    """Lista todos os números de telefone adquiridos na subconta da empresa."""
+    if not company.twilio_subaccount_sid:
+        return []
+    creds = company.get_twilio_credentials()
+    sub_client = Client(creds["account_sid"], creds["auth_token"])
+    try:
+        numbers = sub_client.incoming_phone_numbers.list()
+        return [
+            {"phone_number": n.phone_number, "friendly_name": n.friendly_name, "sid": n.sid}
+            for n in numbers
+        ]
+    except TwilioRestException as e:
+        logger.error(f"[TWILIO] Erro ao listar números da subconta {company.id}: {e}")
+        return []
+
+
+def configure_existing_number(company: Company, phone_number: str) -> bool:
+    """Configura webhooks e salva um número que já existe na subconta."""
+    if not company.twilio_subaccount_sid:
+        return False
+    creds = company.get_twilio_credentials()
+    sub_client = Client(creds["account_sid"], creds["auth_token"])
+    backend_url = os.getenv("PUBLIC_BASE_URL") or os.getenv("BASE_URL") or "http://localhost:5000"
+    
+    try:
+        # 1. Busca o SID do número pelo valor
+        numbers = sub_client.incoming_phone_numbers.list(phone_number=phone_number)
+        if not numbers:
+            logger.warning(f"[TWILIO] Número {phone_number} não encontrado na subconta {company.twilio_subaccount_sid}")
+            return False
+        
+        number_sid = numbers[0].sid
+        
+        # 2. Atualiza os Webhooks
+        sub_client.incoming_phone_numbers(number_sid).update(
+            voice_url=f"{backend_url}/api/twilio/voice",
+            voice_method="POST",
+            status_callback=f"{backend_url}/api/twilio/status",
+            status_callback_method="POST",
+        )
+        
+        # 3. Salva no banco
+        company.twilio_number = phone_number
+        db.session.commit()
+        return True
+    except TwilioRestException as e:
+        logger.error(f"[TWILIO] Erro ao configurar número existente {phone_number}: {e}")
+        return False
+
+
+def setup_full_company(company: Company, phone_number: str = None) -> dict:
+    """
+    Executa o setup completo de uma nova empresa (SaaS flow):
+    1. Cria subconta
+    2. Cria TwiML App
+    3. Compra número de telefone (se phone_number for passado, compra ele)
+    """
+    results = {"ok": False, "steps": {}}
+
+    try:
+        # Passo 1: Subconta
+        sub = create_subaccount(company)
+        results["steps"]["subaccount"] = "ok"
+        results["subaccount_sid"] = sub["subaccount_sid"]
+
+        # Passo 2: TwiML App
+        app_sid = create_twiml_app(company)
+        results["steps"]["twiml_app"] = "ok" if app_sid else "failed"
+
+        # Passo 3: Número
+        number_result = provision_phone_number(company, area_code="11", specific_number=phone_number)
+        if isinstance(number_result, dict) and "error" in number_result:
+            results["steps"]["phone_number"] = "failed"
+            results["error"] = number_result["error"]
+            results["ok"] = False
+            return results
+            
+        results["steps"]["phone_number"] = "ok"
+        results["phone_number"] = number_result
+        results["ok"] = True
+        logger.info(f"[SETUP] Setup completo concluído para empresa {company.id}: {results}")
+
+    except Exception as e:
+        logger.error(f"[SETUP] Erro crítico no setup da empresa {company.id}: {e}")
+        results["error"] = str(e)
+
+    return results

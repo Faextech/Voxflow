@@ -127,7 +127,7 @@ def initiate_payment(current_user):
         headers = {
             "Authorization": f"Bearer {mp_access_token}",
             "Content-Type": "application/json",
-            "X-Idempotency-Key": f"nexdial-{company.id}-{int(amount*100)}",
+            "X-Idempotency-Key": f"voxflow-{company.id}-{int(amount*100)}",
         }
 
         backend_url = os.getenv("BASE_URL", "http://localhost:5000")
@@ -135,7 +135,7 @@ def initiate_payment(current_user):
         if method == "pix":
             payload = {
                 "transaction_amount": float(amount),
-                "description": f"NexDial - Recarga de crédito ({company.name})",
+                "description": f"VoxFlow - Recarga de crédito ({company.name})",
                 "payment_method_id": "pix",
                 "payer": {
                     "email": current_user.email,

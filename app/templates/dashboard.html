@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexDial - Dashboard</title>
+    <title>VoxFlow - Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -1095,12 +1095,12 @@
     <script>
         // Theme init — default: light (no dark class)
         (function() {
-            const saved = localStorage.getItem('nexdial_theme');
+            const saved = localStorage.getItem('voxflow_theme');
             if (saved === 'dark') document.documentElement.classList.add('dark');
         })();
         function toggleTheme() {
             const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('nexdial_theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('voxflow_theme', isDark ? 'dark' : 'light');
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = isDark;
         }
@@ -1117,7 +1117,7 @@
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.03 1.18 2 2 0 012 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
                 </div>
                 <div>
-                    <div class="sidebar-brand-name">NexDial</div>
+                    <div class="sidebar-brand-name">VoxFlow</div>
                     <div class="sidebar-brand-tag">Plataforma de discagem</div>
                 </div>
             </div>
@@ -1181,6 +1181,10 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Usuários
                 </button>
+                <a id="sidebar-admin-link" href="/admin" style="display:none;" class="menu-link" style="color:#f87171;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    Painel Admin
+                </a>
                 <button class="menu-link admin-only" data-section="settings">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07M4.93 4.93a10 10 0 000 14.14M8.46 8.46a5 5 0 000 7.07"/></svg>
                     Configurações
@@ -2015,6 +2019,50 @@
                     </div>
                 </div>
 
+                <div class="panel">
+                    <div class="panel-header">
+                        <div><h3>Identidade e Documentação</h3><p>Para habilitação de números brasileiros (Twilio BR).</p></div>
+                    </div>
+                    <div style="padding:24px;">
+                        <div class="alert alert-warning" style="margin-bottom:16px; font-size:12px; display:flex; align-items:center; gap:8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            Números brasileiros exigem verificação de identidade. Preencha os dados abaixo.
+                        </div>
+                        <div class="form-grid">
+                            <div class="field">
+                                <label>Tipo de Entidade</label>
+                                <select id="settings-reg-type">
+                                    <option value="business">Pessoa Jurídica (CNPJ)</option>
+                                    <option value="individual">Pessoa Física (CPF)</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Nome / Razão Social</label>
+                                <input type="text" id="settings-reg-name">
+                            </div>
+                            <div class="field">
+                                <label>CPF / CNPJ</label>
+                                <input type="text" id="settings-reg-tax-id">
+                            </div>
+                            <div class="field">
+                                <label>Endereço Completo</label>
+                                <textarea id="settings-reg-address" rows="1" style="min-height:42px;"></textarea>
+                            </div>
+                            <div class="field">
+                                <label>Documento de Identidade (PDF/JPG)</label>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="file" id="settings-reg-doc" style="font-size:12px; padding:6px;">
+                                    <div id="reg-doc-status"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actions-row" style="margin-top:16px;">
+                            <button class="btn btn-primary" onclick="saveRegulatorySettings()">Atualizar Documentação</button>
+                        </div>
+                        <div id="regulatory-message" class="message"></div>
+                    </div>
+                </div>
+
                 <div class="panel" style="display:none;">
                     <div class="panel-header">
                         <div><h3>Integração Twilio</h3><p>Configurações de telefonia para o discador e webphone.</p></div>
@@ -2046,14 +2094,14 @@
 
                 <div class="panel">
                     <div class="panel-header">
-                        <div><h3>Painel de Conhecimento</h3><p>Guias, treinamentos e documentação do NexDial.</p></div>
+                        <div><h3>Painel de Conhecimento</h3><p>Guias, treinamentos e documentação do VoxFlow.</p></div>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:24px 24px 16px;">
                         <div style="background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.04)); border:1px solid rgba(59,130,246,0.2); border-radius:14px; padding:18px 20px;">
                             <div style="font-size:28px; margin-bottom:10px;">🎓</div>
                             <div style="font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Guia de Treinamento</div>
                             <div style="font-size:12px; color:#6b7280; line-height:1.5; margin-bottom:14px;">Tour completo com 11 etapas que explica campanhas, discagem, CRM, leads e configurações.</div>
-                            <button class="btn btn-primary" onclick="restartNexDialTutorial()" style="font-size:12px; padding:9px 16px; border-radius:10px; width:100%;">
+                            <button class="btn btn-primary" onclick="restartVoxFlowTutorial()" style="font-size:12px; padding:9px 16px; border-radius:10px; width:100%;">
                                 ↺ Reiniciar Guia de Treinamento
                             </button>
                         </div>
@@ -2061,13 +2109,13 @@
                             <div style="font-size:28px; margin-bottom:10px;">📋</div>
                             <div style="font-size:14px; font-weight:700; color:#e2e8f0; margin-bottom:6px;">Boas Práticas</div>
                             <div style="font-size:12px; color:#6b7280; line-height:1.5; margin-bottom:14px;">Melhores práticas para discagem em massa, organização do CRM e qualidade operacional.</div>
-                            <button class="btn btn-secondary" onclick="restartNexDialTutorial(10)" style="font-size:12px; padding:9px 16px; border-radius:10px; width:100%;">
+                            <button class="btn btn-secondary" onclick="restartVoxFlowTutorial(10)" style="font-size:12px; padding:9px 16px; border-radius:10px; width:100%;">
                                 → Ver Dicas Avançadas
                             </button>
                         </div>
                     </div>
                     <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text-secondary); line-height:1.6; margin:0 24px 24px;">
-                        💡 O guia de treinamento pode ser reaberto a qualquer momento nesta seção. Ele ensina o fluxo real de operação do NexDial, incluindo criação de campanhas, importação de leads, uso do Call Hub e automações do CRM.
+                        💡 O guia de treinamento pode ser reaberto a qualquer momento nesta seção. Ele ensina o fluxo real de operação do VoxFlow, incluindo criação de campanhas, importação de leads, uso do Call Hub e automações do CRM.
                     </div>
                 </div>
 
@@ -2340,12 +2388,12 @@
 
     <script>
         const COMPANY_ID = parseInt(localStorage.getItem('company_id') || '1', 10);
-        const NEXDIAL_ROLE = localStorage.getItem('nexdial_role') || 'agent';
-        const NEXDIAL_NAME = localStorage.getItem('nexdial_user_name') || '';
+        const NEXDIAL_ROLE = localStorage.getItem('voxflow_role') || 'agent';
+        const NEXDIAL_NAME = localStorage.getItem('voxflow_user_name') || '';
 
         // Mostrar/ocultar itens de menu conforme role
         (function applyRoleVisibility() {
-            const isAdmin = (NEXDIAL_ROLE === 'admin' || NEXDIAL_ROLE === 'supervisor');
+            const isAdmin = (NEXDIAL_ROLE === 'admin' || NEXDIAL_ROLE === 'supervisor' || NEXDIAL_ROLE === 'superadmin');
             document.querySelectorAll('.admin-only').forEach(el => {
                 el.style.display = isAdmin ? '' : 'none';
             });
@@ -2353,7 +2401,7 @@
 
         // Wrapper que injeta Authorization: Bearer em todo fetch do dashboard
         async function authFetch(url, opts = {}) {
-            const token = localStorage.getItem('nexdial_token') || '';
+            const token = localStorage.getItem('voxflow_token') || '';
             const base  = token ? { 'Authorization': `Bearer ${token}` } : {};
             const merged = { ...base, ...(opts.headers || {}) };
             return fetch(url, { ...opts, headers: merged });
@@ -2416,6 +2464,10 @@
             const sub = document.querySelector('.topbar p');
             if (h2) h2.textContent = SECTION_LABELS[sectionName] || sectionName;
             if (sub) sub.textContent = SECTION_DESCS[sectionName] || '';
+
+            if (sectionName === 'settings' && window.loadRegulatorySettings) {
+                window.loadRegulatorySettings();
+            }
         }
 
         function setMessage(elementId, type, text) {
@@ -2483,7 +2535,7 @@
         }
 
         function getCurrentCampaignId() {
-            return localStorage.getItem('nexdial_current_campaign_id');
+            return localStorage.getItem('voxflow_current_campaign_id');
         }
 
         const STATUS_MAP_PT = {
@@ -2870,7 +2922,7 @@
 
         async function viewCampaignMonitor(campaignId) {
             try {
-                localStorage.setItem('nexdial_current_campaign_id', String(campaignId));
+                localStorage.setItem('voxflow_current_campaign_id', String(campaignId));
 
                 const [progress, queue] = await Promise.all([
                     fetchCampaignProgress(campaignId),
@@ -2936,7 +2988,7 @@
 
             const runningCampaign = campaigns.find(c => c.status === 'running') || campaigns[0];
             if (runningCampaign) {
-                localStorage.setItem('nexdial_current_campaign_id', String(runningCampaign.id));
+                localStorage.setItem('voxflow_current_campaign_id', String(runningCampaign.id));
                 try {
                     const [progress, queue] = await Promise.all([
                         fetchCampaignProgress(runningCampaign.id),
@@ -3260,6 +3312,12 @@
                 populateCampaignSelects(campaigns);
                 populatePipelineSelects(pipelines);
                 await autoSelectRunningCampaign(campaigns);
+
+                // Update credit balance in dashboard
+                if (typeof _crAtualizarNavBadge === 'function') {
+                    _crAtualizarNavBadge();
+                }
+
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
             }
@@ -3376,7 +3434,7 @@
                     return;
                 }
 
-                localStorage.setItem('nexdial_current_campaign_id', String(campaignId));
+                localStorage.setItem('voxflow_current_campaign_id', String(campaignId));
                 await loadAllData();
                 await refreshCurrentCampaignMonitor();
                 alert('Campanha iniciada com sucesso.');
@@ -3399,7 +3457,7 @@
                     return;
                 }
 
-                localStorage.setItem('nexdial_current_campaign_id', String(campaignId));
+                localStorage.setItem('voxflow_current_campaign_id', String(campaignId));
                 await loadAllData();
                 await refreshCurrentCampaignMonitor();
                 alert('Campanha pausada com sucesso.');
@@ -3423,7 +3481,7 @@
                     return;
                 }
 
-                localStorage.setItem('nexdial_current_campaign_id', String(campaignId));
+                localStorage.setItem('voxflow_current_campaign_id', String(campaignId));
                 await loadAllData();
                 await refreshCurrentCampaignMonitor();
                 showSection('campaigns');
@@ -3966,8 +4024,8 @@ async function deleteLead(leadId) {
         window.saveManualCRM = saveManualCRM;
 
         // --- Event Listeners vinculados ao webphone-modern.js ---
-        window.addEventListener('nexdial:incoming_call', (e) => {
-            console.log("Dashboard: Recebeu evento nexdial:incoming_call", e.detail);
+        window.addEventListener('voxflow:incoming_call', (e) => {
+            console.log("Dashboard: Recebeu evento voxflow:incoming_call", e.detail);
             const d = e.detail;
             if (!d.campaign_id) {
                 openManualCallPopup(d);
@@ -3976,14 +4034,14 @@ async function deleteLead(leadId) {
             }
         });
 
-        window.addEventListener('nexdial:call_ended', () => {
-            console.log("Dashboard: Recebeu evento nexdial:call_ended");
+        window.addEventListener('voxflow:call_ended', () => {
+            console.log("Dashboard: Recebeu evento voxflow:call_ended");
             closeIncomingCallPopup();
             closeManualCallPopup();
         });
 
         // Countdown de classificação após lead desligar
-        window.addEventListener('nexdial:classification_grace', (e) => {
+        window.addEventListener('voxflow:classification_grace', (e) => {
             const sec = e.detail && e.detail.seconds;
             const subtitle = document.getElementById('premiumSubtitle');
             const kicker   = document.querySelector('#premiumIncomingCallPopup .premium-kicker');
@@ -4703,7 +4761,7 @@ async function deleteLead(leadId) {
             <div style="padding: 0 20px 10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span class="tut-step-counter" id="tut-step-label">PASSO 1 / 11</span>
-                    <button class="tut-close-btn" onclick="closeNexDialTutorial()" title="Fechar — você pode reabrir nas Configurações">✕</button>
+                    <button class="tut-close-btn" onclick="closeVoxFlowTutorial()" title="Fechar — você pode reabrir nas Configurações">✕</button>
                 </div>
                 <div class="tut-progress-track">
                     <div class="tut-progress-fill" id="tut-progress-fill" style="width:9%;"></div>
@@ -4717,7 +4775,7 @@ async function deleteLead(leadId) {
             <div class="tut-footer">
                 <button class="tut-btn-back" id="tut-btn-back" onclick="tutNav(-1)" style="display:none;">← Anterior</button>
                 <button class="tut-btn-next" id="tut-btn-next" onclick="tutNav(1)">Próximo →</button>
-                <button class="tut-btn-finish" id="tut-btn-finish" onclick="closeNexDialTutorial()" style="display:none;">Entrar no Sistema ✓</button>
+                <button class="tut-btn-finish" id="tut-btn-finish" onclick="closeVoxFlowTutorial()" style="display:none;">Entrar no Sistema ✓</button>
             </div>
         </div>
     </div>
@@ -5337,7 +5395,7 @@ async function deleteLead(leadId) {
     // ─── AUTO-INIT: carrega dados ao abrir a página ──────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
         // Verifica token antes de carregar
-        const token = localStorage.getItem('nexdial_token') || sessionStorage.getItem('nexdial_token');
+        const token = localStorage.getItem('voxflow_token') || sessionStorage.getItem('voxflow_token');
         if (!token) return; // página de login cuidará do redirecionamento
 
         // Garante que o CRM tenha pelo menos uma pipeline padrão
@@ -5350,8 +5408,8 @@ async function deleteLead(leadId) {
             const meRes = await authFetch('/api/me');
             if (meRes.ok) {
                 const me = await meRes.json();
-                localStorage.setItem('nexdial_role', me.role || 'agent');
-                localStorage.setItem('nexdial_user_name', me.name || '');
+                localStorage.setItem('voxflow_role', me.role || 'agent');
+                localStorage.setItem('voxflow_user_name', me.name || '');
                 localStorage.setItem('user_id', me.id || '');
                 // Atualiza sidebar
                 const sInfo = document.getElementById('sidebar-user-info');
@@ -5359,10 +5417,12 @@ async function deleteLead(leadId) {
                 const sAvatar = document.getElementById('sidebar-user-avatar');
                 if (sAvatar) { const n = me.name || 'U'; sAvatar.textContent = n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase(); }
                 // Reaplica visibilidade de menu com role atualizado
-                const isAdmin = (me.role === 'admin' || me.role === 'supervisor');
+                const isAdmin = (me.role === 'admin' || me.role === 'supervisor' || me.role === 'superadmin');
                 document.querySelectorAll('.admin-only').forEach(el => {
                     el.style.display = isAdmin ? '' : 'none';
                 });
+                const adminLink = document.getElementById('sidebar-admin-link');
+                if (adminLink) adminLink.style.display = me.role === 'superadmin' ? 'flex' : 'none';
             }
         } catch(e) { /* silencioso */ }
 
@@ -5546,8 +5606,51 @@ async function deleteLead(leadId) {
 
     // ─── Configurações ───────────────────────────────────────────────────────
     function saveCompanySettings() {
+        // Mock ou API se implementada
         setMessage('settings-message','success','Configurações salvas localmente.');
     }
+
+    async function loadRegulatorySettings() {
+        try {
+            const r = await authFetch('/api/settings/regulatory');
+            const data = await r.json();
+            if (document.getElementById('settings-reg-type')) {
+                document.getElementById('settings-reg-type').value = data.reg_type || 'business';
+                document.getElementById('settings-reg-name').value = data.reg_name || '';
+                document.getElementById('settings-reg-tax-id').value = data.reg_tax_id || '';
+                document.getElementById('settings-reg-address').value = data.reg_address || '';
+                if (data.has_document) {
+                    document.getElementById('reg-doc-status').innerHTML = '<span style="color:#4ade80; font-size:11px;">✓ Documento Enviado</span>';
+                }
+            }
+        } catch(e) { console.error('Erro ao carregar docs', e); }
+    }
+    window.loadRegulatorySettings = loadRegulatorySettings;
+
+    async function saveRegulatorySettings() {
+        const fd = new FormData();
+        fd.append('reg_type', document.getElementById('settings-reg-type').value);
+        fd.append('reg_name', document.getElementById('settings-reg-name').value);
+        fd.append('reg_tax_id', document.getElementById('settings-reg-tax-id').value);
+        fd.append('reg_address', document.getElementById('settings-reg-address').value);
+        
+        const file = document.getElementById('settings-reg-doc').files[0];
+        if (file) fd.append('document', file);
+
+        try {
+            const r = await authFetch('/api/settings/regulatory', {
+                method: 'POST',
+                body: fd
+            });
+            if (r.ok) {
+                setMessage('regulatory-message', 'success', 'Identidade atualizada com sucesso.');
+                loadRegulatorySettings();
+            } else {
+                setMessage('regulatory-message', 'error', 'Erro ao salvar identidade.');
+            }
+        } catch(e) { setMessage('regulatory-message', 'error', 'Erro de conexão.'); }
+    }
+    window.saveRegulatorySettings = saveRegulatorySettings;
 
     // ═══════════════════════════════════════════════════════════
     // NEXDIAL ONBOARDING CENTER — lógica completa v2
@@ -5555,9 +5658,9 @@ async function deleteLead(leadId) {
     const TUT_STEPS = [
         {
             icon: '🚀',
-            title: 'Bem-vindo ao NexDial',
+            title: 'Bem-vindo ao VoxFlow',
             body: `
-                <p class="tut-desc">Você está prestes a operar a plataforma de discagem e CRM mais completa para equipes comerciais. O NexDial conecta campanhas, leads, ligações automáticas e gestão de oportunidades em um único lugar.</p>
+                <p class="tut-desc">Você está prestes a operar a plataforma de discagem e CRM mais completa para equipes comerciais. O VoxFlow conecta campanhas, leads, ligações automáticas e gestão de oportunidades em um único lugar.</p>
                 <ul class="tut-steps-list">
                     <li><span class="step-num">📞</span>Discador automático sequencial com suporte a 8 telefones por lead</li>
                     <li><span class="step-num">🎯</span>CRM com pipeline visual, automações e histórico completo</li>
@@ -5635,7 +5738,7 @@ async function deleteLead(leadId) {
             icon: '📈',
             title: 'O Coração do CRM — Pipelines',
             body: `
-                <p class="tut-desc">O <strong>CRM</strong> do NexDial organiza seus leads em um pipeline visual estilo Kanban. Cada coluna representa uma etapa do processo comercial. O discador alimenta o CRM automaticamente.</p>
+                <p class="tut-desc">O <strong>CRM</strong> do VoxFlow organiza seus leads em um pipeline visual estilo Kanban. Cada coluna representa uma etapa do processo comercial. O discador alimenta o CRM automaticamente.</p>
                 <ul class="tut-steps-list">
                     <li><span class="step-num">1</span>Acesse <strong>CRM</strong> no menu lateral para ver o pipeline</li>
                     <li><span class="step-num">2</span>As etapas padrão incluem: Novos Leads, Em Contato, Qualificado, Reunião Agendada, Proposta, Ganho, Perdido, Não Atendeu, Caixa Postal, Inválido</li>
@@ -5686,7 +5789,7 @@ async function deleteLead(leadId) {
             icon: '🛠️',
             title: 'Configurações e Twilio',
             body: `
-                <p class="tut-desc">O NexDial usa o <strong>Twilio</strong> para fazer as chamadas. Você precisa configurar suas credenciais uma única vez nas Configurações para ativar o discador e o webphone.</p>
+                <p class="tut-desc">O VoxFlow usa o <strong>Twilio</strong> para fazer as chamadas. Você precisa configurar suas credenciais uma única vez nas Configurações para ativar o discador e o webphone.</p>
                 <ul class="tut-steps-list">
                     <li><span class="step-num">1</span>Acesse <strong>Configurações</strong> no menu lateral</li>
                     <li><span class="step-num">2</span>Preencha o <em>Account SID</em> (começa com AC…) da sua conta Twilio</li>
@@ -5703,7 +5806,7 @@ async function deleteLead(leadId) {
             icon: '👤',
             title: 'Perfis e Usuários',
             body: `
-                <p class="tut-desc">O NexDial suporta múltiplos operadores na mesma conta. Cada usuário tem um papel que define o que pode ver e fazer no sistema.</p>
+                <p class="tut-desc">O VoxFlow suporta múltiplos operadores na mesma conta. Cada usuário tem um papel que define o que pode ver e fazer no sistema.</p>
                 <ul class="tut-steps-list">
                     <li><span class="step-num">Admin</span>Acesso total: configurações, usuários, campanhas, CRM e relatórios</li>
                     <li><span class="step-num">Supervisor</span>Monitora agentes em tempo real, vê métricas e pode pausar campanhas</li>
@@ -5722,7 +5825,7 @@ async function deleteLead(leadId) {
             icon: '💡',
             title: 'Dicas Finais e Boas Práticas',
             body: `
-                <p class="tut-desc">Parabéns! Você completou o tour do NexDial. Aqui estão as melhores práticas para extrair o máximo da plataforma no dia a dia.</p>
+                <p class="tut-desc">Parabéns! Você completou o tour do VoxFlow. Aqui estão as melhores práticas para extrair o máximo da plataforma no dia a dia.</p>
                 <ul class="tut-steps-list">
                     <li><span class="step-num">✓</span><strong>CRM organizado:</strong> mova leads manualmente quando necessário — o sistema automatiza o básico, mas o julgamento humano faz a diferença</li>
                     <li><span class="step-num">✓</span><strong>Múltiplos telefones:</strong> sempre importe numero_2 e numero_3 — o discador tenta automaticamente em sequência</li>
@@ -5768,26 +5871,26 @@ async function deleteLead(leadId) {
         _tutCurrentStep = Math.max(0, Math.min(total - 1, _tutCurrentStep + dir));
         _tutRender(_tutCurrentStep);
         // Salva progresso
-        localStorage.setItem('nexdial_tutorial_step', _tutCurrentStep);
+        localStorage.setItem('voxflow_tutorial_step', _tutCurrentStep);
     }
 
-    function startNexDialTutorial(startAt) {
+    function startVoxFlowTutorial(startAt) {
         _tutCurrentStep = (typeof startAt === 'number') ? startAt : 0;
         _tutRender(_tutCurrentStep);
         document.getElementById('nexDialTutorialOverlay').classList.add('active');
     }
-    window.startNexDialTutorial = startNexDialTutorial;
+    window.startVoxFlowTutorial = startVoxFlowTutorial;
 
-    function restartNexDialTutorial(startAt) {
-        localStorage.removeItem('nexdial_tutorial_seen');
-        startNexDialTutorial(startAt || 0);
+    function restartVoxFlowTutorial(startAt) {
+        localStorage.removeItem('voxflow_tutorial_seen');
+        startVoxFlowTutorial(startAt || 0);
     }
-    window.restartNexDialTutorial = restartNexDialTutorial;
+    window.restartVoxFlowTutorial = restartVoxFlowTutorial;
 
-    function closeNexDialTutorial() {
+    function closeVoxFlowTutorial() {
         document.getElementById('nexDialTutorialOverlay').classList.remove('active');
-        localStorage.setItem('nexdial_tutorial_seen', 'true');
-        localStorage.removeItem('nexdial_tutorial_step');
+        localStorage.setItem('voxflow_tutorial_seen', 'true');
+        localStorage.removeItem('voxflow_tutorial_step');
     }
 
     function saveTwilioSettings() {
@@ -6090,13 +6193,13 @@ async function deleteLead(leadId) {
     async function nexusAutoInit() {
         try {
             await authFetch('/api/crm/initialize', { method: 'POST' });
-            if (localStorage.getItem('nexdial_tutorial_seen') !== 'true') {
+            if (localStorage.getItem('voxflow_tutorial_seen') !== 'true') {
                  setTimeout(() => {
-                    if (window.startNexDialTutorial) window.startNexDialTutorial();
+                    if (window.startVoxFlowTutorial) window.startVoxFlowTutorial();
                  }, 1500);
             }
         } catch (e) {
-            console.error('NexDial Init Error:', e);
+            console.error('VoxFlow Init Error:', e);
         }
     }
     window.addEventListener('load', nexusAutoInit);
@@ -6516,7 +6619,7 @@ async function deleteLead(leadId) {
         }
 
         function _crToken() {
-            return localStorage.getItem('nexdial_token') || '';
+            return localStorage.getItem('voxflow_token') || '';
         }
 
         function _crFetch(url, opts) {
@@ -6839,7 +6942,7 @@ async function deleteLead(leadId) {
             let _cr2PixInterval = null;
 
             function _cr2Token() {
-                return localStorage.getItem('nexdial_token') || localStorage.getItem('token') || '';
+                return localStorage.getItem('voxflow_token') || localStorage.getItem('token') || '';
             }
             function _cr2Fetch(url, opts = {}) {
                 opts.headers = Object.assign({ 'Authorization': 'Bearer ' + _cr2Token(), 'Content-Type': 'application/json' }, opts.headers || {});

@@ -1,5 +1,5 @@
 """
-Sistema de crédito e billing do NexDial.
+Sistema de crédito e billing do VoxFlow.
 
 Cada Company tem um saldo em reais (credit_balance na tabela companies).
 Toda movimentação é registrada em CreditTransaction.
@@ -20,7 +20,7 @@ class CreditTransaction(db.Model):
         index=True,
     )
 
-    # "recharge" | "call_debit" | "manual_adjust"
+    # "recharge" | "call_debit" | "manual_adjust" | "transfer_in" | "transfer_out"
     type = db.Column(db.String(50), nullable=False)
 
     # Valor positivo = crédito, negativo = débito (em reais)
