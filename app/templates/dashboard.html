@@ -1402,11 +1402,11 @@
                             </div>
 
                             <div class="hub-actions" style="margin-top:16px;">
-                                <button class="btn btn-secondary" onclick="loadWorkspace()">Atualizar workspace</button>
-                                <button class="btn btn-secondary" onclick="setOperatorStatus()">Salvar status</button>
-                                <button class="btn btn-success" onclick="loadToken()">Carregar token</button>
-                                <button class="btn btn-primary" onclick="startWebphone()">Iniciar webphone</button>
-                                <button class="btn btn-outline" style="margin-top:8px; border: 1px solid #4ade80; color: #4ade80; width: 100%;" onclick="testBrowserAudio()">🔊 Testar Áudio</button>
+                                <button class="btn btn-secondary" onclick="try { loadWorkspace() } catch(e) { alert('Erro: ' + e) }">Atualizar workspace</button>
+                                <button class="btn btn-secondary" onclick="try { setOperatorStatus() } catch(e) { alert('Erro: ' + e) }">Salvar status</button>
+                                <button class="btn btn-success" onclick="try { loadToken() } catch(e) { alert('Erro: ' + e) }">Carregar token</button>
+                                <button class="btn btn-primary" onclick="try { startWebphone() } catch(e) { alert('Erro: ' + e) }">Iniciar webphone</button>
+                                <button class="btn btn-outline" style="margin-top:8px; border: 1px solid #4ade80; color: #4ade80; width: 100%;" onclick="try { testBrowserAudio() } catch(e) { alert('Erro: ' + e) }">🔊 Testar Áudio</button>
                             </div>
 
                             <div style="margin-top:16px;">
