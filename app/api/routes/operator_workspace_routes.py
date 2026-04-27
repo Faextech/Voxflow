@@ -82,7 +82,25 @@ def get_operator_workspace(agent_id):
         .first()
     )
 
-    lead = latest_call.lead if latest_call else None
+    # Lógica de Ocultação do Popup (AMD Race Condition)
+    # Se a chamada é do discador automático, o frontend SÓ deve enxergá-la 
+    # DEPOIS que o AMD confirmar 'human' (quando o status vai para 'answered_waiting_agent').
+    # Caso contrário, retornamos null para não disparar o popup antecipadamente.
+    amd_warning = False
+    if latest_call and latest_call.campaign_id:
+        if latest_call.status in ("queued", "dialing", "ringing", "amd_analyzing", "in-progress", "initiated"):
+            latest_call = None
+            lead = None
+        else:
+            lead = latest_call.lead if latest_call else None
+            
+            # Checar se foi unknown para enviar a flag de warning
+            from app.services.call_bridge import ACTIVE_CONFERENCES_BY_AGENT
+            bridge = ACTIVE_CONFERENCES_BY_AGENT.get(agent_id)
+            if bridge and bridge.get("amd_detected") == "unknown":
+                amd_warning = True
+    else:
+        lead = latest_call.lead if latest_call else None
 
     return jsonify({
         "agent": {
@@ -93,6 +111,7 @@ def get_operator_workspace(agent_id):
         },
         "current_call": _serialize_call(latest_call),
         "current_lead": _serialize_lead(lead),
+        "amd_warning":  amd_warning,
     }), 200
 
 

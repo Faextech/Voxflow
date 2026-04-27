@@ -239,13 +239,15 @@ def browser_outgoing():
         existing_campaign_id = None
         existing_status = "agent_joined"
         existing_audio_bridged = False
-        
+        existing_is_manual = False
+
         if current_item and current_item.get("lead_id"):
             existing_lead_id = current_item.get("lead_id")
             existing_db_call_id = current_item.get("db_call_id")
             existing_campaign_id = current_item.get("campaign_id")
             existing_status = current_item.get("status", "agent_joined")
             existing_audio_bridged = current_item.get("audio_bridged", False)
+            existing_is_manual = current_item.get("is_manual", False)
             logger.info("[BROWSER_OUTGOING] Agente %s reconectando com lead %s ativo. Preservando estado.", agent_id, existing_lead_id)
 
         register_pending_conference(
@@ -256,7 +258,7 @@ def browser_outgoing():
             lead_name="Ponte de Áudio",
             campaign_id=existing_campaign_id
         )
-        
+
         # Restaurar propriedades extras
         if agent_id in ACTIVE_CONFERENCES_BY_AGENT:
             new_item = ACTIVE_CONFERENCES_BY_AGENT[agent_id]
@@ -264,6 +266,8 @@ def browser_outgoing():
                 new_item["db_call_id"] = existing_db_call_id
                 new_item["status"] = existing_status
                 new_item["audio_bridged"] = existing_audio_bridged
+            if existing_is_manual:
+                new_item["is_manual"] = True
         
         logger.info("[BROWSER_OUTGOING] agente %s conectado à ponte persistente %s e registrada com sucesso", agent_id, agent_conf)
         return str(response), 200, {"Content-Type": "text/xml"}
@@ -472,6 +476,23 @@ def browser_outgoing():
 
 
 
+@twilio_voice_bp.route("/amd-hold", methods=["GET", "POST"])
+def amd_hold():
+    """
+    TwiML executado enquanto o AMD analisa a chamada (FASE 1 FIX).
+    Fica em silêncio (Pause) por até 15s aguardando o amd-callback.
+    O AMD roda sobre este leg puro (não-Conference), o que é o único modo
+    suportado pela Twilio. Quando o /amd-callback confirmar humano, ele
+    redireciona este leg via REST API para /api/twilio/lead-entry que o
+    coloca na conferência correta.
+    """
+    response = VoiceResponse()
+    response.pause(length=15)
+    # Se o AMD não respondeu em 15s (timeout), encerra silenciosamente
+    response.hangup()
+    return str(response), 200, {"Content-Type": "text/xml"}
+
+
 @twilio_voice_bp.route("/wait-audio", methods=["GET", "POST"])
 def wait_audio():
     """
@@ -532,7 +553,10 @@ def status():
         # Não sobrescreve classificações específicas com 'completed' genérico
         if not (call_status == "completed" and call.status in ("voicemail", "no_answer", "failed")):
             if call_status and call_status != call.status:
-                call.status = call_status
+                if call_status == "in-progress" and call.status == "amd_analyzing":
+                    pass
+                else:
+                    call.status = call_status
 
         if call_status in TERMINAL and not getattr(call, "ended_at", None):
             call.ended_at = datetime.utcnow()
@@ -605,14 +629,197 @@ def status():
                         "failed": "failed", "canceled": "no_answer", "completed": "no_answer",
                     }
                     _disp = _disp_map.get(call_status, "no_answer")
+                    _force_advance = False
+
                     if call.status == "voicemail":
                         _disp = "voicemail"
+                    elif call.status == "amd_analyzing" and call_status in ("completed", "canceled", "failed", "no-answer", "busy"):
+                        logger.warning("[STATUS] Chamada %s caiu (%s) ANTES do AMD concluir. Race condition detectada.", call_sid, call_status)
+                        raced = _sess.setdefault("_amd_raced_sids", set())
+                        raced.add(call_sid)
+                        _disp = "voicemail"
+                        _force_advance = True
+                    else:
+                        # NOVO: Detectar AMD ativo mesmo quando chamada está no /amd-hold
+                        # (nessa arquitetura o status nunca é 'amd_analyzing' no DB porque
+                        # a chamada não entra na conference — ela fica no Pause do /amd-hold)
+                        _item_check = None
+                        for _cname, _it in list(ACTIVE_CONFERENCES_BY_NAME.items()):
+                            if (
+                                (call and _it.get("db_call_id") == call.id)
+                                or _it.get("lead_call_sid") == call_sid
+                            ):
+                                _item_check = _it
+                                break
+
+                        _amd_was_active = (
+                            call.status in ("dialing", "ringing", "amd_analyzing")
+                            or (_item_check and _item_check.get("amd_enabled"))
+                        )
+
+                        if _amd_was_active and call_status in ("completed", "canceled", "no-answer", "failed", "busy"):
+                            logger.warning(
+                                "[STATUS] Chamada %s com AMD ativo terminou (%s) antes do callback (amd-hold arch). Tratando como voicemail.",
+                                call_sid, call_status,
+                            )
+                            raced = _sess.setdefault("_amd_raced_sids", set())
+                            raced.add(call_sid)
+                            _disp = "voicemail"
+                            _force_advance = True
+                            if call.lead_id:
+                                update_lead_crm_status(call.lead_id, call.id, "voicemail", "AMD timeout/call dropped")
+
                     logger.info("[STATUS] Avançando discador: disposition=%s SID=%s", _disp, call_sid)
-                    on_call_ended(int(call.campaign_id), int(call.company_id), call_sid, _disp, delay=0)
+                    on_call_ended(int(call.campaign_id), int(call.company_id), call_sid, _disp, delay=0, force_advance=_force_advance)
         except Exception as _e:
             logger.error("[STATUS] Erro ao avançar discador: %s", _e)
 
     return "", 204
+
+
+@twilio_voice_bp.route("/amd-callback", methods=["POST"])
+def amd_callback():
+    logger.info("=== /api/twilio/amd-callback ===")
+    call_sid        = request.form.get("CallSid")
+    answered_by     = (request.form.get("AnsweredBy") or "").strip().lower()
+    conference_name = request.values.get("c") or request.values.get("conference_name")
+
+    logger.info("[AMD] CallSid: %s | AnsweredBy: %s | Conf: %s", call_sid, answered_by, conference_name)
+
+    item = ACTIVE_CONFERENCES_BY_NAME.get(conference_name)
+    if not item:
+        logger.warning("[AMD] Conference %s não encontrada na memória para a call %s", conference_name, call_sid)
+        return "", 204
+
+    # ── FASE 2: Verificar race condition — /status já tratou este SID ────────
+    campaign_id = item.get("campaign_id")
+    company_id  = item.get("company_id")
+    if campaign_id:
+        try:
+            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS
+            _sess = AUTO_DIALER_SESSIONS.get(int(campaign_id))
+            if _sess:
+                raced = _sess.get("_amd_raced_sids", set())
+                if call_sid in raced:
+                    raced.discard(call_sid)
+                    logger.info("[AMD] SID %s já foi tratado como race condition em /status. Ignorando callback AMD tardio.", call_sid)
+                    return "", 204
+        except Exception as _re:
+            logger.debug("[AMD] Erro ao verificar race condition: %s", _re)
+
+    c = None
+    if item.get("db_call_id"):
+        c = Call.query.get(item["db_call_id"])
+
+    is_machine = answered_by in ("machine_start", "machine_end_beep", "machine_end_silence", "machine_end_other", "fax")
+
+    # BUG 2 FIX: Para o Brasil, tratar 'unknown' com duração < 8s como máquina (conservador).
+    # O AMD retorna 'unknown' principalmente quando a caixa postal desligou antes de concluir.
+    # Se a chamada durou >= 8s com unknown, provavelmente é um humano que não falou claramente.
+    if answered_by == "unknown" and not is_machine:
+        _check_c = c
+        if not _check_c and item.get("db_call_id"):
+            _check_c = Call.query.get(item["db_call_id"])
+        _unknown_duration = 0
+        if _check_c and _check_c.answered_at:
+            _unknown_duration = (datetime.utcnow() - _check_c.answered_at).total_seconds()
+        if _unknown_duration < 8:
+            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs < 8s → tratando como máquina (BR conservador)", _unknown_duration)
+            is_machine = True
+            answered_by = "unknown_treated_as_machine"
+        else:
+            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs >= 8s → tratando como humano incérto", _unknown_duration)
+            item["amd_uncertain"] = True
+
+    if c and getattr(c, "ended_at", None):
+        logger.info("[AMD] Chamada %s já encerrou (ended_at=%s). Forçando is_machine=True para ignorar popup fantasma.", call_sid, c.ended_at)
+        is_machine = True
+
+    if is_machine:
+        logger.info("[AMD] Máquina detectada (%s). Encerrando chamada %s...", answered_by, call_sid)
+
+        # Encerrar via API Twilio
+        try:
+            company = Company.query.get(company_id or (g.company_id if hasattr(g, 'company_id') else None))
+            if company:
+                svc = TwilioService.from_company(company, current_user_email=item.get("user_email"))
+                svc.client.calls(call_sid).update(status="completed")
+        except Exception as e:
+            logger.error("[AMD] Erro ao encerrar chamada (máquina): %s", e)
+
+        # ── FASE 3: Voicemail incerto (duração curta = possível falso positivo) ──
+        call_duration = 0
+        if c and c.answered_at:
+            call_duration = (datetime.utcnow() - c.answered_at).total_seconds()
+
+        is_uncertain = call_duration < 8 and call_duration > 0
+        final_vm_status = "voicemail_uncertain" if is_uncertain else "voicemail"
+
+        if c:
+            c.status     = final_vm_status
+            c.ended_at   = c.ended_at or datetime.utcnow()
+            c.amd_result = answered_by
+            db.session.commit()
+
+        if is_uncertain:
+            logger.info("[AMD] Voicemail INCERTO (duração %.1fs < 8s). Lead %s → retry no final da fila.", call_duration, item.get("lead_id"))
+            lead = Lead.query.get(item.get("lead_id"))
+            if lead:
+                lead.status = "retry"
+                db.session.commit()
+        else:
+            update_lead_crm_status(item.get("lead_id"), item.get("db_call_id"), "voicemail", f"AMD: {answered_by}")
+
+        if campaign_id and company_id:
+            logger.info("[AMD] Caixa Postal detectada. Repassando para on_call_ended com force_advance=True")
+            # Limpa a bridge
+            item["lead_id"]       = None
+            item["db_call_id"]    = None
+            item["lead_call_sid"] = None
+            item["status"]        = "idle"
+            item["amd_uncertain"] = False
+
+            from app.api.routes.auto_dialer import on_call_ended
+            on_call_ended(campaign_id, company_id, call_sid, "voicemail", force_advance=True)
+
+    else:
+        # ── Humano ou unknown ─────────────────────────────────────────────────
+        logger.info("[AMD] Humano detectado (%s). Redirecionando lead %s para conferência %s", answered_by, call_sid, conference_name)
+
+        # FASE 1 FIX: Redireciona a chamada via REST API para entrar na conferência
+        # (antes era apenas mudança de status em memória — a chamada ficava no /amd-hold)
+        try:
+            company = Company.query.get(company_id or (g.company_id if hasattr(g, 'company_id') else None))
+            if company:
+                svc = TwilioService.from_company(company, current_user_email=item.get("user_email"))
+                lead_entry_url = f"{_base_url()}/api/twilio/lead-entry?c={conference_name}&lead_id={item.get('lead_id', '')}"
+                svc.client.calls(call_sid).update(url=lead_entry_url, method="POST")
+                logger.info("[AMD] Humano confirmado. Redirecionando %s para conference %s", call_sid, conference_name)
+        except Exception as e:
+            logger.error("[AMD] Erro ao redirecionar chamada humano: %s", e)
+
+        # BUG 1 FIX: Garantir ISO 8601 com sufixo Z para que o frontend parse corretamente
+        _now_iso = datetime.utcnow().isoformat() + "Z"
+        item["status"]           = "answered_waiting_agent"
+        item["lead_answered_at"] = _now_iso
+        item["amd_uncertain"]    = False
+        if item.get("agent_leg_call_sid"):
+            item["audio_bridged"] = True
+
+        # Reler c do DB caso ainda não estivesse preenchido
+        if not c and item.get("db_call_id"):
+            c = Call.query.get(item["db_call_id"])
+        if c:
+            c.status      = "answered_waiting_agent"
+            c.amd_result  = answered_by
+            c.answered_at = c.answered_at or datetime.utcnow()  # CRTICO: garantir answered_at no DB
+            db.session.commit()
+
+        if campaign_id:
+            from app.api.routes.auto_dialer import on_lead_answered
+            on_lead_answered(campaign_id, call_sid)
+
+    return "", 200
 
 
 @twilio_voice_bp.route("/conference-events", methods=["GET", "POST"])
@@ -637,27 +844,40 @@ def conference_events():
     if event in ("participant-join", "join"):
 
         if is_lead:
-            item["status"]           = "answered_waiting_agent"
-            item["lead_call_sid"]    = call_sid
-            item["lead_answered_at"] = datetime.utcnow().isoformat()
-            item["amd_uncertain"]    = False
-            if item.get("agent_leg_call_sid"):
-                item["audio_bridged"] = True
+            item["lead_call_sid"] = call_sid
 
-            logger.info("[CONF] %s → lead entrou (call_sid=%s)", conference_name, call_sid)
+            if item.get("amd_enabled") and item.get("amd_uncertain", True):
+                item["status"] = "amd_analyzing"
+                logger.info("[CONF] %s → lead entrou (call_sid=%s), mas aguardando AMD", conference_name, call_sid)
+                if item.get("db_call_id"):
+                    c = Call.query.get(item["db_call_id"])
+                    if c:
+                        c.status = "amd_analyzing"
+                        c.answered_at = c.answered_at or datetime.utcnow()
+                        db.session.commit()
+            else:
+                item["status"] = "answered_waiting_agent"
+                # BUG 3 FIX: Não sobrescrever lead_answered_at se já foi setado pelo /amd-callback
+                if not item.get("lead_answered_at"):
+                    item["lead_answered_at"] = datetime.utcnow().isoformat() + "Z"
+                item["amd_uncertain"] = False
+                if item.get("agent_leg_call_sid"):
+                    item["audio_bridged"] = True
 
-            if item.get("db_call_id"):
-                c = Call.query.get(item["db_call_id"])
-                if c:
-                    c.status     = "answered_waiting_agent"
-                    c.answered_at = c.answered_at or datetime.utcnow()
-                    db.session.commit()
+                logger.info("[CONF] %s → lead entrou (call_sid=%s)", conference_name, call_sid)
 
-            # Notifica state machine: lead atendeu → cancela timer, status=in_call
-            campaign_id = item.get("campaign_id")
-            if campaign_id:
-                from app.api.routes.auto_dialer import on_lead_answered
-                on_lead_answered(campaign_id, call_sid)
+                if item.get("db_call_id"):
+                    c = Call.query.get(item["db_call_id"])
+                    if c:
+                        c.status      = "answered_waiting_agent"
+                        c.answered_at = c.answered_at or datetime.utcnow()
+                        db.session.commit()
+
+                # Notifica state machine: lead atendeu → cancela timer, status=in_call
+                campaign_id = item.get("campaign_id")
+                if campaign_id:
+                    from app.api.routes.auto_dialer import on_lead_answered
+                    on_lead_answered(campaign_id, call_sid)
 
         elif is_agent:
             item["status"]             = "agent_joined"
@@ -858,6 +1078,13 @@ def pending_call(agent_id):
     # para que o operador possa ler as notas e classificar a ligação manualmente.
     show_popup = lead_id is not None
 
+    # FASE 2: Lógica de Ocultação do Popup (AMD Race Condition)
+    # Statuses que NUNCA devem mostrar popup — lead ainda tocando ou AMD analisando.
+    # O popup SÓ abre em "answered_waiting_agent" (AMD confirmou humano) ou manual.
+    POPUP_HIDDEN_STATUSES = {"queued", "dialing", "ringing", "amd_analyzing", "in-progress", "initiated", "idle", "agent_joined"}
+    if item.get("campaign_id") and status in POPUP_HIDDEN_STATUSES:
+        show_popup = False
+
     if show_popup:
         logger.info("[POPUP] Disparando popup para operador %s | Lead %s | Status %s", agent_id, lead_id, status)
 
@@ -901,8 +1128,16 @@ def pending_call(agent_id):
                 "state":        getattr(lead, "state", None),
             }
 
+    # BUG 1 FIX: Buscar answered_at de múltiplas fontes com fallback pro DB
+    _answered_at = item.get("lead_answered_at")
+    if not _answered_at and item.get("db_call_id"):
+        _db_call_obj = Call.query.get(item["db_call_id"])
+        if _db_call_obj and _db_call_obj.answered_at:
+            _answered_at = _db_call_obj.answered_at.isoformat() + "Z"
+            item["lead_answered_at"] = _answered_at  # cachear em memória
+
     return jsonify({
-        "has_call": bool(lead_id),  # False se não houver um lead na ponte — força fechamento do popup no frontend
+        "has_call": bool(lead_id),
         "show_popup": show_popup,
         "status": status,
         "status_display": _call_status_display(status),
@@ -913,7 +1148,8 @@ def pending_call(agent_id):
         "webphone_connected": webphone_connected,
         "lead": lead_data,
         "audio_bridged": bool(item.get("audio_bridged")),
-        "answered_at": item.get("lead_answered_at"),
+        "answered_at": _answered_at,
+        "is_manual": bool(item.get("is_manual", False)),
     }), 200
 
 
@@ -997,6 +1233,10 @@ def manual_call():
         user_email=getattr(g, "user_email", None),
     )
 
+    # Marca explicitamente como chamada manual para o frontend rotear o popup correto
+    if conf_name in ACTIVE_CONFERENCES_BY_NAME:
+        ACTIVE_CONFERENCES_BY_NAME[conf_name]["is_manual"] = True
+
     logger.info("[MANUAL-CALL] agent=%s to=%s conf=%s sid=%s", agent_id, to_norm, conf_name, call.sid)
     return jsonify({"ok": True, "call_sid": call.sid, "conference": conf_name}), 200
 
@@ -1060,6 +1300,59 @@ def debug_agent_state(agent_id):
         "public_base_url": public_base_url,
         "all_conferences": list(ACTIVE_CONFERENCES_BY_NAME.keys()),
     }), 200
+
+
+@twilio_voice_bp.route("/amd-reclassify/<int:call_id>", methods=["POST"])
+@require_auth
+def amd_reclassify(call_id):
+    """
+    FASE 3: Permite ao supervisor reclassificar uma chamada que o AMD errou.
+    Ações:
+    - 'retry_now'         → coloca o lead de volta na fila como próximo (máxima prioridade)
+    - 'retry_end'         → coloca o lead no final da fila da campanha
+    - 'confirm_voicemail' → confirma como caixa postal definitiva (sem retry)
+    """
+    data   = request.get_json(force=True) or {}
+    action = data.get("action")  # retry_now | retry_end | confirm_voicemail
+
+    call = Call.query.get(call_id)
+    if not call or call.company_id != g.company_id:
+        return jsonify({"error": "Chamada não encontrada"}), 404
+
+    lead = Lead.query.get(call.lead_id)
+    if not lead:
+        return jsonify({"error": "Lead não encontrado"}), 404
+
+    if action == "retry_now":
+        lead.status       = "retry"
+        call.amd_recovered = True
+        db.session.commit()
+        # Se a campanha estiver rodando, forçar esse lead como próximo
+        from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS
+        sess = AUTO_DIALER_SESSIONS.get(int(call.campaign_id))
+        if sess:
+            sess["_priority_lead_id"] = lead.id
+        logger.info("[AMD-RECLASSIFY] Lead %s recolocado como PRÓXIMO (retry_now)", lead.id)
+        return jsonify({"ok": True, "message": "Lead recolocado como próximo na fila"}), 200
+
+    elif action == "retry_end":
+        lead.status        = "retry"
+        call.amd_recovered = True
+        db.session.commit()
+        logger.info("[AMD-RECLASSIFY] Lead %s recolocado no FINAL da fila (retry_end)", lead.id)
+        return jsonify({"ok": True, "message": "Lead recolocado no final da fila"}), 200
+
+    elif action == "confirm_voicemail":
+        lead.status       = "voicemail"
+        call.status       = "voicemail"
+        call.amd_result   = "confirmed_voicemail"
+        call.amd_recovered = True
+        db.session.commit()
+        update_lead_crm_status(lead.id, call.id, "voicemail", "Supervisor confirmou caixa postal")
+        logger.info("[AMD-RECLASSIFY] Lead %s confirmado como caixa postal pelo supervisor", lead.id)
+        return jsonify({"ok": True, "message": "Confirmado como caixa postal"}), 200
+
+    return jsonify({"error": "Ação inválida. Use: retry_now, retry_end ou confirm_voicemail"}), 400
 
 
 @twilio_voice_bp.route("/lead-entry", methods=["POST"])
@@ -1203,39 +1496,6 @@ def voice():
     
     return str(response), 200, {"Content-Type": "text/xml"}
 
-
-@twilio_voice_bp.route('/amd-callback', methods=['POST'])
-def amd_callback():
-    """
-    AMD (Answering Machine Detection).
-
-    REGRA CONSERVADORA:
-      Só pula automaticamente para machine_end_beep (100% certeza de caixa postal).
-      TUDO o mais (machine_start, machine_end_silence, human, unknown, fax) → trata como humano → abre popup.
-      Se existir qualquer dúvida → tratar como humano.
-    """
-    values      = dict(request.values)
-    answered_by = values.get('AnsweredBy', '').strip()
-    call_sid    = values.get('CallSid', '').strip()
-
-    logger.info("[AMD] answered_by=%s call_sid=%s", answered_by, call_sid)
-
-    CERTAIN_VOICEMAIL = {"machine_end_beep"}
-
-    # IMPORTANTE: NUNCA encerra automaticamente baseado em AMD.
-    # Popup SEMPRE abre para operador classificar, mesmo com certeza de voicemail.
-    # Isso permite que operador ouça a mensagem e decida o que fazer.
-
-    # Marca AMD no bridge para informação do operador (opcional)
-    call = Call.query.filter_by(call_sid=call_sid).first()
-    if call and call.agent_id:
-        bridge = ACTIVE_CONFERENCES_BY_AGENT.get(call.agent_id)
-        if bridge:
-            bridge["amd_detected"] = (answered_by or "").lower()
-            bridge["amd_certain"] = (answered_by in CERTAIN_VOICEMAIL)
-
-    logger.info("[AMD] Popup abrirá para classificação - operador decide o que fazer")
-    return '', 204
 
 def handle_call_status(call_sid, call_status, answered_by=None):
     """

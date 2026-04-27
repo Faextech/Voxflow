@@ -85,7 +85,7 @@ def _new_session(campaign_id, company_id, campaign_name, interval_sec, leads_tot
 def _session_for_json(s: dict) -> dict:
     if not s:
         return {}
-    skip = {"_lock", "_ring_timer", "_cancelled_sids"}
+    skip = {"_lock", "_ring_timer", "_cancelled_sids", "_amd_raced_sids"}
     return {k: v for k, v in s.items() if k not in skip}
 
 
@@ -276,7 +276,7 @@ def on_lead_answered(campaign_id: int, call_sid: str):
     logger.info("[EVENT] Lead atendeu (SID=%s) — status=in_call, timer cancelado", call_sid)
 
 
-def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition: str, delay: int = None):
+def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition: str, delay: int = None, force_advance: bool = False):
     """
     Chamada encerrada por qualquer motivo (timeout, desligou, no-answer, busy, failed).
     Limpa estado e agenda próxima discagem.
@@ -327,6 +327,25 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
                 sess["current_lead_id"] = None  # força re-busca do mesmo lead
                 dial_next_in_session(campaign_id, company_id, force=True)
                 return
+
+    # Se for AMD detectando máquina e não há mais telefones, avança sem pausar para o operador
+    if force_advance:
+        logger.info("[EVENT] Chamada %s (%s) finalizada sem mais números → Avanço forçado (AMD)", call_sid, disposition)
+        sess["status"] = "running"
+        sess["current_call_sid"] = None
+        sess["current_lead_id"] = None
+        
+        if current_lead_id:
+            try:
+                lead = Lead.query.filter_by(id=current_lead_id, company_id=company_id).first()
+                if lead and lead.status not in ("completed", "exhausted", "invalid"):
+                    lead.status = "exhausted"
+                    db.session.commit()
+            except Exception:
+                pass
+                
+        _advance(campaign_id, company_id, delay=0)
+        return
 
     # A pedido do cliente: SEMPRE pausa a campanha para aguardar classificação do operador
     # (seja answered, no_answer, busy, etc. que não pulou para o próximo phone acima)
@@ -447,24 +466,36 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
     if skip_current_id:
         skipped.add(skip_current_id)
 
-    # ── Callback queue tem prioridade ─────────────────────────────────────
+    # ── Priority lead (AMD recovery) tem máxima prioridade ──────────────
     lead = None
-    cb = (
-        CallbackQueue.query
-        .filter(
-            CallbackQueue.campaign_id == campaign_id,
-            CallbackQueue.status      == CallbackStatus.PENDING.value,
-            CallbackQueue.scheduled_for <= datetime.utcnow(),
+    priority_lead_id = sess.pop("_priority_lead_id", None)
+    if priority_lead_id:
+        priority_lead = Lead.query.filter_by(id=priority_lead_id, company_id=company_id).first()
+        if priority_lead and priority_lead.campaign_id == campaign_id:
+            phone_check = _next_phone_for_lead(priority_lead, campaign_id, company_id, ignore_history=True)
+            if phone_check:
+                lead = priority_lead
+                logger.info("[DIALER] Discando lead prioritário (AMD recovery): lead_id=%s", priority_lead_id)
+
+    # ── Callback queue tem prioridade ─────────────────────────────────────
+    cb = None
+    if not lead:
+        cb = (
+            CallbackQueue.query
+            .filter(
+                CallbackQueue.campaign_id == campaign_id,
+                CallbackQueue.status      == CallbackStatus.PENDING.value,
+                CallbackQueue.scheduled_for <= datetime.utcnow(),
+            )
+            .order_by(CallbackQueue.priority.desc(), CallbackQueue.scheduled_for.asc())
+            .first()
         )
-        .order_by(CallbackQueue.priority.desc(), CallbackQueue.scheduled_for.asc())
-        .first()
-    )
-    if cb:
-        lead = Lead.query.filter_by(id=cb.lead_id, company_id=company_id).first()
-        if lead:
-            cb.status   = CallbackStatus.DIALING.value
-            cb.attempts += 1
-            db.session.commit()
+        if cb:
+            lead = Lead.query.filter_by(id=cb.lead_id, company_id=company_id).first()
+            if lead:
+                cb.status   = CallbackStatus.DIALING.value
+                cb.attempts += 1
+                db.session.commit()
 
     if not lead:
         lead = _next_lead_query(campaign_id, company_id, skipped)
@@ -556,28 +587,36 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
         company_id      = company_id,
         db_call_id      = db_call.id,
         lead_call_sid   = None,
-        amd_enabled     = False,
+        amd_enabled     = True,
         user_email      = sess.get("user_email"),
     )
 
-    twiml = (
-        f'<?xml version="1.0" encoding="UTF-8"?>'
-        f'<Response><Dial>'
-        f'<Conference startConferenceOnEnter="true" endConferenceOnExit="false" beep="false"'
-        f' participantLabel="lead_{lead.id}"'
-        f' statusCallback="{conf_url}" statusCallbackMethod="POST"'
-        f' statusCallbackEvent="join leave">{conf_name}</Conference>'
-        f'</Dial></Response>'
-    )
+    # FASE 1 FIX: AMD NÃO funciona com <Dial><Conference> (documentação Twilio explícita).
+    # Usamos url= apontando para /amd-hold que faz um Pause silencioso enquanto o AMD
+    # analisa a chamada. Ao confirmar humano, o /amd-callback redireciona via REST API
+    # para /lead-entry que coloca o lead na conferência correta.
+    amd_hold_url    = f"{public_base}/api/twilio/amd-hold?c={conf_name}&lead_id={lead.id}"
+    amd_callback_url = f"{public_base}/api/twilio/amd-callback?c={conf_name}"
 
     try:
         result = svc.client.calls.create(
             to                     = phone,
             from_                  = svc.twilio_number,
-            twiml                  = twiml,
+            url                    = amd_hold_url,   # <-- CRÍTICO: url= em vez de twiml=
             status_callback        = f"{status_url}?c={conf_name}",
             status_callback_event  = ["initiated", "ringing", "answered", "completed"],
             status_callback_method = "POST",
+            machine_detection      = "Enable",
+            async_amd              = "true",
+            async_amd_status_callback         = amd_callback_url,
+            async_amd_status_callback_method  = "POST",
+            # Parâmetros otimizados para operadoras brasileiras (Vivo/Claro/TIM/Oi)
+            # speech_end_threshold=2500: caixas postais BR têm pausa de ~1.5-2.5s no meio
+            # da saudação — valor padrão de 1200ms classificava erroneamente como humano.
+            machine_detection_timeout              = 15,
+            machine_detection_speech_threshold     = 2400,
+            machine_detection_speech_end_threshold = 2500,
+            machine_detection_silence_timeout      = 3000,
             timeout                = 55,
         )
     except InsufficientCreditError as credit_err:

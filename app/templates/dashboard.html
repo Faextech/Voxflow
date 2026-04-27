@@ -3723,12 +3723,28 @@ async function deleteLead(leadId) {
             loadPopupStages();
             
             // Iniciar o timer assim que o lead atendeu.
-            // answered_at vem do backend; se ausente, usa now() como fallback seguro.
+            // answered_at vem do backend com sufixo Z (UTC ISO 8601).
+            // Validar a string antes de passar para startHubTimer para evitar '00:00:00' travado.
             const _timerAnswered = ['answered_waiting_agent','answered_awaiting_amd','agent_joining','agent_joined','answered'];
-            const _timerStart = data.answered_at || data.started_at || (_timerAnswered.includes(st) ? new Date().toISOString() : null);
-            if (_timerStart && window._currentTimerCallId !== data.call_id) {
-                window._currentTimerCallId = data.call_id;
-                startHubTimer(_timerStart);
+            let _timerStart = data.answered_at || data.started_at;
+
+            // Se status indica atendimento mas não temos timestamp, usar now() como fallback seguro
+            if (!_timerStart && _timerAnswered.includes(st)) {
+                console.warn('[TIMER] answered_at ausente para status:', st, '— usando now() como fallback');
+                _timerStart = new Date().toISOString();
+            }
+
+            // Só inicia o timer se: (a) temos timestamp, (b) é uma data válida, (c) não está rodando para este call_id
+            if (_timerStart && typeof _timerStart === 'string') {
+                const _testDate = new Date(_timerStart);
+                if (!isNaN(_testDate.getTime())) {
+                    if (window._currentTimerCallId !== data.call_id) {
+                        window._currentTimerCallId = data.call_id;
+                        startHubTimer(_timerStart);
+                    }
+                } else {
+                    console.error('[TIMER] answered_at inválido recebido do backend:', _timerStart);
+                }
             }
 
             if (typeof window.resumeTwilioAudioPipeline === 'function') {
@@ -3888,8 +3904,12 @@ async function deleteLead(leadId) {
                 popup.classList.add('active');
                 loadPopupStages();
                 if (typeof window.resumeTwilioAudioPipeline === 'function') window.resumeTwilioAudioPipeline();
-                // answered_at vem do backend; fallback para now() se ausente
-                startHubTimer(data.answered_at || data.started_at || new Date().toISOString());
+                // answered_at vem do backend com sufixo Z — validar antes de usar
+                const _manTimerRaw = data.answered_at || data.started_at;
+                const _manTimerStart = _manTimerRaw && !isNaN(new Date(_manTimerRaw).getTime())
+                    ? _manTimerRaw
+                    : new Date().toISOString();
+                startHubTimer(_manTimerStart);
             }
             // Se já está aberto, apenas atualiza os dados — NÃO reinicia o timer
         }

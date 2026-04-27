@@ -43,6 +43,8 @@ class Call(db.Model):
 
     recording_url = db.Column(db.Text, nullable=True)
     disposition = db.Column(db.String(100), nullable=True)
+    amd_result = db.Column(db.String(50), nullable=True)   # human | machine_start | unknown | timeout
+    amd_recovered = db.Column(db.Boolean, default=False)   # True se supervisor reclassificou
     hangup_cause = db.Column(db.String(100), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
