@@ -17,11 +17,14 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('companies', sa.Column('reg_type', sa.String(length=50), nullable=True))
-    op.add_column('companies', sa.Column('reg_name', sa.String(length=255), nullable=True))
-    op.add_column('companies', sa.Column('reg_tax_id', sa.String(length=50), nullable=True))
-    op.add_column('companies', sa.Column('reg_address', sa.Text(), nullable=True))
-    op.add_column('companies', sa.Column('reg_document_path', sa.String(length=512), nullable=True))
+    conn = op.get_bind()
+    # Use IF NOT EXISTS so this is safe to re-run on PostgreSQL if the migration
+    # was previously stamped but not fully applied.
+    conn.execute(sa.text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS reg_type VARCHAR(50)"))
+    conn.execute(sa.text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS reg_name VARCHAR(255)"))
+    conn.execute(sa.text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS reg_tax_id VARCHAR(50)"))
+    conn.execute(sa.text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS reg_address TEXT"))
+    conn.execute(sa.text("ALTER TABLE companies ADD COLUMN IF NOT EXISTS reg_document_path VARCHAR(512)"))
 
 
 def downgrade():
