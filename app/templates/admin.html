@@ -460,7 +460,10 @@
 
     async function loadDashboard() {
         const r = await API('/api/admin/dashboard');
-        if (!r.ok) return;
+        if (!r.ok) {
+            document.getElementById('dashStats').innerHTML = `<p style="padding:20px;color:#f87171;font-size:13px;">Erro ao carregar dashboard (HTTP ${r.status}). Verifique o console.</p>`;
+            return;
+        }
         const d = await r.json();
         document.getElementById('dashStats').innerHTML = `
             <div class="stat-card"><div class="stat-label">Total de Clientes</div><div class="stat-value">${d.total_companies}</div></div>
