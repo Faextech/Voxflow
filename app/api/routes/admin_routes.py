@@ -449,7 +449,7 @@ def twilio_diagnostics():
 
         # 2a. Saldo real
         try:
-            bal = client.api.v2010.balance.fetch()
+            bal = client.balance.fetch()
             result['twilio_balance'] = {
                 'ok': True,
                 'balance': bal.balance,
