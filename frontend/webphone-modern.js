@@ -178,7 +178,7 @@ function el(id) {
 // Retorna headers com Authorization Bearer lido do localStorage.
 // Merge com quaisquer headers extras (ex: Content-Type).
 function _authHeaders(extra = {}) {
-  const token = localStorage.getItem("nexdial_token") || "";
+  const token = localStorage.getItem("voxflow_token") || localStorage.getItem("nexdial_token") || localStorage.getItem("token") || "";
   if (token) return { Authorization: `Bearer ${token}`, ...extra };
   return { ...extra };
 }
