@@ -558,6 +558,12 @@ def status():
                 else:
                     call.status = call_status
 
+        # Gravar answered_at quando a chamada é atendida (in-progress)
+        # CRÍTICO: o AMD usa esse timestamp para calcular duração e decidir human/machine
+        if call_status == "in-progress" and not call.answered_at:
+            call.answered_at = datetime.utcnow()
+            logger.info("[STATUS] answered_at gravado para %s às %s", call_sid, call.answered_at)
+
         if call_status in TERMINAL and not getattr(call, "ended_at", None):
             call.ended_at = datetime.utcnow()
             answered_by  = request.values.get("AnsweredBy")
@@ -713,22 +719,27 @@ def amd_callback():
 
     is_machine = answered_by in ("machine_start", "machine_end_beep", "machine_end_silence", "machine_end_other", "fax")
 
-    # BUG 2 FIX: Para o Brasil, tratar 'unknown' com duração < 8s como máquina (conservador).
-    # O AMD retorna 'unknown' principalmente quando a caixa postal desligou antes de concluir.
-    # Se a chamada durou >= 8s com unknown, provavelmente é um humano que não falou claramente.
+    # Para o Brasil, tratar 'unknown' com duração conhecida < 10s como máquina (conservador).
+    # Se answered_at não foi gravado (duração desconhecida), tratar como INCERTO (não máquina)
+    # para não perder chamadas reais de humanos.
     if answered_by == "unknown" and not is_machine:
         _check_c = c
         if not _check_c and item.get("db_call_id"):
             _check_c = Call.query.get(item["db_call_id"])
-        _unknown_duration = 0
+        _unknown_duration = None
         if _check_c and _check_c.answered_at:
             _unknown_duration = (datetime.utcnow() - _check_c.answered_at).total_seconds()
-        if _unknown_duration < 8:
-            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs < 8s → tratando como máquina (BR conservador)", _unknown_duration)
+
+        if _unknown_duration is None:
+            # answered_at não gravado → duração desconhecida → incerto (dar benefício da dúvida)
+            logger.info("[AMD] AnsweredBy=unknown, answered_at ausente → duração desconhecida → tratando como humano incerto")
+            item["amd_uncertain"] = True
+        elif _unknown_duration < 10:
+            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs < 10s → tratando como máquina (BR conservador)", _unknown_duration)
             is_machine = True
             answered_by = "unknown_treated_as_machine"
         else:
-            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs >= 8s → tratando como humano incérto", _unknown_duration)
+            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs >= 10s → tratando como humano incerto", _unknown_duration)
             item["amd_uncertain"] = True
 
     if c and getattr(c, "ended_at", None):
@@ -747,12 +758,14 @@ def amd_callback():
         except Exception as e:
             logger.error("[AMD] Erro ao encerrar chamada (máquina): %s", e)
 
-        # ── FASE 3: Voicemail incerto (duração curta = possível falso positivo) ──
-        call_duration = 0
+        # Voicemail incerto: duração curta OU answered_at desconhecido = possível falso positivo AMD
+        # Limiar 15s: qualquer detecção de máquina com menos de 15s de conversa real vai para retry
+        # Se answered_at não foi gravado (duração desconhecida), também é incerto
+        call_duration = None
         if c and c.answered_at:
             call_duration = (datetime.utcnow() - c.answered_at).total_seconds()
 
-        is_uncertain = call_duration < 8 and call_duration > 0
+        is_uncertain = (call_duration is None) or (call_duration < 15)
         final_vm_status = "voicemail_uncertain" if is_uncertain else "voicemail"
 
         if c:
@@ -762,7 +775,8 @@ def amd_callback():
             db.session.commit()
 
         if is_uncertain:
-            logger.info("[AMD] Voicemail INCERTO (duração %.1fs < 8s). Lead %s → retry no final da fila.", call_duration, item.get("lead_id"))
+            _dur_log = f"{call_duration:.1f}s" if call_duration is not None else "desconhecida"
+            logger.info("[AMD] Voicemail INCERTO (duração %s). Lead %s → retry no final da fila.", _dur_log, item.get("lead_id"))
             lead = Lead.query.get(item.get("lead_id"))
             if lead:
                 lead.status = "retry"
