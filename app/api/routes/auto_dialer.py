@@ -338,12 +338,14 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
         if current_lead_id:
             try:
                 lead = Lead.query.filter_by(id=current_lead_id, company_id=company_id).first()
-                if lead and lead.status not in ("completed", "exhausted", "invalid"):
+                # Preserva "retry" (voicemail incerto) e "voicemail" — AMD já classificou.
+                # Sobrescrever para "exhausted" descartaria leads que deveriam ser retentados.
+                if lead and lead.status not in ("completed", "exhausted", "invalid", "retry", "voicemail"):
                     lead.status = "exhausted"
                     db.session.commit()
             except Exception:
                 pass
-                
+
         _advance(campaign_id, company_id, delay=0)
         return
 
@@ -622,12 +624,17 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
             async_amd              = "true",
             async_amd_status_callback         = amd_callback_url,
             async_amd_status_callback_method  = "POST",
-            # Parâmetros otimizados para operadoras brasileiras (Vivo/Claro/TIM/Oi)
-            # speech_end_threshold=2500: caixas postais BR têm pausa de ~1.5-2.5s no meio
-            # da saudação — valor padrão de 1200ms classificava erroneamente como humano.
+            # Parâmetros AMD para operadoras brasileiras (Vivo/Claro/TIM/Oi)
+            # speech_threshold=1500: janela de análise menor → AMD decide mais rápido,
+            #   evitando acumular dois "alô" curtos que imitam saudação de caixa postal.
+            # speech_end_threshold=1800: reduzido de 2500ms. Com 2500ms o AMD esperava
+            #   2,5s de silêncio após o "alô" do humano — tempo suficiente para o lead
+            #   repetir "alô", formando padrão [alô+pausa+alô] idêntico ao de caixa postal.
+            #   Com 1800ms o AMD encerra a análise após o 1º "alô" + 1,8s de silêncio,
+            #   classificando corretamente como humano antes de um 2º "alô".
             machine_detection_timeout              = 15,
-            machine_detection_speech_threshold     = 2400,
-            machine_detection_speech_end_threshold = 2500,
+            machine_detection_speech_threshold     = 1500,
+            machine_detection_speech_end_threshold = 1800,
             machine_detection_silence_timeout      = 3000,
             timeout                = 55,
         )

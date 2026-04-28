@@ -479,16 +479,19 @@ def browser_outgoing():
 @twilio_voice_bp.route("/amd-hold", methods=["GET", "POST"])
 def amd_hold():
     """
-    TwiML executado enquanto o AMD analisa a chamada (FASE 1 FIX).
-    Fica em silêncio (Pause) por até 15s aguardando o amd-callback.
-    O AMD roda sobre este leg puro (não-Conference), o que é o único modo
-    suportado pela Twilio. Quando o /amd-callback confirmar humano, ele
-    redireciona este leg via REST API para /api/twilio/lead-entry que o
-    coloca na conferência correta.
+    TwiML executado enquanto o AMD analisa a chamada.
+    Dizemos "Um momento" ao lead para que ele não repita "alô" (causa raiz de
+    falso-positivo: [alô]+[silêncio]+[alô] imita saudação de caixa postal).
+    O AMD analisa apenas o áudio QUE VEM do lead (microfone) — o <Say> vai
+    para o fone do lead mas não é captado pelo AMD. Ao confirmar humano,
+    /amd-callback redireciona via REST para /lead-entry → conferência.
     """
     response = VoiceResponse()
-    response.pause(length=15)
-    # Se o AMD não respondeu em 15s (timeout), encerra silenciosamente
+    # <Say> vai PARA o lead (fone dele). AMD só ouve o que o LEAD fala,
+    # então isso não polui a análise e evita o padrão alô+pausa+alô.
+    response.say("Um momento, por favor.", language="pt-BR")
+    response.pause(length=13)
+    # AMD não respondeu em ~14s → encerra
     response.hangup()
     return str(response), 200, {"Content-Type": "text/xml"}
 
@@ -719,28 +722,15 @@ def amd_callback():
 
     is_machine = answered_by in ("machine_start", "machine_end_beep", "machine_end_silence", "machine_end_other", "fax")
 
-    # Para o Brasil, tratar 'unknown' com duração conhecida < 10s como máquina (conservador).
-    # Se answered_at não foi gravado (duração desconhecida), tratar como INCERTO (não máquina)
-    # para não perder chamadas reais de humanos.
+    # 'unknown' = AMD não conseguiu determinar com certeza.
+    # Tratamos SEMPRE como humano incerto (benefício da dúvida).
+    # A heurística anterior "unknown < 10s = máquina" causava falso-positivo no padrão
+    # alô+pausa+alô: o AMD retornava 'unknown' e a curta duração fazia o código
+    # classificar o humano como caixa postal. Máquinas legítimas retornam
+    # 'machine_start'/'machine_end_*' — 'unknown' genuíno deve ir para o operador.
     if answered_by == "unknown" and not is_machine:
-        _check_c = c
-        if not _check_c and item.get("db_call_id"):
-            _check_c = Call.query.get(item["db_call_id"])
-        _unknown_duration = None
-        if _check_c and _check_c.answered_at:
-            _unknown_duration = (datetime.utcnow() - _check_c.answered_at).total_seconds()
-
-        if _unknown_duration is None:
-            # answered_at não gravado → duração desconhecida → incerto (dar benefício da dúvida)
-            logger.info("[AMD] AnsweredBy=unknown, answered_at ausente → duração desconhecida → tratando como humano incerto")
-            item["amd_uncertain"] = True
-        elif _unknown_duration < 10:
-            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs < 10s → tratando como máquina (BR conservador)", _unknown_duration)
-            is_machine = True
-            answered_by = "unknown_treated_as_machine"
-        else:
-            logger.info("[AMD] AnsweredBy=unknown, duração=%.1fs >= 10s → tratando como humano incerto", _unknown_duration)
-            item["amd_uncertain"] = True
+        logger.info("[AMD] AnsweredBy=unknown → tratando como humano incerto (operador classifica)")
+        item["amd_uncertain"] = True
 
     if c and getattr(c, "ended_at", None):
         logger.info("[AMD] Chamada %s já encerrou (ended_at=%s). Forçando is_machine=True para ignorar popup fantasma.", call_sid, c.ended_at)
