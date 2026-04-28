@@ -7128,6 +7128,11 @@ async function deleteLead(leadId) {
             window.addEventListener('load', () => { if (window.location.hash === '#credito') { cr2CarregarResumo(); cr2CarregarTransacoes(true); } });
         })();
         /* ── end cr2 ──────────────────────────────────────────────────── */
+
+        /* Expõe para que o bloco de inicialização principal possa chamar */
+        window._crAtualizarNavBadge = _crAtualizarNavBadge;
+        /* Carrega o saldo no card do dashboard principal ao iniciar */
+        window.addEventListener('load', _crAtualizarNavBadge);
     })();
     </script>
 
