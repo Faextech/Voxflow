@@ -20,7 +20,7 @@ _CALL_STATUS_TO_STAGE = {
     "in-progress": "Em Contato",
     "answered":    "Em Contato",
     "no-answer":   "Não Atendeu",
-    "busy":        "Caixa Postal",
+    "busy":        "Não Atendeu",   # busy = linha ocupada, NÃO caixa postal
     "failed":      "Inválido",
 }
 
@@ -139,7 +139,13 @@ def status_callback():
         call.phone_dialed = to_number
 
     if call_status:
-        call.status = call_status
+        # Não sobrescreve classificações definitivas do AMD/conferência com 'completed' genérico.
+        # Ex: AMD detectou voicemail → call.status="voicemail_uncertain"; Twilio manda "completed"
+        # logo em seguida — sem este guard o status seria apagado.
+        _AMD_FINAL = {"voicemail", "voicemail_uncertain", "answered",
+                      "no_answer", "busy", "failed"}
+        if not (call_status == "completed" and call.status in _AMD_FINAL):
+            call.status = call_status
 
     if hasattr(call, "from_number") and from_number:
         call.from_number = from_number
@@ -174,26 +180,70 @@ def status_callback():
 
     db.session.commit()
 
+    # Atualiza status do lead se ainda em "dialing/ringing" e o AMD não classificou ainda.
+    # Evita que leads fiquem presos em status "dialing" quando o Twilio envia no-answer/busy/failed
+    # antes do ring-timer de 50s disparar.
+    if call_status in ("no-answer", "busy", "failed", "canceled") and call.lead_id:
+        try:
+            from app.models.lead import Lead as _Lead
+            _lead = _Lead.query.get(call.lead_id)
+            if _lead and _lead.status in ("dialing", "ringing"):
+                _lead_status_map = {
+                    "no-answer": "no_answer",
+                    "busy":      "busy",
+                    "failed":    "failed",
+                    "canceled":  "no_answer",
+                }
+                _lead.status = _lead_status_map[call_status]
+                db.session.commit()
+        except Exception as _le:
+            logger.warning("[STATUS] Erro ao atualizar lead status: %s", _le)
+            db.session.rollback()
+
     # Automação: move o deal da pipeline conforme o status da chamada
     _auto_move_deal_by_call_status(call, call_status)
 
     # ── AVANÇO AUTOMÁTICO DO DISCADOR ───────────────────────────────────────
-    # Este handler é chamado pelo Twilio para TODOS os status callbacks.
-    # Quando o status é terminal, o discador deve avançar para o próximo lead.
-    # CRÍTICO: sem isso, o discador fica preso em 'waiting_webhook' para sempre.
+    # Usa on_call_ended() em vez de resume_auto_dialer_for_campaign() para:
+    #   • verificar se há mais números do mesmo lead antes de avançar
+    #   • respeitar current_call_sid (evita duplo-avanço quando AMD já avançou)
+    #   • respeitar _cancelled_sids (leads pulados manualmente)
     _TERMINAL = {"completed", "failed", "no-answer", "busy", "canceled", "no_answer"}
-    if call_status in _TERMINAL and call and call.campaign_id:
+    if call_status in _TERMINAL and call and call.campaign_id and call.company_id:
         try:
-            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS, resume_auto_dialer_for_campaign
-            sess = AUTO_DIALER_SESSIONS.get(call.campaign_id)
-            if sess and sess.get("status") in ("running", "waiting_webhook", "dialing"):
-                logger.info(
-                    "[STATUS→DIALER] %s — chamando próximo lead | campaign=%s lead=%s",
-                    call_status, call.campaign_id, call.lead_id,
-                )
-                resume_auto_dialer_for_campaign(call.campaign_id, call.company_id)
+            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS, on_call_ended
+            _sess = AUTO_DIALER_SESSIONS.get(int(call.campaign_id))
+            if _sess and _sess.get("current_call_sid") == call_sid:
+                _cancelled = _sess.get("_cancelled_sids")
+                if isinstance(_cancelled, set) and call_sid in _cancelled:
+                    _cancelled.discard(call_sid)
+                    logger.info("[STATUS→DIALER] SID %s cancelado manualmente — sem avanço", call_sid)
+                else:
+                    # Determina disposição respeitando o que AMD/conferência já classificou
+                    if call.status in ("voicemail", "voicemail_uncertain"):
+                        _disp, _force = "voicemail", True
+                    elif call.status in ("no_answer", "busy", "failed"):
+                        _disp, _force = call.status, False
+                    else:
+                        _disp = {
+                            "no-answer": "no_answer",
+                            "no_answer": "no_answer",
+                            "busy":      "busy",
+                            "failed":    "failed",
+                            "canceled":  "no_answer",
+                            "completed": "no_answer",
+                        }.get(call_status, "no_answer")
+                        _force = False
+                    logger.info(
+                        "[STATUS→DIALER] %s → disposition=%s force=%s | campaign=%s lead=%s",
+                        call_status, _disp, _force, call.campaign_id, call.lead_id,
+                    )
+                    on_call_ended(
+                        int(call.campaign_id), int(call.company_id),
+                        call_sid, _disp, delay=0, force_advance=_force,
+                    )
         except Exception as _exc:
-            logger.error("[STATUS→DIALER] Erro ao retomar discador: %s", _exc)
+            logger.error("[STATUS→DIALER] Erro ao avançar discador: %s", _exc)
 
     # ── Débito automático de crédito ────────────────────────────────────────
     if call_status == "completed" and call_duration and call.company_id:

@@ -365,6 +365,19 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
     # Chamada não atendida (no_answer, busy, failed, voicemail sem force_advance) sem mais números:
     # avança automaticamente para o próximo lead sem pausar.
     logger.info("[EVENT] Chamada %s encerrada (%s) sem mais números → avançando para próximo lead", call_sid, disposition)
+
+    # Garante que o lead sai do status "dialing" para não ficar preso.
+    # Ring-timer (50s) já faz isso para timeouts, mas quando o Twilio antecipa o no-answer
+    # o timer é cancelado aqui e o lead ficaria em "dialing" indefinidamente sem este bloco.
+    if current_lead_id and disposition in ("no_answer", "busy", "failed"):
+        try:
+            _lead = Lead.query.filter_by(id=current_lead_id, company_id=company_id).first()
+            if _lead and _lead.status in ("dialing", "ringing"):
+                _lead.status = disposition   # "no_answer" | "busy" | "failed"
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     sess["current_call_sid"] = None
     _advance(campaign_id, company_id, delay=delay if delay else 2)
 
