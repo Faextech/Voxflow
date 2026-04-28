@@ -564,6 +564,10 @@
         document.getElementById('regAddress').value = c.reg_address || '';
 
         document.getElementById('twilioInfo').innerHTML = c.twilio_subaccount_sid ? `<span class="badge badge-green">Subconta: ${c.twilio_subaccount_sid}</span><br><small>Número: ${c.twilio_number||'Pendente'}</small>` : '<span class="badge badge-gray">Sem Subconta</span>';
+
+        // Mostra/oculta botões Suspender e Ativar conforme status
+        document.getElementById('btnSuspend').style.display = (c.twilio_subaccount_sid && c.status === 'active') ? 'inline-flex' : 'none';
+        document.getElementById('btnActivate').style.display = (c.twilio_subaccount_sid && c.status === 'suspended') ? 'inline-flex' : 'none';
         
         const txHtml = c.recent_transactions.map(t => `<div class="tx-item"><div><div class="tx-desc">${esc(t.description)}</div><div class="tx-date">${new Date(t.created_at).toLocaleString()}</div></div><div class="tx-amount ${t.amount>=0?'credit':'debit'}">R$ ${Math.abs(t.amount).toFixed(2)}</div></div>`).join('');
         document.getElementById('txHistory').innerHTML = txHtml || '<p style="font-size:12px;text-align:center;">Sem transações</p>';
@@ -710,6 +714,32 @@
         } else {
             showToast('Erro: ' + d.error, 'error');
         }
+    }
+
+    async function suspendCompany() {
+        if (!confirm('Suspender esta empresa no Twilio?')) return;
+        const r = await API('/api/admin/companies/' + _currentCompanyId + '/suspend', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) { showToast('Empresa suspensa!'); openCompany(_currentCompanyId); loadCompanies(); }
+        else showToast('Erro: ' + (d.error || ''), 'error');
+    }
+
+    async function activateCompany() {
+        if (!confirm('Reativar esta empresa no Twilio?')) return;
+        const r = await API('/api/admin/companies/' + _currentCompanyId + '/activate', { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) { showToast('Empresa ativada!'); openCompany(_currentCompanyId); loadCompanies(); }
+        else showToast('Erro: ' + (d.error || ''), 'error');
+    }
+
+    function copyCode() {
+        const code = document.getElementById('generatedCode').textContent;
+        navigator.clipboard.writeText(code).then(() => showToast('Código copiado!')).catch(() => {
+            const el = document.createElement('textarea');
+            el.value = code; document.body.appendChild(el); el.select();
+            document.execCommand('copy'); document.body.removeChild(el);
+            showToast('Código copiado!');
+        });
     }
 </script>
 
