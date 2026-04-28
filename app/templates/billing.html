@@ -338,17 +338,24 @@
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = document.documentElement.classList.contains('dark');
 
-            const token = localStorage.getItem('voxflow_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
-            if (token) {
+            // Verifica autenticação
+            const authToken = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || '';
+            if (!authToken) { window.location.href = '/login'; return; }
+
+            const token = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+            const storedName = localStorage.getItem('voxflow_user_name') || '';
+            let userName = storedName;
+            if (!userName && token) {
                 try {
                     const p = JSON.parse(atob(token.split('.')[1]));
-                    const name = p.name || p.sub || 'Usuário';
-                    const el = document.getElementById('sidebar-user-name');
-                    const av = document.getElementById('sidebar-user-avatar');
-                    if (el) el.textContent = name;
-                    if (av) av.textContent = name.charAt(0).toUpperCase();
+                    userName = p.name || p.sub || '';
                 } catch(e) {}
             }
+            if (!userName) userName = 'Usuário';
+            const el = document.getElementById('sidebar-user-name');
+            const av = document.getElementById('sidebar-user-avatar');
+            if (el) el.textContent = userName;
+            if (av) av.textContent = userName.charAt(0).toUpperCase();
         });
         function logoutApp() {
             localStorage.clear(); sessionStorage.clear();
@@ -590,7 +597,7 @@
 
     <script>
     /* ─── Billing JS — zero alterações na lógica ─────────────────────────────── */
-    const TOKEN = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    const TOKEN = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || sessionStorage.getItem('token') || '';
     const HEADERS = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${TOKEN}` };
 
     let txPage = 1;

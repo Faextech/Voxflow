@@ -480,10 +480,10 @@
         }
         const d = await r.json();
 
-        // Saldo Twilio real
+        // Saldo Twilio real (convertido para BRL)
         const twilioBalanceHtml = d.twilio_balance !== null && d.twilio_balance !== undefined
-            ? `<div class="stat-value" style="color:#a78bfa;">${d.twilio_currency} ${parseFloat(d.twilio_balance).toFixed(2)}</div>
-               <div class="stat-sub">Conta Twilio Master</div>`
+            ? `<div class="stat-value" style="color:#a78bfa;">R$ ${(d.twilio_balance_brl !== null && d.twilio_balance_brl !== undefined ? d.twilio_balance_brl : parseFloat(d.twilio_balance) * 5.80).toFixed(2)}</div>
+               <div class="stat-sub">Conta Twilio Master${d.usd_brl_rate ? ` · USD ${parseFloat(d.twilio_balance).toFixed(2)} × ${d.usd_brl_rate.toFixed(2)}` : ''}</div>`
             : `<div class="stat-value" style="color:#f87171;font-size:14px;">Erro</div>
                <div class="stat-sub" style="color:#f87171;" title="${esc(d.twilio_error||'')}">Twilio indisponível</div>`;
 
@@ -530,7 +530,14 @@
     function renderCompaniesTable() {
         const rows = companies.map(c => `
             <tr>
-                <td><div style="font-weight:600;">${esc(c.name)}</div></td>
+                <td>
+                    <div style="font-weight:600;">${esc(c.name)}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${esc(c.email||'')}</div>
+                </td>
+                <td>
+                    <div style="font-weight:500;font-size:13px;">${esc(c.admin_name||'—')}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${esc(c.admin_email||'—')}</div>
+                </td>
                 <td><span class="badge badge-blue">${c.plan || '—'}</span></td>
                 <td style="font-weight:700;">R$ ${(c.credit_balance||0).toFixed(2)}</td>
                 <td><span class="badge badge-${c.twilio_subaccount_sid ? 'green':'gray'}">${c.twilio_subaccount_sid ? 'Sim' : 'Não'}</span></td>
@@ -538,7 +545,7 @@
                 <td><button class="btn btn-outline btn-sm" onclick="openCompany(${c.id})">Detalhes</button></td>
             </tr>
         `).join('');
-        document.getElementById('companiesTable').innerHTML = `<table><thead><tr><th>Empresa</th><th>Plano</th><th>Saldo</th><th>Twilio</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+        document.getElementById('companiesTable').innerHTML = `<table><thead><tr><th>Empresa</th><th>Usuário / Login</th><th>Plano</th><th>Saldo</th><th>Twilio</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 
     let _currentCompanyId = null;

@@ -35,6 +35,7 @@ def _auto_add_missing_columns(db):
             "reg_tax_id":           "VARCHAR(50)",
             "reg_address":          "TEXT",
             "reg_document_path":    "VARCHAR(512)",
+            "phone":                "VARCHAR(50)",
         }
         for col, col_type in new_cols.items():
             if col not in existing:

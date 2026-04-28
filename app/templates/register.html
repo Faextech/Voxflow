@@ -255,6 +255,11 @@
         </div>
 
         <div class="form-group">
+            <label for="phone">Telefone / WhatsApp</label>
+            <input type="tel" id="phone" placeholder="(11) 99999-9999">
+        </div>
+
+        <div class="form-group">
             <label for="invite_code">Código de Convite</label>
             <input type="text" id="invite_code" placeholder="Ex: VXF-ABC123" required>
         </div>
@@ -275,6 +280,7 @@
             const email       = document.getElementById('email').value.trim();
             const password    = document.getElementById('password').value;
             const company     = document.getElementById('company').value.trim();
+            const phone       = document.getElementById('phone').value.trim();
             const inviteCode  = document.getElementById('invite_code').value.trim();
 
             const errorDiv   = document.getElementById('error');
@@ -309,6 +315,7 @@
                         email:        email,
                         password:     password,
                         company_name: company,
+                        phone:        phone,
                         invite_code:  inviteCode
                     })
                 });

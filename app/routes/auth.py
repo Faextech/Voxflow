@@ -24,6 +24,7 @@ def register():
     email        = (data.get('email') or '').strip().lower()
     password     = data.get('password')
     company_name = data.get('company_name', 'Minha Empresa')
+    phone        = (data.get('phone') or '').strip()
     invite_code  = (data.get('invite_code') or '').strip()
 
     if not email or not password:
@@ -40,7 +41,7 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email já cadastrado'}), 400
 
-    company = Company(name=company_name, email=email)
+    company = Company(name=company_name, email=email, phone=phone or None)
     db.session.add(company)
     db.session.flush()  # gera company.id sem commitar
 

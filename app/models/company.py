@@ -13,6 +13,7 @@ class Company(db.Model):
     name   = db.Column(db.String(255), nullable=False)
     cnpj   = db.Column(db.String(50),  nullable=True)
     email  = db.Column(db.String(255), nullable=True)
+    phone  = db.Column(db.String(50),  nullable=True)
     plan   = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(50),  nullable=False, default="active")
 

@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import string
+import time
 from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request, g
@@ -13,6 +14,29 @@ from app.models.billing import CreditTransaction
 from app.models.invite_code import InviteCode
 
 logger = logging.getLogger(__name__)
+
+_usd_brl_cache = {'rate': None, 'ts': 0}
+
+
+def _get_usd_brl_rate() -> float:
+    """Busca cotação USD→BRL com cache de 1 hora."""
+    now = time.time()
+    if _usd_brl_cache['rate'] and (now - _usd_brl_cache['ts']) < 3600:
+        return _usd_brl_cache['rate']
+    try:
+        import requests as req
+        r = req.get('https://economia.awesomeapi.com.br/json/last/USD-BRL', timeout=5)
+        if r.ok:
+            rate = float(r.json()['USDBRL']['bid'])
+            _usd_brl_cache['rate'] = rate
+            _usd_brl_cache['ts'] = now
+            return rate
+    except Exception as exc:
+        logger.warning('[EXCHANGE] Erro ao buscar USD/BRL: %s', exc)
+    env_rate = os.getenv('USD_BRL_RATE')
+    if env_rate:
+        return float(env_rate)
+    return 5.80
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -58,6 +82,7 @@ def list_companies():
     result = []
     for c in companies:
         user_count = User.query.filter_by(company_id=c.id).count()
+        admin_user = User.query.filter_by(company_id=c.id, role='admin').first()
         result.append({
             'id': c.id,
             'name': c.name,
@@ -69,6 +94,8 @@ def list_companies():
             'twilio_subaccount_sid': c.twilio_subaccount_sid,
             'user_count': user_count,
             'created_at': c.created_at.isoformat() if c.created_at else None,
+            'admin_name': admin_user.name if admin_user else None,
+            'admin_email': admin_user.email if admin_user else None,
         })
     return jsonify(result)
 
@@ -395,6 +422,12 @@ def admin_dashboard():
     # ── Saldo REAL da conta Twilio master ─────────────────────────────────────
     twilio_balance, twilio_currency, twilio_error = _fetch_twilio_balance_real()
 
+    twilio_balance_brl = None
+    usd_brl_rate = None
+    if twilio_balance:
+        usd_brl_rate = _get_usd_brl_rate()
+        twilio_balance_brl = round(float(twilio_balance) * usd_brl_rate, 2)
+
     return jsonify({
         'total_companies':      total_companies,
         'master_balance':       master_balance,
@@ -404,7 +437,9 @@ def admin_dashboard():
         'total_credit_platform': master_balance + float(total_clients_credit),
         # Saldo real da conta Twilio (USD) — None se falhou
         'twilio_balance':       twilio_balance,
+        'twilio_balance_brl':   twilio_balance_brl,
         'twilio_currency':      twilio_currency or 'USD',
+        'usd_brl_rate':         usd_brl_rate,
         'twilio_error':         twilio_error,
     })
 

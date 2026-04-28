@@ -2,13 +2,11 @@
 Rotas de billing: saldo, histórico, recarga manual (admin) e webhook de pagamento.
 """
 
-import hashlib
-import hmac
 import logging
 import os
 from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 
 from app.auth import require_auth, require_role
 from app.extensions import db
@@ -25,8 +23,8 @@ billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 # ---------------------------------------------------------------------------
 @billing_bp.route("/balance", methods=["GET"])
 @require_auth
-def get_balance(current_user):
-    company = Company.query.get(current_user.company_id)
+def get_balance():
+    company = Company.query.get(g.company_id)
     if not company:
         return jsonify({"error": "Empresa não encontrada"}), 404
 
@@ -44,12 +42,12 @@ def get_balance(current_user):
 # ---------------------------------------------------------------------------
 @billing_bp.route("/transactions", methods=["GET"])
 @require_auth
-def list_transactions(current_user):
+def list_transactions():
     page = request.args.get("page", 1, type=int)
     per_page = min(request.args.get("per_page", 20, type=int), 100)
     tx_type = request.args.get("type")  # opcional: "recharge" | "call_debit"
 
-    q = CreditTransaction.query.filter_by(company_id=current_user.company_id)
+    q = CreditTransaction.query.filter_by(company_id=g.company_id)
     if tx_type:
         q = q.filter_by(type=tx_type)
     q = q.order_by(CreditTransaction.created_at.desc())
@@ -70,7 +68,7 @@ def list_transactions(current_user):
 @billing_bp.route("/recharge", methods=["POST"])
 @require_auth
 @require_role("admin")
-def manual_recharge(current_user):
+def manual_recharge():
     data = request.get_json(silent=True) or {}
     try:
         amount = Decimal(str(data.get("amount", 0)))
@@ -80,7 +78,7 @@ def manual_recharge(current_user):
     if amount <= 0:
         return jsonify({"error": "Valor deve ser positivo"}), 400
 
-    company = Company.query.get(current_user.company_id)
+    company = Company.query.get(g.company_id)
     if not company:
         return jsonify({"error": "Empresa não encontrada"}), 404
 
@@ -104,7 +102,7 @@ def manual_recharge(current_user):
 # ---------------------------------------------------------------------------
 @billing_bp.route("/payment/initiate", methods=["POST"])
 @require_auth
-def initiate_payment(current_user):
+def initiate_payment():
     data = request.get_json(silent=True) or {}
     try:
         amount = Decimal(str(data.get("amount", 0)))
@@ -115,7 +113,7 @@ def initiate_payment(current_user):
         return jsonify({"error": "Valor mínimo de recarga é R$ 10,00"}), 400
 
     method = data.get("method", "pix")  # "pix" | "card"
-    company = Company.query.get(current_user.company_id)
+    company = Company.query.get(g.company_id)
 
     mp_access_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
     if not mp_access_token:
@@ -138,12 +136,12 @@ def initiate_payment(current_user):
                 "description": f"VoxFlow - Recarga de crédito ({company.name})",
                 "payment_method_id": "pix",
                 "payer": {
-                    "email": current_user.email,
+                    "email": g.user_email,
                 },
                 "notification_url": f"{backend_url}/api/billing/payment/webhook",
                 "metadata": {
                     "company_id": str(company.id),
-                    "user_id": str(current_user.id),
+                    "user_id": str(g.user_id),
                     "amount": str(amount),
                 },
             }
@@ -300,13 +298,38 @@ def payment_webhook():
 # ---------------------------------------------------------------------------
 @billing_bp.route("/dashboard", methods=["GET"])
 @require_auth
-def billing_dashboard(current_user):
+def billing_dashboard():
     from app.models.call import Call
     from sqlalchemy import func
 
-    company = Company.query.get(current_user.company_id)
+    company = Company.query.get(g.company_id)
     if not company:
         return jsonify({"error": "Empresa não encontrada"}), 404
+
+    # Para superadmin: exibe saldo real da Twilio convertido para BRL
+    if g.user_role == 'superadmin':
+        try:
+            from app.api.routes.admin_routes import _fetch_twilio_balance_real, _get_usd_brl_rate
+            twilio_balance, twilio_currency, twilio_error = _fetch_twilio_balance_real()
+            if twilio_balance:
+                rate = _get_usd_brl_rate()
+                balance = float(twilio_balance) * rate
+            else:
+                balance = company.get_balance()
+        except Exception as e:
+            logger.error(f"[BILLING] Erro ao buscar saldo Twilio para superadmin: {e}")
+            balance = company.get_balance()
+
+        return jsonify({
+            "balance": balance,
+            "cost_per_minute": float(company.cost_per_minute),
+            "has_credit": balance > 0,
+            "is_twilio_balance": True,
+            "last_30_days": {"total_spent": 0, "total_calls": 0},
+            "last_recharges": [],
+            "last_calls": [],
+            "currency": "BRL",
+        })
 
     # Total gasto em chamadas (último mês)
     from datetime import datetime, timedelta
@@ -359,10 +382,10 @@ def billing_dashboard(current_user):
 # ---------------------------------------------------------------------------
 @billing_bp.route("/payment/<payment_id>/status", methods=["GET"])
 @require_auth
-def payment_status(current_user, payment_id):
+def payment_status(payment_id):
     tx = CreditTransaction.query.filter_by(
         payment_id=str(payment_id),
-        company_id=current_user.company_id,
+        company_id=g.company_id,
     ).first()
 
     if not tx:
