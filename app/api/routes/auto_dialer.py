@@ -624,17 +624,16 @@ def _dial_locked(campaign_id, company_id, sess, force=False, skip_current_id=Non
             async_amd              = "true",
             async_amd_status_callback         = amd_callback_url,
             async_amd_status_callback_method  = "POST",
-            # Parâmetros AMD para operadoras brasileiras (Vivo/Claro/TIM/Oi)
-            # speech_threshold=1500: janela de análise menor → AMD decide mais rápido,
-            #   evitando acumular dois "alô" curtos que imitam saudação de caixa postal.
-            # speech_end_threshold=1800: reduzido de 2500ms. Com 2500ms o AMD esperava
-            #   2,5s de silêncio após o "alô" do humano — tempo suficiente para o lead
-            #   repetir "alô", formando padrão [alô+pausa+alô] idêntico ao de caixa postal.
-            #   Com 1800ms o AMD encerra a análise após o 1º "alô" + 1,8s de silêncio,
-            #   classificando corretamente como humano antes de um 2º "alô".
+            # Parâmetros AMD para operadoras brasileiras (Vivo/Claro/TIM/Oi).
+            # speech_end_threshold=2500: caixas postais BR têm pausas de ~1,5-2,5s no
+            #   meio da saudação — valor menor fazia o AMD decidir antes de ver a pausa
+            #   e classificava erroneamente como humano.
+            # O padrão "alô+pausa+alô" que causava FP em humanos é resolvido pelo
+            #   <Say> no /amd-hold: o lead ouve "Um momento" e não repete o alô,
+            #   então o AMD analisa um único "alô" + 2,5s de silêncio = humano.
             machine_detection_timeout              = 15,
-            machine_detection_speech_threshold     = 1500,
-            machine_detection_speech_end_threshold = 1800,
+            machine_detection_speech_threshold     = 2400,
+            machine_detection_speech_end_threshold = 2500,
             machine_detection_silence_timeout      = 3000,
             timeout                = 55,
         )
