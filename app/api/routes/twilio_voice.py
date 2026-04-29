@@ -487,11 +487,9 @@ def amd_hold():
     /amd-callback redireciona via REST para /lead-entry → conferência.
     """
     response = VoiceResponse()
-    # <Say> vai PARA o lead (fone dele). AMD só ouve o que o LEAD fala,
-    # então isso não polui a análise e evita o padrão alô+pausa+alô.
-    response.say("Um momento, por favor.", language="pt-BR")
-    response.pause(length=13)
-    # AMD não respondeu em ~14s → encerra
+    # Silêncio enquanto o AMD analisa. O falso-positivo alô+alô é tratado em
+    # /amd-callback: machine_start em < 6s → incerto → redireciona para operador.
+    response.pause(length=15)
     response.hangup()
     return str(response), 200, {"Content-Type": "text/xml"}
 
