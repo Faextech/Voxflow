@@ -736,10 +736,43 @@ def amd_callback():
         logger.info("[AMD] Chamada %s já encerrou (ended_at=%s). Forçando is_machine=True para ignorar popup fantasma.", call_sid, c.ended_at)
         is_machine = True
 
-    if is_machine:
-        logger.info("[AMD] Máquina detectada (%s). Encerrando chamada %s...", answered_by, call_sid)
+    # ── Calcula duração ANTES de qualquer ação para decidir certeza ──────────
+    # Deve acontecer ANTES de terminar a chamada.
+    _call_duration = None
+    if c and c.answered_at:
+        _call_duration = (datetime.utcnow() - c.answered_at).total_seconds()
+    elif item.get("db_call_id"):
+        _c2 = Call.query.get(item["db_call_id"])
+        if _c2 and _c2.answered_at:
+            _call_duration = (datetime.utcnow() - _c2.answered_at).total_seconds()
+            if not c:
+                c = _c2
 
-        # Encerrar via API Twilio
+    # ── Reclassifica machine_start precoce como INCERTO ──────────────────────
+    # machine_start em < 6s = AMD detectou padrão de máquina muito cedo.
+    # Esse janela é exatamente onde humanos com padrão alô+pausa+alô caem:
+    #   T=0.7s  1º alô termina
+    #   T=2-3s  2º alô (lead sem resposta → repete)
+    #   T=3-5s  AMD dispara machine_start ← falso positivo
+    # machine_end_* (beep/silence/other) só dispara APÓS o greeting completo
+    # (8-15s), portanto é muito mais confiável.
+    # Solução: machine_start < 6s → tratar como humano incerto (redireciona para
+    # operador em vez de desligar). O operador ouve o lead e classifica.
+    if is_machine and answered_by == "machine_start":
+        if _call_duration is None or _call_duration < 6:
+            logger.info(
+                "[AMD] machine_start em %.1fs < 6s → INCERTO (possível alô+alô). "
+                "Redirecionando para operador em vez de desligar.",
+                _call_duration or 0,
+            )
+            is_machine = False
+            item["amd_uncertain"] = True
+
+    if is_machine:
+        logger.info("[AMD] Máquina confirmada (%s, %.1fs). Encerrando chamada %s...",
+                    answered_by, _call_duration or 0, call_sid)
+
+        # Termina a chamada somente para detecções certas
         try:
             company = Company.query.get(company_id or (g.company_id if hasattr(g, 'company_id') else None))
             if company:
@@ -748,35 +781,17 @@ def amd_callback():
         except Exception as e:
             logger.error("[AMD] Erro ao encerrar chamada (máquina): %s", e)
 
-        # Voicemail incerto: duração curta OU answered_at desconhecido = possível falso positivo AMD
-        # Limiar 15s: qualquer detecção de máquina com menos de 15s de conversa real vai para retry
-        # Se answered_at não foi gravado (duração desconhecida), também é incerto
-        call_duration = None
-        if c and c.answered_at:
-            call_duration = (datetime.utcnow() - c.answered_at).total_seconds()
-
-        is_uncertain = (call_duration is None) or (call_duration < 15)
-        final_vm_status = "voicemail_uncertain" if is_uncertain else "voicemail"
-
+        # machine_end_* ou machine_start tardio (≥6s) = voicemail real confirmado
         if c:
-            c.status     = final_vm_status
+            c.status     = "voicemail"
             c.ended_at   = c.ended_at or datetime.utcnow()
             c.amd_result = answered_by
             db.session.commit()
 
-        if is_uncertain:
-            _dur_log = f"{call_duration:.1f}s" if call_duration is not None else "desconhecida"
-            logger.info("[AMD] Voicemail INCERTO (duração %s). Lead %s → retry no final da fila.", _dur_log, item.get("lead_id"))
-            lead = Lead.query.get(item.get("lead_id"))
-            if lead:
-                lead.status = "retry"
-                db.session.commit()
-        else:
-            update_lead_crm_status(item.get("lead_id"), item.get("db_call_id"), "voicemail", f"AMD: {answered_by}")
+        update_lead_crm_status(item.get("lead_id"), item.get("db_call_id"), "voicemail", f"AMD: {answered_by}")
 
         if campaign_id and company_id:
-            logger.info("[AMD] Caixa Postal detectada. Repassando para on_call_ended com force_advance=True")
-            # Limpa a bridge
+            logger.info("[AMD] Caixa Postal confirmada. Avançando discador.")
             item["lead_id"]       = None
             item["db_call_id"]    = None
             item["lead_call_sid"] = None
