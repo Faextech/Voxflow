@@ -989,17 +989,7 @@ async function startWebphone() {
         closeProtection: true,
         edge: ["sao-paulo", "ashburn"],  // Prioriza São Paulo para menor latência no Brasil
         allowIncomingWhileBusy: true,
-        sounds: {
-          outgoing: '', // Desabilita o som de "chamando" antigo (SDK 1.x)
-          disconnect: '' // Desabilita o som de queda
-        }
       });
-
-      // Desabilita o som de "chamando" novo (SDK 2.x+)
-      if (device.audio && typeof device.audio.outgoing === 'function') {
-         device.audio.outgoing(false);
-         device.audio.disconnect(false);
-      }
 
       device.on("registering", () => {
         setDeviceStatus("registrando...");
