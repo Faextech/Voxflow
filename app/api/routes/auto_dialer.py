@@ -380,6 +380,7 @@ def on_call_ended(campaign_id: int, company_id: int, call_sid: str, disposition:
         except Exception:
             db.session.rollback()
 
+    sess["status"] = "running"
     sess["current_call_sid"] = None
     _advance(campaign_id, company_id, delay=delay if delay else 2)
 
