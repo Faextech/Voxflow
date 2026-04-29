@@ -302,6 +302,42 @@ async function safeJson(response) {
   return await response.json();
 }
 
+// ── Ringback local para ligação manual ──────────────────────────────────────
+// A chamada manual usa REST API (servidor liga para o lead), então o SDK do
+// browser não sabe que o telefone está tocando e não toca ringback sozinho.
+// Geramos o tom padrão brasileiro (425 Hz, 1s on / 4s off) via Web Audio API.
+let _ringbackCtx = null;
+let _ringbackTimer = null;
+
+function startRingback() {
+  stopRingback();
+  try {
+    _ringbackCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone() {
+      if (!_ringbackCtx) return;
+      const osc  = _ringbackCtx.createOscillator();
+      const gain = _ringbackCtx.createGain();
+      osc.connect(gain);
+      gain.connect(_ringbackCtx.destination);
+      osc.frequency.value = 425;
+      gain.gain.setValueAtTime(0.25, _ringbackCtx.currentTime);
+      gain.gain.setValueAtTime(0,    _ringbackCtx.currentTime + 1);
+      osc.start(_ringbackCtx.currentTime);
+      osc.stop(_ringbackCtx.currentTime + 1);
+    }
+    playTone();
+    _ringbackTimer = setInterval(playTone, 5000); // 1s tom + 4s silêncio
+  } catch (e) {
+    console.warn("[ringback] Web Audio não suportado:", e);
+  }
+}
+
+function stopRingback() {
+  if (_ringbackTimer) { clearInterval(_ringbackTimer); _ringbackTimer = null; }
+  if (_ringbackCtx)   { try { _ringbackCtx.close(); } catch (e) {} _ringbackCtx = null; }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 // Referência global ao elemento <audio> remoto do Twilio SDK.
 // O SDK cria este elemento via `new Audio()` — ele NÃO é adicionado ao DOM,
 // então document.querySelectorAll("audio") nunca o encontra.
@@ -1169,10 +1205,12 @@ async function makeCall() {
 
     log(`Chamada discada para ${phoneNumber}. Aguardando atendimento...`);
     setCallStatus("chamando...");
+    startRingback();
   } catch (error) {
     console.error(error);
     setCallStatus("falha");
     log(`Erro ao ligar: ${error.message}`);
+    stopRingback();
   }
 }
 
@@ -1344,6 +1382,12 @@ async function pollOperatorState() {
     setCallStatus(status);
 
     // Evita poluir o log visual se for a carga inicial da página
+    const _terminalStatuses = ["completed", "failed", "busy", "no-answer", "no_answer", "canceled"];
+    const _answeredStatuses = ["in-progress", "answered", "agent_joined"];
+    if (_terminalStatuses.includes(status) || _answeredStatuses.includes(status)) {
+      stopRingback();
+    }
+
     if (!isInitialLoad) {
       if (status === "completed") {
         log("Chamada finalizada.");
@@ -1357,7 +1401,7 @@ async function pollOperatorState() {
         log("Chamada cancelada.");
       } else if (status === "ringing") {
         log("Telefone tocando...");
-      } else if (status === "in-progress" || status === "answered" || status === "agent_joined") {
+      } else if (_answeredStatuses.includes(status)) {
         log("Chamada em andamento.");
       }
     }
