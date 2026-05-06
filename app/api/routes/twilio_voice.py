@@ -1253,6 +1253,7 @@ def manual_call():
     # Marca explicitamente como chamada manual para o frontend rotear o popup correto
     if conf_name in ACTIVE_CONFERENCES_BY_NAME:
         ACTIVE_CONFERENCES_BY_NAME[conf_name]["is_manual"] = True
+        ACTIVE_CONFERENCES_BY_NAME[conf_name]["audio_bridged"] = True
 
     logger.info("[MANUAL-CALL] agent=%s to=%s conf=%s sid=%s", agent_id, to_norm, conf_name, call.sid)
     return jsonify({"ok": True, "call_sid": call.sid, "conference": conf_name}), 200
@@ -1489,23 +1490,30 @@ def voice():
     agent = Agent.query.filter_by(company_id=company_id, status='active').first()
     agent_id = agent.id if agent else 1
     
-    conf_name = f"inbound_{call_sid}"
+    conf_name = f"agent_bridge_{agent_id}"
     public_base_url = (os.getenv("PUBLIC_BASE_URL") or "").strip()
+    if not public_base_url:
+        public_base_url = _base_url()
+        
+    conf_url = f"{public_base_url}/api/twilio/conference-events"
     
     # 1. Registrar a state da conferência INBOUND
-    ACTIVE_CONFERENCES_BY_AGENT[agent_id] = {
-        "conference_name": conf_name,
-        "company_id": company_id,
-        "agent_id": agent_id,
-        "campaign_id": "INBOUND",
-        "phone_number": from_ph,
-        "lead_name": "Ligação Receptiva",
-        "company_name": "Cliente / Desconhecido",
-        "status": "answered_waiting_agent",
-        "created_at": datetime.utcnow().isoformat(),
-        "lead_answered_at": datetime.utcnow().isoformat()
-    }
-    ACTIVE_CONFERENCES_BY_NAME[conf_name] = ACTIVE_CONFERENCES_BY_AGENT[agent_id]
+    from app.services.call_bridge import register_pending_conference
+    
+    register_pending_conference(
+        conference_name=conf_name,
+        agent_id=agent_id,
+        lead_id=0,
+        company_id=company_id,
+        phone_number=from_ph,
+        lead_name="Ligação Receptiva",
+        campaign_id=None,
+        lead_call_sid=call_sid,
+        user_email=None,
+    )
+    
+    if conf_name in ACTIVE_CONFERENCES_BY_NAME:
+        ACTIVE_CONFERENCES_BY_NAME[conf_name]["audio_bridged"] = True
 
     # Não disparamos client:agent_* — o operador entra com device.connect (outgoing)
     # para o mesmo conference_name quando o pending-call aparecer no browser.
@@ -1517,8 +1525,12 @@ def voice():
         conf_name,
         start_conference_on_enter=False,
         end_conference_on_exit=True,
-        beep=False,
-        wait_url=f"{public_base_url}/api/twilio/wait-audio?c={conf_name}"
+        beep=True,
+        wait_url=f"{public_base_url}/api/twilio/wait-audio?c={conf_name}",
+        status_callback=conf_url,
+        status_callback_method="POST",
+        status_callback_event="start end join leave",
+        participant_label="inbound_caller"
     )
     response.append(dial)
     
