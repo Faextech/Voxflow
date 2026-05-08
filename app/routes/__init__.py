@@ -25,6 +25,9 @@ from app.api.routes.analytics import analytics_bp
 from app.api.routes.support_routes import support_bp
 from app.api.routes.billing_routes import billing_bp
 from app.api.routes.admin_routes import admin_bp
+from app.api.routes.dnc_routes import dnc_bp
+from app.api.routes.followup_routes import followup_bp
+from app.api.routes.callback_routes import callback_bp
 
 
 def register_blueprints(app):
@@ -55,3 +58,6 @@ def register_blueprints(app):
     app.register_blueprint(support_bp)
     app.register_blueprint(billing_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(dnc_bp)
+    app.register_blueprint(followup_bp)
+    app.register_blueprint(callback_bp)

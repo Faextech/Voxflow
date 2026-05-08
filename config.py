@@ -54,10 +54,13 @@ class Config:
     PREFERRED_URL_SCHEME = 'https'
     JSON_SORT_KEYS = False
 
+    # ========== REDIS ==========
+    REDIS_URL = os.getenv('REDIS_URL', '')
+
     # ========== JWT (JSON Web Tokens) ==========
     JWT_ALGORITHM = 'HS256'
-    JWT_EXPIRATION_HOURS = 168
-    JWT_REFRESH_EXPIRATION_DAYS = 7
+    JWT_EXPIRATION_HOURS = int(os.getenv('JWT_EXPIRATION_HOURS', '4'))   # access token: 4h
+    JWT_REFRESH_EXPIRATION_DAYS = int(os.getenv('JWT_REFRESH_DAYS', '30'))  # refresh: 30 dias
 
     # ========== CORS (Cross-Origin Resource Sharing) ==========
     CORS_ORIGINS = os.getenv(

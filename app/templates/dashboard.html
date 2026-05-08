@@ -7,12 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <!-- Socket.IO: servido pelo Flask-SocketIO (endpoint /socket.io/socket.io.js automático) -->
+    <script src="/socket.io/socket.io.js" onerror="console.warn('[WS] socket.io CDN indisponível')"></script>
+
         <style>
         :root {
             /* Tema Claro (Padrão) */
             --bg-primary: #ffffff;
             --bg-secondary: #f8fafc;
             --bg-card: #ffffff;
+            --surface: #f1f5f9;
             --border: #e2e8f0;
             --text-primary: #0f172a;
             --text-secondary: #64748b;
@@ -23,6 +27,8 @@
             --sidebar-bg: #1e293b;
             --sidebar-text: #f1f5f9;
             --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --input-bg: #f8fafc;
+            --input-border: #cbd5e1;
             /* Legacy aliases */
             --muted: var(--text-secondary);
             --primary: var(--accent);
@@ -35,12 +41,35 @@
             --bg-primary: #0f172a;
             --bg-secondary: #1e293b;
             --bg-card: #1e293b;
+            --surface: #1e293b;
             --border: #334155;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --sidebar-bg: #0f172a;
             --sidebar-text: #f1f5f9;
+            --input-bg: rgba(0,0,0,0.25);
+            --input-border: #334155;
         }
+
+        /* Inputs + selects follow theme */
+        input:not([type=checkbox]):not([type=radio]):not([type=range]),
+        select, textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.15s;
+            outline: none;
+        }
+        input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,
+        select:focus, textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        }
+        select option { background: var(--bg-card); color: var(--text-primary); }
 
         /* Base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -422,6 +451,89 @@
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .gap-2 { gap: 8px; }
         .gap-4 { gap: 16px; }
+
+        /* ── Mobile hamburger button (hidden on desktop) ── */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed; top: 12px; left: 12px; z-index: 1100;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 8px; cursor: pointer;
+            color: var(--text-primary); line-height: 0;
+        }
+        .mobile-overlay {
+            display: none;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        /* ── Responsive breakpoints ── */
+        @media (max-width: 900px) {
+            .app { grid-template-columns: 1fr; }
+
+            .sidebar {
+                position: fixed; left: -260px; top: 0; bottom: 0;
+                width: 240px; z-index: 1000;
+                transition: left 0.25s ease;
+            }
+            .sidebar.open { left: 0; }
+            .mobile-menu-btn { display: flex; }
+            .mobile-overlay.open { display: block; }
+
+            .main-content { padding: 56px 12px 20px; }
+
+            /* Cards grid: 2 columns on tablet */
+            .stats-grid,
+            .mini-info { grid-template-columns: repeat(2, 1fr) !important; }
+
+            /* Hub layout stacks */
+            .hub-layout { grid-template-columns: 1fr !important; }
+            .hub-sidebar { display: none !important; }
+        }
+
+        @media (max-width: 900px) {
+            /* Panel headers stack on tablet */
+            .panel-header { flex-direction: column; align-items: flex-start !important; gap: 10px !important; }
+            .panel-header button { width: 100%; }
+        }
+
+        @media (max-width: 600px) {
+            /* Cards grid: 1 column on phone */
+            .stats-grid,
+            .mini-info { grid-template-columns: 1fr !important; }
+
+            /* Premium call popup */
+            .pcall-body { grid-template-columns: 1fr !important; }
+            .pcall-center-panel,
+            .pcall-crm-panel { border-left: none !important; border-top: 1px solid var(--border); }
+
+            /* Analytics KPI row */
+            .analytics-kpi-row { grid-template-columns: 1fr 1fr !important; }
+
+            /* Panels */
+            .panel { border-radius: 12px !important; }
+
+            /* Campaign cards — actions wrap and go full width */
+            .campaign-card .btn { font-size: 11px !important; padding: 6px 10px !important; }
+
+            /* Tables — horizontal scroll */
+            table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+            /* Topbar */
+            .topbar { padding: 0 10px !important; gap: 6px !important; }
+            #topbar-campaign-name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+            /* Forms in panels */
+            #campaign-form { flex-direction: column !important; }
+            #campaign-form .field { min-width: unset !important; width: 100% !important; }
+
+            /* Dialer overlay */
+            .dialer-overlay-content { padding: 16px !important; }
+            .monitor-stats { grid-template-columns: 1fr 1fr !important; }
+
+            /* Modals full width on phone */
+            .modal-content,
+            [id$="Modal"] > div { width: 96% !important; padding: 18px !important; }
+        }
     </style>
     <style>
         /* ── SIDEBAR PREMIUM ── */
@@ -584,11 +696,39 @@
             color: var(--text-secondary);
         }
         .empty-state svg { opacity: 0.3; margin-bottom: 12px; }
-        .empty-state p { font-size: 14px; font-weight: 500; }
+        .empty-state p { font-size: 14px; font-weight: 500; margin-bottom: 16px; }
+        .empty-state-icon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: var(--bg-secondary); display: flex; align-items: center;
+            justify-content: center; margin: 0 auto 16px; opacity: 0.6;
+        }
+        .empty-state-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+        .empty-state-desc  { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+        .empty-state-cta   {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--accent); color: #fff;
+            border: none; border-radius: 8px; padding: 8px 18px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: opacity .15s;
+        }
+        .empty-state-cta:hover { opacity: 0.85; }
 
-        /* ── SHIMMER ── */
+        /* ── SHIMMER / SKELETON ── */
         .shimmer-row {
             height: 52px; border-radius: 8px; margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        .skeleton-card {
+            border-radius: 12px; overflow: hidden;
+            background: var(--bg-secondary);
+            background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        .skeleton-text {
+            height: 14px; border-radius: 6px; margin-bottom: 8px;
             background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.5s infinite;
@@ -1104,13 +1244,41 @@
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = isDark;
         }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (!sidebar) return;
+            const open = sidebar.classList.toggle('open');
+            overlay.classList.toggle('open', open);
+        }
+
+        // Close sidebar on nav item click (mobile)
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.menu-link').forEach(el => {
+                el.addEventListener('click', () => {
+                    const sidebar = document.getElementById('appSidebar');
+                    const overlay = document.getElementById('mobileOverlay');
+                    if (sidebar && window.innerWidth <= 900) {
+                        sidebar.classList.remove('open');
+                        overlay && overlay.classList.remove('open');
+                    }
+                });
+            });
+        });
         window.addEventListener('DOMContentLoaded', () => {
             const cb = document.getElementById('themeCheckbox');
             if (cb) cb.checked = document.documentElement.classList.contains('dark');
         });
     </script>
+    <!-- Mobile sidebar controls -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menu" onclick="toggleMobileSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
     <div class="app">
-        <aside class="sidebar">
+        <aside class="sidebar" id="appSidebar">
             <!-- Logo / Brand -->
             <div class="sidebar-brand">
                 <div class="sidebar-logo">
@@ -1150,6 +1318,11 @@
                     Chamadas
                 </button>
 
+                <button class="menu-link" data-section="callbacks">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Callbacks
+                </button>
+
                 <div class="sidebar-section-label">Operação</div>
                 <button class="menu-link" data-section="operation">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
@@ -1162,6 +1335,15 @@
                 <button class="menu-link" data-section="reports">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     Relatórios
+                </button>
+
+                <button class="menu-link" data-section="followup">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                    Follow-up
+                </button>
+                <button class="menu-link" data-section="dnc">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Lista DNC
                 </button>
 
                 <div class="sidebar-section-label">Módulos</div>
@@ -1190,6 +1372,18 @@
                     Configurações
                 </button>
             </nav>
+
+            <!-- Cmd+K shortcut button -->
+            <button onclick="openCmdPalette()" style="
+                margin:0 8px 6px; display:flex; align-items:center; gap:8px;
+                background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+                border-radius:8px; padding:8px 10px; cursor:pointer; width:calc(100% - 16px);
+                color:#94a3b8; font-size:12px; font-family:'Inter',sans-serif;
+                transition:background .15s;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span style="flex:1; text-align:left;">Busca rápida</span>
+                <kbd style="font-size:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:1px 5px;">⌘K</kbd>
+            </button>
 
             <!-- Footer -->
             <div class="sidebar-footer">
@@ -1275,6 +1469,21 @@
                         <h3 id="dash-balance" style="color:#16a34a;">—</h3>
                         <div id="dash-credit-status" style="font-size:11px;margin-top:2px;color:var(--text-secondary);"></div>
                     </div>
+                </div>
+
+                <!-- ── Setup Checklist (UX-05) — hidden when all steps done ── -->
+                <div id="setupChecklist" style="display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:var(--shadow);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                        <div>
+                            <div style="font-size:14px; font-weight:700; color:var(--text-primary);">Configure sua conta</div>
+                            <div style="font-size:12px; color:var(--text-secondary);" id="checklistProgress">0 de 5 etapas concluídas</div>
+                        </div>
+                        <button onclick="dismissSetupChecklist()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;" title="Fechar">×</button>
+                    </div>
+                    <div style="background:var(--bg-secondary);border-radius:6px;height:6px;margin-bottom:16px;">
+                        <div id="checklistBar" style="background:var(--accent);height:6px;border-radius:6px;width:0%;transition:width .4s ease;"></div>
+                    </div>
+                    <div id="checklistSteps" style="display:flex; flex-direction:column; gap:8px;"></div>
                 </div>
 
                 <div class="grid-2">
@@ -1648,6 +1857,9 @@
 
             <section id="section-campaigns" class="content-section">
 
+                <!-- ── ALERTAS DE CAMPANHA (AUTO-03) ── -->
+                <div id="campaignAlertsBar" style="display:none; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+
                 <!-- ── CRIAR CAMPANHA ── -->
                 <div class="panel">
                     <div class="panel-header">
@@ -1669,6 +1881,19 @@
                             <select id="campaign-stage-id">
                                 <option value="">Escolha a pipeline primeiro</option>
                             </select>
+                        </div>
+                        <!-- Modo de discagem -->
+                        <div class="field" style="flex:1; min-width:160px;">
+                            <label title="Auto: sequencial 1 por vez. Preditivo: dispara N chamadas simultâneas por agente disponível.">Modo de discagem</label>
+                            <select id="campaign-dial-mode" onchange="_togglePredictiveRatio()">
+                                <option value="auto">Auto (Sequencial)</option>
+                                <option value="predictive">Preditivo (N×ratio)</option>
+                            </select>
+                        </div>
+                        <!-- Ratio preditivo — visível só no modo preditivo -->
+                        <div class="field" id="campaign-predictive-ratio-wrap" style="flex:0 0 160px; display:none;">
+                            <label title="Nº de chamadas simultâneas por agente disponível. Ex: 1.5 = 3 chamadas para 2 agentes.">Ratio preditivo</label>
+                            <input type="number" id="campaign-predictive-ratio" min="1" max="3" step="0.1" value="1.5" placeholder="1.5">
                         </div>
                         <div class="field" style="display:flex; align-items:center; gap:8px; padding-bottom:6px;">
                             <input type="checkbox" id="campaign-mobile-only" style="width:16px; height:16px; cursor:pointer; accent-color:#6366f1;">
@@ -1725,6 +1950,45 @@
                 </div>
             </section>
 
+            <!-- ── CALLBACKS SECTION (MÉDIO-06) ── -->
+            <section id="section-callbacks" class="content-section">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Fila de Callbacks</h3>
+                            <p>Retornos agendados ordenados por prioridade.</p>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <select id="cbStatusFilter" class="input" style="width:140px;padding:6px 10px;" onchange="loadCallbacks()">
+                                <option value="pending">Pendentes</option>
+                                <option value="all">Todos</option>
+                                <option value="completed">Concluídos</option>
+                                <option value="canceled">Cancelados</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="loadCallbacks()" style="padding:6px 14px;">Atualizar</button>
+                        </div>
+                    </div>
+                    <div id="callbacksTableWrap" class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Prioridade</th>
+                                    <th>Lead</th>
+                                    <th>Telefone</th>
+                                    <th>Agendado Para</th>
+                                    <th>Notas</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="callbacksTableBody">
+                                <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:32px;">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <section id="section-import" class="content-section">
 
                 <div class="panel">
@@ -1741,92 +2005,181 @@
                             <script>(function(){var c=localStorage.getItem('company_id');if(c)document.getElementById('import-company-id').value=c;})();</script>
                         </div>
 
-                        <div class="field" style="margin-bottom:16px;">
-                            <label>Campanha <span style="color:#ef4444;">*</span></label>
-                            <select id="import-campaign-id" required></select>
-                        </div>
-
-                        <div class="form-grid" style="margin-bottom:16px;">
-                            <div class="field">
-                                <label>Pipeline do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
-                                <select id="import-pipeline-id">
-                                    <option value="">(Nenhuma / Usar padrão)</option>
-                                </select>
+                        <!-- ══ IMPORT WIZARD ══════════════════════════════════════════════════ -->
+                        <!-- Passo 1: campanha + arquivo -->
+                        <div id="import-step-1">
+                            <div class="field" style="margin-bottom:16px;">
+                                <label>Campanha <span style="color:#ef4444;">*</span></label>
+                                <select id="import-campaign-id" required></select>
                             </div>
-                            <div class="field">
-                                <label>Estágio do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
-                                <select id="import-stage-id">
-                                    <option value="">Escolha a pipeline primeiro</option>
-                                </select>
+
+                            <div class="form-grid" style="margin-bottom:16px;">
+                                <div class="field">
+                                    <label>Pipeline do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
+                                    <select id="import-pipeline-id">
+                                        <option value="">(Nenhuma / Usar padrão)</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Estágio do CRM <span style="color:var(--text-secondary); font-weight:400;">(Opcional)</span></label>
+                                    <select id="import-stage-id">
+                                        <option value="">Escolha a pipeline primeiro</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Drop-zone -->
+                            <div id="import-dropzone" class="field" style="margin-bottom:24px; border:2px dashed var(--border); border-radius:12px; padding:32px; text-align:center; background:var(--bg-secondary); cursor:pointer; transition:border-color 0.2s;" onclick="document.getElementById('import-file').click()">
+                                <div style="font-size:36px; margin-bottom:8px;">📄</div>
+                                <div style="font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:6px;">Arraste o arquivo aqui</div>
+                                <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">ou clique para selecionar</div>
+                                <div id="import-file-label" style="font-size:12px; color:var(--accent); font-weight:600; display:none;"></div>
+                                <input type="file" id="import-file" accept=".csv,.xlsx" style="display:none">
+                                <div style="font-size:11px; color:var(--muted); margin-top:8px;">CSV ou XLSX · máx 10 MB</div>
+                            </div>
+
+                            <div class="actions-row">
+                                <button type="button" class="btn btn-primary" id="import-btn-preview" onclick="importStepPreview()" style="padding:10px 28px;">
+                                    Próximo — Mapear Colunas →
+                                </button>
+                            </div>
+                            <div id="import-message" class="message"></div>
+                        </div>
+
+                        <!-- Passo 2: mapeamento de colunas -->
+                        <div id="import-step-2" style="display:none;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                                <div>
+                                    <h4 style="margin:0; font-size:15px;">Mapeamento de Colunas</h4>
+                                    <p style="margin:4px 0 0; font-size:12px; color:var(--muted);">Associe cada coluna do seu arquivo ao campo correto do VoxFlow. ✅ = detectado automaticamente.</p>
+                                </div>
+                                <button type="button" class="btn btn-secondary" onclick="importGoBack()" style="font-size:12px; padding:6px 14px;">← Voltar</button>
+                            </div>
+
+                            <!-- Preview amostra -->
+                            <div id="import-sample-wrap" style="overflow-x:auto; margin-bottom:20px; border:1px solid var(--border); border-radius:8px; font-size:12px;"></div>
+
+                            <!-- Seletores de mapeamento -->
+                            <div id="import-mapping-grid" style="display:grid; grid-template-columns:1fr 36px 1fr; gap:8px; align-items:center; margin-bottom:20px;"></div>
+
+                            <div class="actions-row" style="gap:12px;">
+                                <button type="button" class="btn btn-primary" id="import-btn-confirm" onclick="importConfirm()" style="padding:10px 28px;">
+                                    ↑ Importar Leads
+                                </button>
+                                <div id="import-mapping-error" style="font-size:12px; color:#ef4444; display:none;"></div>
                             </div>
                         </div>
 
-                        <div class="field" style="margin-bottom:24px;">
-                            <label>Arquivo <span style="color:#ef4444;">*</span></label>
-                            <div style="border:2px dashed var(--border); border-radius:10px; padding:28px; text-align:center; background:var(--bg-secondary); transition:border-color 0.2s;">
-                                <div style="font-size:32px; margin-bottom:8px;">&#128196;</div>
-                                <div style="font-size:14px; color:var(--text-secondary); margin-bottom:12px;">Arraste o arquivo aqui ou clique para selecionar</div>
-                                <input type="file" id="import-file" accept=".csv,.xlsx" required style="display:block; margin:0 auto; max-width:280px;">
-                                <div style="font-size:11px; color:var(--text-secondary); margin-top:8px;">Formatos aceitos: .csv e .xlsx</div>
+                        <!-- Passo 3: resultado -->
+                        <div id="import-step-3" style="display:none;">
+                            <div id="import-result-box" style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:24px; text-align:center;"></div>
+                            <div class="actions-row" style="margin-top:16px;">
+                                <button type="button" class="btn btn-secondary" onclick="importReset()">← Nova importação</button>
                             </div>
                         </div>
-
-                        <div class="actions-row">
-                            <button type="submit" class="btn btn-primary" style="padding:10px 28px;">&#8593; Importar leads</button>
-                        </div>
-
-                        <div id="import-message" class="message"></div>
                     </form>
                 </div>
 
                 <div class="panel">
                     <div class="panel-header">
                         <div>
-                            <h3>Formato esperado da planilha</h3>
-                            <p>Use esses cabeçalhos para o sistema importar corretamente.</p>
+                            <h3>Campos suportados</h3>
+                            <p>O mapeador de colunas detecta automaticamente PT-BR e EN. Apenas <strong>name</strong> e <strong>numero_1</strong> são obrigatórios.</p>
                         </div>
                     </div>
-                    <div style="padding:20px;">
-                        <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; padding:14px 18px; font-family:monospace; font-size:13px; color:var(--accent); overflow-x:auto;">
-                            name, email, company_name, job_title, notes, numero_1, numero_2, numero_3, numero_4, numero_5, numero_6, numero_7, numero_8
+                    <div style="padding:16px 20px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">name</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">email</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">company_name</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">job_title</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">city</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">state</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">notes</span>
+                            <span style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:monospace;color:var(--accent);">numero_1 … numero_8</span>
                         </div>
-                        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">&#8505;&#65039; A primeira linha do arquivo deve conter exatamente esses cabeçalhos. Apenas <strong>name</strong> e <strong>numero_1</strong> são obrigatórios.</p>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:12px;">💡 Aliases PT-BR detectados: <em>nome, empresa, cargo, cidade, estado, telefone, celular, whatsapp, observações</em></p>
                     </div>
                 </div>
             </section>
 
             <section id="section-reports" class="content-section">
+
+                <!-- KPIs rápidos -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:20px;">
+                    <div class="panel" style="padding:18px 20px; text-align:center;">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Total leads</div>
+                        <div id="report-total-leads" style="font-size:28px; font-weight:800; color:var(--text-primary);">—</div>
+                    </div>
+                    <div class="panel" style="padding:18px 20px; text-align:center;">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Total chamadas</div>
+                        <div id="report-total-calls" style="font-size:28px; font-weight:800; color:var(--text-primary);">—</div>
+                    </div>
+                    <div class="panel" style="padding:18px 20px; text-align:center;">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Leads novos</div>
+                        <div id="report-new-leads" style="font-size:28px; font-weight:800; color:var(--text-primary);">—</div>
+                    </div>
+                    <div class="panel" style="padding:18px 20px; text-align:center;">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; margin-bottom:6px;">Campanhas</div>
+                        <div id="report-total-campaigns" style="font-size:28px; font-weight:800; color:var(--text-primary);">—</div>
+                    </div>
+                </div>
+
+                <!-- Exports -->
                 <div class="panel">
                     <div class="panel-header">
-                        <div>
-                            <h3>Relatórios iniciais</h3>
-                            <p>Base executiva para evoluirmos depois para tempo em linha, vendedor e performance.</p>
-                        </div>
+                        <div><h3>Exportar dados</h3><p>Baixe CSV compatível com Excel, Google Sheets ou qualquer BI.</p></div>
                     </div>
+                    <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
 
-                    <div class="cards">
-                        <div class="card metric-card">
-                            <small>Total de leads</small>
-                            <h3 id="report-total-leads">0</h3>
+                        <!-- Leads export -->
+                        <div style="border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:180px;">
+                                <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:3px;">Leads</div>
+                                <div style="font-size:12px; color:var(--text-secondary);">Nome, telefone, email, status, campanha, última chamada</div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <select id="export-leads-campaign" style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:12px;">
+                                    <option value="">Todas as campanhas</option>
+                                </select>
+                                <select id="export-leads-status" style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:12px;">
+                                    <option value="">Todos os status</option>
+                                    <option value="new">Novos</option>
+                                    <option value="atendeu">Atendeu</option>
+                                    <option value="venda">Venda</option>
+                                    <option value="retornar">Retornar</option>
+                                    <option value="sem_interesse">Sem interesse</option>
+                                    <option value="caixa_postal">Caixa postal</option>
+                                    <option value="nao_atendeu">Não atendeu</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="exportCSV('leads')" style="font-size:12px; padding:8px 16px;">⬇ Leads CSV</button>
+                            </div>
                         </div>
-                        <div class="card metric-card">
-                            <small>Total de chamadas</small>
-                            <h3 id="report-total-calls">0</h3>
-                        </div>
-                        <div class="card metric-card">
-                            <small>Leads novos</small>
-                            <h3 id="report-new-leads">0</h3>
-                        </div>
-                        <div class="card metric-card">
-                            <small>Campanhas</small>
-                            <h3 id="report-total-campaigns">0</h3>
-                        </div>
-                    </div>
 
-                    <div class="empty">
-                        No próximo passo, aqui vamos colocar:
-                        tempo em linha, chamadas por vendedor, chamadas por dia, taxa de contato e produtividade.
+                        <!-- Calls export -->
+                        <div style="border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:180px;">
+                                <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:3px;">Histórico de chamadas</div>
+                                <div style="font-size:12px; color:var(--text-secondary);">Data, duração, status, lead, agente, campanha, AMD</div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <input type="date" id="export-calls-from" style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:12px;">
+                                <input type="date" id="export-calls-to" style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:12px;">
+                                <button class="btn btn-primary" onclick="exportCSV('calls')" style="font-size:12px; padding:8px 16px;">⬇ Chamadas CSV</button>
+                            </div>
+                        </div>
+
+                        <!-- DNC export -->
+                        <div style="border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                            <div style="flex:1; min-width:180px;">
+                                <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:3px;">Lista DNC</div>
+                                <div style="font-size:12px; color:var(--text-secondary);">Todos os números bloqueados com motivo e data</div>
+                            </div>
+                            <button class="btn btn-primary" onclick="exportCSV('dnc')" style="font-size:12px; padding:8px 16px;">⬇ DNC CSV</button>
+                        </div>
+
                     </div>
+                    <div id="export-msg" style="padding:0 20px 16px; font-size:13px; min-height:18px;"></div>
                 </div>
             </section>
 
@@ -1949,6 +2302,128 @@
                             </div>
                             <div id="an-outcomes-legend" style="flex:1; display:flex; flex-direction:column; gap:12px;"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ── Painel AMD — qualidade de detecção ── -->
+                <div class="panel" style="margin-top:20px;" id="amd-panel">
+                    <div class="panel-header" style="cursor:pointer;" onclick="toggleAMDPanel()">
+                        <div>
+                            <h3>🤖 Qualidade AMD — Detecção de Secretária Eletrônica</h3>
+                            <p>Taxa de acerto do detector de caixa postal, falsos positivos recuperados e distribuição por campanha.</p>
+                        </div>
+                        <button class="btn btn-secondary" style="font-size:12px;" onclick="event.stopPropagation();loadAMDMetrics()">↻ Atualizar</button>
+                    </div>
+                    <div id="amd-panel-body">
+                        <!-- KPIs AMD -->
+                        <div class="cards" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;margin-top:4px;" id="amd-kpis">
+                            <div class="card" style="padding:16px 18px;border-radius:var(--radius-lg);background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22c55e;margin-bottom:6px;">Humano Detectado</div>
+                                <div id="amd-human-pct" style="font-size:28px;font-weight:800;color:#22c55e;">—</div>
+                                <div id="amd-human-count" style="font-size:11px;color:#4ade80;margin-top:2px;">— chamadas</div>
+                            </div>
+                            <div class="card" style="padding:16px 18px;border-radius:var(--radius-lg);background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.18);">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#ef4444;margin-bottom:6px;">Caixa Postal</div>
+                                <div id="amd-machine-pct" style="font-size:28px;font-weight:800;color:#ef4444;">—</div>
+                                <div id="amd-machine-count" style="font-size:11px;color:#f87171;margin-top:2px;">— chamadas</div>
+                            </div>
+                            <div class="card" style="padding:16px 18px;border-radius:var(--radius-lg);background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin-bottom:6px;">Unknown / Timeout</div>
+                                <div id="amd-unknown-pct" style="font-size:28px;font-weight:800;color:#f59e0b;">—</div>
+                                <div id="amd-unknown-count" style="font-size:11px;color:#fbbf24;margin-top:2px;">— chamadas</div>
+                            </div>
+                            <div class="card" style="padding:16px 18px;border-radius:var(--radius-lg);background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.18);">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8b5cf6;margin-bottom:6px;">Falsos Positivos Recuperados</div>
+                                <div id="amd-recovered-pct" style="font-size:28px;font-weight:800;color:#8b5cf6;">—</div>
+                                <div id="amd-recovered-count" style="font-size:11px;color:#a78bfa;margin-top:2px;">— recuperados</div>
+                            </div>
+                        </div>
+                        <!-- Tabela por campanha -->
+                        <div id="amd-campaign-table" style="overflow-x:auto;">
+                            <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Clique em "Atualizar" para carregar as métricas AMD.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ── FOLLOW-UP ── -->
+            <section id="section-followup" class="content-section">
+
+                <!-- Tabs -->
+                <div style="display:flex; gap:4px; padding:0 0 20px; border-bottom:1px solid var(--border); margin-bottom:20px;">
+                    <button id="fu-tab-sequences" onclick="fuSwitchTab('sequences')"
+                        style="padding:8px 18px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; background:var(--accent); color:#fff;">
+                        Sequências
+                    </button>
+                    <button id="fu-tab-tasks" onclick="fuSwitchTab('tasks')"
+                        style="padding:8px 18px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; background:var(--bg-secondary); color:var(--text-secondary);">
+                        Tarefas pendentes
+                        <span id="fu-tasks-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:99px; margin-left:4px;">0</span>
+                    </button>
+                </div>
+
+                <!-- TAB: Sequences -->
+                <div id="fu-pane-sequences">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Sequências de Follow-up</h3>
+                                <p>Automatiza ações (email, WhatsApp, retorno) após a classificação de uma chamada.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="openCreateFollowUpModal()">+ Nova sequência</button>
+                        </div>
+                        <div id="fu-sequences-list" style="padding:16px 20px;"><p class="empty">Carregando...</p></div>
+                    </div>
+                </div>
+
+                <!-- TAB: Pending tasks -->
+                <div id="fu-pane-tasks" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Tarefas pendentes</h3>
+                                <p>Follow-ups agendados prontos para execução manual.</p>
+                            </div>
+                            <button class="btn btn-secondary" onclick="fuLoadTasks()" style="font-size:12px;">Atualizar</button>
+                        </div>
+                        <div id="fu-tasks-list" style="padding:16px 20px;"><p class="empty">Carregando...</p></div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ── DNC ── -->
+            <section id="section-dnc" class="content-section">
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Lista DNC — Do Not Call</h3>
+                            <p>Números nesta lista são automaticamente bloqueados pelo discador.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAddDncModal()">+ Adicionar número</button>
+                    </div>
+
+                    <!-- Bulk import -->
+                    <div style="padding:16px 20px; border-bottom:1px solid var(--border);">
+                        <label style="font-size:13px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">Importação em massa (um número por linha)</label>
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <textarea id="dnc-bulk-input" rows="3" placeholder="+5511999990001&#10;+5511999990002" style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical; font-family:monospace;"></textarea>
+                            <button class="btn btn-secondary" onclick="dncBulkImport()" style="white-space:nowrap; margin-top:0;">Importar</button>
+                        </div>
+                        <div id="dnc-bulk-msg" style="font-size:12px; margin-top:6px; min-height:16px;"></div>
+                    </div>
+
+                    <!-- Search -->
+                    <div style="padding:12px 20px; border-bottom:1px solid var(--border);">
+                        <input type="text" id="dnc-search" placeholder="Buscar número..." oninput="dncRenderFiltered()" style="width:100%; max-width:320px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:13px;">
+                    </div>
+
+                    <div id="dnc-list-container" style="padding:16px 20px;"><p class="empty">Carregando...</p></div>
+                    <div style="padding:0 20px 16px; display:flex; gap:10px; align-items:center;">
+                        <button class="btn btn-secondary" id="dnc-prev-btn" onclick="dncLoadPage(dncCurrentPage-1)" style="display:none;">← Anterior</button>
+                        <span id="dnc-page-info" style="font-size:12px; color:var(--text-secondary);"></span>
+                        <button class="btn btn-secondary" id="dnc-next-btn" onclick="dncLoadPage(dncCurrentPage+1)" style="display:none;">Próxima →</button>
                     </div>
                 </div>
             </section>
@@ -2267,16 +2742,25 @@
         <!-- MODAL DE CLASSIFICAÇÃO -->
         <div id="classifyModal" class="classify-overlay" style="display:none;">
             <div class="classify-modal">
-                <h3 style="color:#fff;font-size:24px;font-weight:800;margin-bottom:8px;">Classificar Chamada</h3>
-                <p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">Selecione o desfecho desta ligação para atualizar o CRM.</p>
-                
+                <h3 style="color:#fff;font-size:24px;font-weight:800;margin-bottom:4px;">Classificar Chamada</h3>
+                <p style="color:#94a3b8;font-size:13px;margin-bottom:18px;">Selecione o desfecho — ou use os atalhos de teclado.</p>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">V = Venda</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">A = Atendeu</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">R = Retornar</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">S = Sem interesse</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">C = Caixa postal</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">I = Inválido</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">Enter = Salvar</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;color:#64748b;font-family:monospace;">Esc = Cancelar</span>
+                </div>
                 <div class="classify-grid">
-                    <button class="class-btn success" onclick="selectDispositionBtn(this, 'venda')">✅ Venda / Sucesso</button>
-                    <button class="class-btn" onclick="selectDispositionBtn(this, 'atendeu')" style="border-color:rgba(59,130,246,0.5);">📞 Contato realizado</button>
-                    <button class="class-btn warning" onclick="selectDispositionBtn(this, 'retornar_depois')">📅 Retornar depois</button>
-                    <button class="class-btn danger" onclick="selectDispositionBtn(this, 'sem_interesse')">🚫 Sem interesse</button>
-                    <button class="class-btn" onclick="selectDispositionBtn(this, 'caixa_postal')">🤖 Caixa postal</button>
-                    <button class="class-btn" onclick="selectDispositionBtn(this, 'numero_invalido')">❌ Número inválido</button>
+                    <button class="class-btn success" onclick="selectDispositionBtn(this, 'venda')">✅ <u>V</u>enda / Sucesso</button>
+                    <button class="class-btn" onclick="selectDispositionBtn(this, 'atendeu')" style="border-color:rgba(59,130,246,0.5);">📞 <u>A</u>tendeu</button>
+                    <button class="class-btn warning" onclick="selectDispositionBtn(this, 'retornar_depois')">📅 <u>R</u>etornar depois</button>
+                    <button class="class-btn danger" onclick="selectDispositionBtn(this, 'sem_interesse')">🚫 <u>S</u>em interesse</button>
+                    <button class="class-btn" onclick="selectDispositionBtn(this, 'caixa_postal')">🤖 <u>C</u>aixa postal</button>
+                    <button class="class-btn" onclick="selectDispositionBtn(this, 'numero_invalido')">❌ <u>I</u>nválido</button>
                 </div>
 
                 <select id="hubDisposition" style="display:none;">
@@ -2385,6 +2869,242 @@
         </script>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SISTEMA DE NOTIFICAÇÕES — Som + Badge de aba + Atalhos de teclado
+         ═══════════════════════════════════════════════════════════════════ -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Notificação sonora via Web Audio API ──────────────────────────────
+        let _audioCtx = null;
+        function _getAudioCtx() {
+            if (!_audioCtx) {
+                try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+            }
+            return _audioCtx;
+        }
+
+        function playCallNotification() {
+            const ctx = _getAudioCtx();
+            if (!ctx) return;
+            try {
+                // Duas notas curtas — padrão call center
+                const beeps = [[880, 0, 0.12], [880, 0.18, 0.12], [1100, 0.36, 0.18]];
+                beeps.forEach(([freq, start, dur]) => {
+                    const osc  = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type      = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+                    gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01);
+                    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+                    osc.start(ctx.currentTime + start);
+                    osc.stop(ctx.currentTime  + start + dur + 0.05);
+                });
+            } catch(e) { /* silent fail */ }
+        }
+        window.playCallNotification = playCallNotification;
+
+        // ── Badge de aba + título piscante ────────────────────────────────────
+        const _originalTitle = document.title;
+        let _badgeInterval   = null;
+        let _badgeCount      = 0;
+
+        function startTabBadge(leadName) {
+            _badgeCount++;
+            clearInterval(_badgeInterval);
+            let blink = true;
+            _badgeInterval = setInterval(() => {
+                document.title = blink
+                    ? `(${_badgeCount}) 📞 ${leadName || 'Lead'} — VoxFlow`
+                    : _originalTitle;
+                blink = !blink;
+            }, 900);
+        }
+
+        function stopTabBadge() {
+            clearInterval(_badgeInterval);
+            _badgeInterval = null;
+            _badgeCount    = Math.max(0, _badgeCount - 1);
+            document.title = _badgeCount > 0
+                ? `(${_badgeCount}) VoxFlow`
+                : _originalTitle;
+        }
+        window.startTabBadge = startTabBadge;
+        window.stopTabBadge  = stopTabBadge;
+
+        // ── Integração com popup premium ──────────────────────────────────────
+        let _popupWasActive = false;
+        const _popupEl = document.getElementById('premiumIncomingCallPopup');
+        if (_popupEl) {
+            const _observer = new MutationObserver(() => {
+                const isActive = _popupEl.classList.contains('active');
+                if (isActive && !_popupWasActive) {
+                    // Popup acabou de abrir
+                    const leadNameEl = document.getElementById('hubLeadName') || document.getElementById('pcallLeadName');
+                    const name = leadNameEl ? leadNameEl.textContent.trim() : 'Lead';
+                    playCallNotification();
+                    startTabBadge(name);
+                    // Browser Notification API (se permitido)
+                    if (Notification && Notification.permission === 'granted') {
+                        new Notification('📞 Lead atendeu — VoxFlow', {
+                            body: name,
+                            icon: '/static/favicon.ico',
+                            tag:  'voxflow-call',
+                        });
+                    }
+                } else if (!isActive && _popupWasActive) {
+                    stopTabBadge();
+                }
+                _popupWasActive = isActive;
+            });
+            _observer.observe(_popupEl, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Solicita permissão de notificação do browser (silencioso)
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+        }
+
+        // ── Atalhos de teclado ────────────────────────────────────────────────
+        const _keyMap = {
+            'v': 'venda',
+            'a': 'atendeu',
+            'r': 'retornar_depois',
+            's': 'sem_interesse',
+            'c': 'caixa_postal',
+            'i': 'numero_invalido',
+        };
+
+        // Mapa de atalhos para o popup premium (premiumQualification select)
+        const _premiumKeyMap = {
+            'g': 'ganho',
+            'a': 'atendeu',
+            'r': 'retornar_depois',
+            's': 'sem_interesse',
+            'c': 'caixa_postal',
+            'n': 'nao_atendeu',
+            'i': 'numero_invalido',
+            'p': 'proposta_enviada',
+            'm': 'reuniao_agendada',
+        };
+
+        document.addEventListener('keydown', function(e) {
+            // Ignora se foco está em input/textarea/select
+            const tag = (document.activeElement || {}).tagName || '';
+            if (['INPUT','TEXTAREA','SELECT'].includes(tag.toUpperCase())) return;
+
+            // ── Premium popup shortcuts ───────────────────────────────────────
+            const premiumPopup = document.getElementById('premiumIncomingCallPopup');
+            const premiumOpen  = premiumPopup && premiumPopup.classList.contains('active');
+            if (premiumOpen) {
+                const key = e.key.toLowerCase();
+                // Esc: fecha popup
+                if (e.key === 'Escape') {
+                    premiumPopup.classList.remove('active');
+                    e.preventDefault(); return;
+                }
+                // Enter: salva e avança
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (typeof window.savePremiumCRM === 'function') window.savePremiumCRM();
+                    return;
+                }
+                // Teclas de qualificação rápida
+                if (_premiumKeyMap[key]) {
+                    e.preventDefault();
+                    const sel = document.getElementById('premiumQualification');
+                    if (sel) {
+                        sel.value = _premiumKeyMap[key];
+                        // Feedback visual: pisca a borda do select
+                        sel.style.outline = '2px solid #2563eb';
+                        setTimeout(() => { sel.style.outline = ''; }, 600);
+                    }
+                    return;
+                }
+                return; // não propaga para outros handlers quando popup aberto
+            }
+
+            // ── Legacy classify modal shortcuts ───────────────────────────────
+            const modal = document.getElementById('classifyModal');
+            const modalOpen = modal && modal.style.display !== 'none';
+
+            if (e.key === 'Escape' && modalOpen) {
+                closeClassifyModal();
+                return;
+            }
+            if (e.key === 'Enter' && modalOpen) {
+                const sel = modal.querySelector('.class-btn.selected');
+                if (sel) { saveActiveDispositionAndClose(); }
+                return;
+            }
+            if (!modalOpen) return;
+            const key = e.key.toLowerCase();
+            if (_keyMap[key]) {
+                e.preventDefault();
+                const disposition = _keyMap[key];
+                const btn = modal.querySelector(`[onclick*="${disposition}"]`);
+                if (btn) { btn.click(); }
+            }
+        });
+
+        // ── Auto-renovação do access token antes de expirar ───────────────────
+        (function _startTokenAutoRefresh() {
+            const REFRESH_BEFORE_MS = 5 * 60 * 1000; // renova 5min antes de expirar
+            const CHECK_INTERVAL_MS = 60 * 1000;     // verifica a cada 1min
+
+            function _getTokenExpiry() {
+                // Prioridade 1: timestamp de expiração salvo explicitamente no login
+                const stored = localStorage.getItem('voxflow_token_exp');
+                if (stored) {
+                    const ts = parseInt(stored, 10);
+                    if (!isNaN(ts) && ts > 0) return ts;
+                }
+                // Prioridade 2: decodificar o campo exp do JWT (o cookie é HttpOnly, usamos localStorage)
+                const raw = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || '';
+                if (!raw || raw.split('.').length !== 3) return null;
+                try {
+                    // atob requer padding correto — base64url → base64
+                    const b64 = raw.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    const payload = JSON.parse(atob(b64));
+                    return payload.exp ? payload.exp * 1000 : null;
+                } catch(e) { return null; }
+            }
+
+            async function _refreshToken() {
+                try {
+                    const res = await fetch('/auth/refresh', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                    if (res.ok) {
+                        console.log('[AUTH] Access token renovado silenciosamente');
+                    } else if (res.status === 401) {
+                        // Refresh token expirou — redireciona para login
+                        window.location.href = '/login';
+                    }
+                } catch(e) { /* rede instável — tenta na próxima verificação */ }
+            }
+
+            setInterval(() => {
+                const expiry = _getTokenExpiry();
+                if (!expiry) return;
+                const msLeft = expiry - Date.now();
+                if (msLeft > 0 && msLeft < REFRESH_BEFORE_MS) {
+                    _refreshToken();
+                } else if (msLeft <= 0) {
+                    _refreshToken();
+                }
+            }, CHECK_INTERVAL_MS);
+        })();
+
+    })();
+    </script>
+
 
     <script>
         const COMPANY_ID = parseInt(localStorage.getItem('company_id') || '1', 10);
@@ -2399,12 +3119,55 @@
             });
         })();
 
+        // ── Empty state + skeleton helpers ───────────────────────────────────
+        function renderEmptyState(container, { icon, title, desc, ctaLabel, ctaAction } = {}) {
+            if (!container) return;
+            const iconSvg = icon || '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+            const cta = ctaLabel && ctaAction
+                ? `<button class="empty-state-cta" onclick="${ctaAction}">${ctaLabel}</button>`
+                : '';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">${iconSvg}</div>
+                    <div class="empty-state-title">${title || 'Nenhum item encontrado'}</div>
+                    <p class="empty-state-desc">${desc || 'Não há dados para exibir no momento.'}</p>
+                    ${cta}
+                </div>`;
+        }
+
+        function renderSkeletonRows(container, count = 4, height = 52) {
+            if (!container) return;
+            container.innerHTML = Array.from({length: count}, () =>
+                `<div class="shimmer-row" style="height:${height}px;"></div>`
+            ).join('');
+        }
+
         // Wrapper que injeta Authorization: Bearer em todo fetch do dashboard
+        function _getCsrfToken() {
+            return document.cookie.split(';').reduce((v, c) => {
+                const [k, val] = c.trim().split('=');
+                return k === 'voxflow_csrf' ? decodeURIComponent(val || '') : v;
+            }, '');
+        }
+
         async function authFetch(url, opts = {}) {
-            const token = localStorage.getItem('voxflow_token') || '';
+            const raw   = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || '';
+            // Só usa o token se parecer um JWT válido (3 segmentos separados por ponto)
+            const token = (raw && raw.split('.').length === 3) ? raw : '';
             const base  = token ? { 'Authorization': `Bearer ${token}` } : {};
-            const merged = { ...base, ...(opts.headers || {}) };
-            return fetch(url, { ...opts, headers: merged });
+            const method = (opts.method || 'GET').toUpperCase();
+            const csrf   = ['POST','PUT','PATCH','DELETE'].includes(method) ? { 'X-CSRF-Token': _getCsrfToken() } : {};
+            const merged = { ...base, ...csrf, ...(opts.headers || {}) };
+
+            const response = await fetch(url, { ...opts, headers: merged, credentials: 'include' });
+            if (response.status === 401 && !url.includes('/login') && !url.includes('/auth/')) {
+                // Remove apenas as chaves de sessão — não apaga localStorage inteiro
+                ['voxflow_token','token','nexdial_token','user_id','company_id',
+                 'voxflow_role','voxflow_user_name','nexdial_user_name','user_email',
+                 'agent_id','voxflow_token_exp'].forEach(k => localStorage.removeItem(k));
+                window.location.href = '/login';
+            }
+            return response;
         }
 
         const sections = document.querySelectorAll('.content-section');
@@ -2432,7 +3195,7 @@
 
         const SECTION_LABELS = {
             dashboard:'Painel de operação', analytics:'Analytics CRM', campaigns:'Campanhas', leads:'Leads',
-            calls:'Chamadas', operation:'Webphone', import:'Importação',
+            calls:'Chamadas', callbacks:'Fila de Callbacks', operation:'Webphone', import:'Importação',
             reports:'Relatórios', users:'Usuários', settings:'Configurações',
             credito:'Meu Crédito'
         };
@@ -2442,6 +3205,7 @@
             campaigns:'Crie, gerencie e inicie campanhas de discagem.',
             leads:'Cadastre e gerencie seus leads.',
             calls:'Histórico completo de chamadas.',
+            callbacks:'Retornos agendados ordenados por prioridade.',
             operation:'Webphone e atendimento manual.',
             import:'Importe leads via planilha CSV ou XLSX.',
             reports:'Métricas e relatórios de produtividade.',
@@ -2465,9 +3229,97 @@
             if (h2) h2.textContent = SECTION_LABELS[sectionName] || sectionName;
             if (sub) sub.textContent = SECTION_DESCS[sectionName] || '';
 
-            if (sectionName === 'settings' && window.loadRegulatorySettings) {
-                window.loadRegulatorySettings();
+            if (sectionName === 'settings') {
+                if (window.loadCompanySettings)    window.loadCompanySettings();
+                if (window.loadRegulatorySettings) window.loadRegulatorySettings();
             }
+            if (sectionName === 'campaigns') {
+                _loadCampaignAlerts();
+            }
+            if (sectionName === 'callbacks') {
+                loadCallbacks();
+            }
+        }
+
+        // ── Callback Queue (MÉDIO-06) ──────────────────────────────────────────
+        async function loadCallbacks() {
+            const tbody = document.getElementById('callbacksTableBody');
+            if (!tbody) return;
+            const status = document.getElementById('cbStatusFilter')?.value || 'pending';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary);">Carregando...</td></tr>';
+            try {
+                const r = await authFetch(`/api/callbacks?status=${status}&per_page=50`);
+                if (!r.ok) throw new Error();
+                const { callbacks } = await r.json();
+                if (!callbacks.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-secondary);">Nenhum callback encontrado.</td></tr>';
+                    return;
+                }
+                const PRIO_LABEL = { 3:'Alta', 2:'Média', 1:'Baixa' };
+                const PRIO_COLOR = { 3:'#ef4444', 2:'#f59e0b', 1:'#22c55e' };
+                const STATUS_LABEL = { pending:'Pendente', completed:'Concluído', canceled:'Cancelado', reserved:'Reservado', dialing:'Discando', failed:'Falhou' };
+                const fmtDt = iso => iso ? new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+                tbody.innerHTML = callbacks.map(cb => {
+                    const p = cb.priority || 1;
+                    const overdue = status === 'pending' && cb.scheduled_for && new Date(cb.scheduled_for) < new Date();
+                    return `<tr${overdue ? ' style="background:rgba(239,68,68,.06);"' : ''}>
+                        <td>
+                            <span style="display:inline-flex;align-items:center;gap:5px;font-weight:700;color:${PRIO_COLOR[p]};">
+                                <span class="material-icons" style="font-size:14px;">circle</span>${PRIO_LABEL[p]}
+                            </span>
+                        </td>
+                        <td>${cb.lead_name || `Lead #${cb.lead_id}`}</td>
+                        <td>${cb.lead_phone || '—'}</td>
+                        <td>${fmtDt(cb.scheduled_for)}${overdue ? ' <span style="color:#ef4444;font-size:10px;font-weight:700;">ATRASADO</span>' : ''}</td>
+                        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(cb.notes||'').replace(/"/g,'&quot;')}">${cb.notes || '—'}</td>
+                        <td><span style="color:${cb.status==='pending'?'#f59e0b':cb.status==='completed'?'#22c55e':'#94a3b8'}">${STATUS_LABEL[cb.status]||cb.status}</span></td>
+                        <td style="display:flex;gap:6px;">
+                            ${cb.status==='pending' ? `
+                                <button class="btn btn-sm" title="Prioridade Alta" onclick="_setCbPriority(${cb.id},3)" style="padding:3px 8px;font-size:11px;background:#ef444422;color:#ef4444;border:1px solid #ef444444;">↑ Alta</button>
+                                <button class="btn btn-sm" title="Cancelar" onclick="_cancelCb(${cb.id})" style="padding:3px 8px;font-size:11px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);">✕</button>
+                            ` : ''}
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch(_) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#ef4444;">Erro ao carregar callbacks.</td></tr>';
+            }
+        }
+
+        async function _setCbPriority(id, priority) {
+            await authFetch(`/api/callbacks/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({priority}) });
+            loadCallbacks();
+        }
+
+        async function _cancelCb(id) {
+            if (!confirm('Cancelar este callback?')) return;
+            await authFetch(`/api/callbacks/${id}`, { method:'DELETE' });
+            loadCallbacks();
+        }
+
+        async function _loadCampaignAlerts() {
+            const bar = document.getElementById('campaignAlertsBar');
+            if (!bar) return;
+            try {
+                const r = await authFetch('/api/analytics/alerts');
+                if (!r.ok) return;
+                const { alerts } = await r.json();
+                if (!alerts || !alerts.length) { bar.style.display = 'none'; return; }
+                const ICONS = { low_balance:'account_balance_wallet', voicemail_high:'voicemail', answer_low:'phone_missed' };
+                const COLORS = { critical:'#ef4444', warning:'#f59e0b' };
+                bar.innerHTML = alerts.map(a => `
+                    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;
+                                background:${COLORS[a.severity]}18;border:1px solid ${COLORS[a.severity]}44;">
+                        <span class="material-icons" style="color:${COLORS[a.severity]};font-size:18px;margin-top:1px;">${ICONS[a.type]||'warning'}</span>
+                        <div style="flex:1;">
+                            <div style="font-size:13px;font-weight:600;color:${COLORS[a.severity]};">${a.title}</div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${a.message}</div>
+                        </div>
+                        <button onclick="this.closest('[style]').remove();if(!document.querySelector('#campaignAlertsBar [style]'))document.getElementById('campaignAlertsBar').style.display='none';"
+                            style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:16px;line-height:1;padding:0 2px;">✕</button>
+                    </div>`).join('');
+                bar.style.display = 'flex';
+            } catch(_) {}
         }
 
         function setMessage(elementId, type, text) {
@@ -2570,6 +3422,76 @@
             if (!status) return '—';
             const key = status.toLowerCase().trim();
             return STATUS_MAP_PT[key] || status;
+        }
+
+        // ── Setup Checklist (UX-05) ───────────────────────────────────────────
+        const CHECKLIST_KEY = `voxflow_setup_${COMPANY_ID}`;
+        const CHECKLIST_STEPS = [
+            { id: 'twilio',   label: 'Configurar Twilio',     action: "showSection('settings')",    check: () => false },
+            { id: 'campaign', label: 'Criar primeira campanha', action: "showSection('campaigns')", check: () => false },
+            { id: 'leads',    label: 'Importar leads',         action: "showSection('import')",     check: () => false },
+            { id: 'call',     label: 'Realizar primeira chamada', action: "showSection('calls')",   check: () => false },
+            { id: 'crm',      label: 'Configurar pipeline CRM', action: "showSection('analytics')", check: () => false },
+        ];
+
+        function _loadChecklistState() {
+            try { return JSON.parse(localStorage.getItem(CHECKLIST_KEY) || '{}'); } catch { return {}; }
+        }
+        function _saveChecklistState(state) {
+            localStorage.setItem(CHECKLIST_KEY, JSON.stringify(state));
+        }
+
+        function renderSetupChecklist() {
+            const dismissed = localStorage.getItem(CHECKLIST_KEY + '_dismissed');
+            if (dismissed) return;
+
+            const state   = _loadChecklistState();
+            const el      = document.getElementById('setupChecklist');
+            const stepsEl = document.getElementById('checklistSteps');
+            const barEl   = document.getElementById('checklistBar');
+            const progEl  = document.getElementById('checklistProgress');
+            if (!el || !stepsEl) return;
+
+            const done  = CHECKLIST_STEPS.filter(s => state[s.id]).length;
+            const total = CHECKLIST_STEPS.length;
+            if (done >= total) { el.style.display = 'none'; return; }
+
+            el.style.display = 'block';
+            barEl.style.width = Math.round(done / total * 100) + '%';
+            progEl.textContent = `${done} de ${total} etapas concluídas`;
+
+            stepsEl.innerHTML = CHECKLIST_STEPS.map(s => {
+                const checked = !!state[s.id];
+                return `<div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
+                    <button onclick="completeChecklistStep('${s.id}')" style="width:20px;height:20px;flex-shrink:0;border-radius:50%;border:2px solid ${checked ? 'var(--accent-green)' : 'var(--border)'};background:${checked ? 'var(--accent-green)' : 'transparent'};cursor:pointer;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;" title="${checked ? 'Concluído' : 'Marcar como feito'}">${checked ? '✓' : ''}</button>
+                    <span style="flex:1; font-size:13px; color:${checked ? 'var(--text-secondary)' : 'var(--text-primary)'}; text-decoration:${checked ? 'line-through' : 'none'};">${s.label}</span>
+                    ${!checked ? `<button onclick="${s.action}" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;font-weight:600;">Ir →</button>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function completeChecklistStep(stepId) {
+            const state = _loadChecklistState();
+            state[stepId] = true;
+            _saveChecklistState(state);
+            renderSetupChecklist();
+        }
+
+        function dismissSetupChecklist() {
+            localStorage.setItem(CHECKLIST_KEY + '_dismissed', '1');
+            const el = document.getElementById('setupChecklist');
+            if (el) el.style.display = 'none';
+        }
+
+        // Auto-detect completed steps from live data
+        function updateChecklistFromMetrics(metrics, campaigns, calls) {
+            const state = _loadChecklistState();
+            let changed = false;
+            if (!state.campaign && (campaigns?.campaigns?.length || campaigns?.length)) { state.campaign = true; changed = true; }
+            if (!state.leads    && metrics?.total_leads > 0)  { state.leads    = true; changed = true; }
+            if (!state.call     && metrics?.total_calls > 0)  { state.call     = true; changed = true; }
+            if (changed) { _saveChecklistState(state); }
+            renderSetupChecklist();
         }
 
         async function fetchMetrics() {
@@ -2700,9 +3622,18 @@
             tbody.innerHTML = '';
 
             if (!leads.length) {
-                tbody.innerHTML = `<tr><td colspan="5">Nenhum lead cadastrado.</td></tr>`;
-                const info = document.getElementById('leads-count-info');
-                if (info) info.textContent = 'Mostrando 0 de 0 leads';
+                const infoEl = document.getElementById('leads-count-info');
+                if (infoEl) infoEl.textContent = 'Mostrando 0 de 0 leads';
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:0; border:none;">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <div class="empty-state-title">Nenhum lead encontrado</div>
+                        <p class="empty-state-desc">Importe leads ou adicione manualmente para começar.</p>
+                        <button class="empty-state-cta" onclick="showSection('import')">Importar Leads</button>
+                    </div>
+                </td></tr>`;
                 return;
             }
 
@@ -3296,6 +4227,12 @@
         }
 
         async function loadAllData() {
+            // Show skeletons while fetching
+            const campsEl  = document.getElementById('campaigns-list-container');
+            const leadsEl  = document.getElementById('leads-table');
+            if (campsEl)  renderSkeletonRows(campsEl, 3, 80);
+            if (leadsEl)  renderSkeletonRows(leadsEl, 5, 52);
+
             try {
                 const [metrics, campaigns, leadsData, calls, pipelines] = await Promise.all([
                     fetchMetrics(),
@@ -3312,6 +4249,7 @@
                 populateCampaignSelects(campaigns);
                 populatePipelineSelects(pipelines);
                 await autoSelectRunningCampaign(campaigns);
+                updateChecklistFromMetrics(metrics, campaigns, calls);
 
                 // Update credit balance in dashboard
                 if (typeof _crAtualizarNavBadge === 'function') {
@@ -3372,52 +4310,214 @@
             if (lcid) lcid.value = cid;
         }
 
-        document.getElementById('import-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearMessage('import-message');
+        // ══ IMPORT WIZARD JS ══════════════════════════════════════════════════
+        // Estado do wizard
+        let _importPreviewData = null; // { columns, sample, suggestions, lead_fields }
 
-            const fileInput = document.getElementById('import-file');
+        // Drag-and-drop na drop zone
+        (function() {
+            const dz   = document.getElementById('import-dropzone');
+            const inp  = document.getElementById('import-file');
+            if (!dz || !inp) return;
+
+            dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--accent)'; });
+            dz.addEventListener('dragleave', ()  => { dz.style.borderColor = 'var(--border)'; });
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                dz.style.borderColor = 'var(--border)';
+                const f = e.dataTransfer.files[0];
+                if (f) { inp.files = e.dataTransfer.files; _importUpdateLabel(f.name); }
+            });
+            inp.addEventListener('change', () => {
+                if (inp.files[0]) _importUpdateLabel(inp.files[0].name);
+            });
+        })();
+
+        function _importUpdateLabel(name) {
+            const lbl = document.getElementById('import-file-label');
+            if (lbl) { lbl.textContent = '📎 ' + name; lbl.style.display = ''; }
+        }
+
+        // PASSO 1 → 2: chama /preview e renderiza mapeador
+        async function importStepPreview() {
+            const fileInput  = document.getElementById('import-file');
+            const campaignId = document.getElementById('import-campaign-id').value;
+            const msgEl      = document.getElementById('import-message');
 
             if (!fileInput.files.length) {
-                setMessage('import-message', 'error', 'Selecione um arquivo.');
+                setMessage('import-message', 'error', 'Selecione um arquivo CSV ou XLSX.');
+                return;
+            }
+            if (!campaignId) {
+                setMessage('import-message', 'error', 'Selecione uma campanha.');
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('company_id', document.getElementById('import-company-id').value);
-            formData.append('campaign_id', document.getElementById('import-campaign-id').value);
-            
+            const btn = document.getElementById('import-btn-preview');
+            btn.disabled = true;
+            btn.textContent = 'Analisando arquivo…';
+
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+
+            try {
+                const res  = await authFetch('/api/leads/import/preview', { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    setMessage('import-message', 'error', data.error || 'Erro ao ler arquivo.');
+                    return;
+                }
+
+                _importPreviewData = data;
+                _importRenderStep2(data);
+                document.getElementById('import-step-1').style.display = 'none';
+                document.getElementById('import-step-2').style.display = '';
+
+            } catch (err) {
+                setMessage('import-message', 'error', 'Erro de rede: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Próximo — Mapear Colunas →';
+            }
+        }
+
+        function _importRenderStep2({ columns, sample, suggestions, lead_fields }) {
+            // ── Preview tabela (primeiras 3 linhas) ──────────────────────────
+            const wrap = document.getElementById('import-sample-wrap');
+            const visibleCols = columns.slice(0, 8); // máx 8 colunas na tabela
+            wrap.innerHTML = `
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead><tr style="background:var(--bg-secondary);">
+                        ${visibleCols.map(c => `<th style="padding:8px 10px; text-align:left; font-size:11px; font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--muted);">${escHtml(c)}</th>`).join('')}
+                        ${columns.length > 8 ? '<th style="padding:8px; font-size:11px; color:var(--muted);">…</th>' : ''}
+                    </tr></thead>
+                    <tbody>
+                        ${sample.slice(0,3).map(row => `<tr>
+                            ${visibleCols.map(c => `<td style="padding:7px 10px; font-size:11px; border-bottom:1px solid var(--border); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(String(row[c] ?? ''))}</td>`).join('')}
+                            ${columns.length > 8 ? '<td></td>' : ''}
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            // ── Grid de mapeamento ───────────────────────────────────────────
+            const grid = document.getElementById('import-mapping-grid');
+            const fieldOpts = ['', ...lead_fields].map(f =>
+                `<option value="${f}">${f || '— ignorar —'}</option>`
+            ).join('');
+
+            grid.innerHTML = `
+                <div style="font-size:11px; font-weight:700; color:var(--muted); padding:0 0 4px;">Coluna do arquivo</div>
+                <div></div>
+                <div style="font-size:11px; font-weight:700; color:var(--muted); padding:0 0 4px;">Campo VoxFlow</div>
+                ${columns.map(col => {
+                    const mapped = suggestions[col];
+                    const auto   = !!mapped;
+                    return `
+                        <div style="font-size:13px; padding:6px 10px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(col)}">${escHtml(col)}</div>
+                        <div style="text-align:center; font-size:16px;">${auto ? '✅' : '→'}</div>
+                        <select data-col="${escHtml(col)}" style="padding:7px 10px; background:var(--bg-primary); border:1px solid ${auto ? 'var(--accent)' : 'var(--border)'}; border-radius:6px; color:var(--text-primary); font-size:13px; font-family:Inter,sans-serif;">
+                            ${['', ...lead_fields].map(f =>
+                                `<option value="${f}" ${f === (mapped || '') ? 'selected' : ''}>${f || '— ignorar —'}</option>`
+                            ).join('')}
+                        </select>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function importGoBack() {
+            document.getElementById('import-step-2').style.display = 'none';
+            document.getElementById('import-step-1').style.display = '';
+        }
+
+        // PASSO 2 → 3: valida e importa
+        async function importConfirm() {
+            const errEl = document.getElementById('import-mapping-error');
+            errEl.style.display = 'none';
+
+            // Lê mapeamento atual dos selects
+            const selects   = document.querySelectorAll('#import-mapping-grid select[data-col]');
+            const columnMap = {};
+            selects.forEach(sel => { columnMap[sel.dataset.col] = sel.value || null; });
+
+            // Valida: pelo menos name e numero_1 mapeados
+            const vals = Object.values(columnMap).filter(Boolean);
+            if (!vals.includes('name')) {
+                errEl.textContent = 'Mapeie pelo menos a coluna "name" (nome do lead).';
+                errEl.style.display = '';
+                return;
+            }
+            if (!vals.includes('numero_1')) {
+                errEl.textContent = 'Mapeie pelo menos a coluna "numero_1" (telefone principal).';
+                errEl.style.display = '';
+                return;
+            }
+
+            const btn = document.getElementById('import-btn-confirm');
+            btn.disabled = true;
+            btn.textContent = 'Importando…';
+
+            const fileInput = document.getElementById('import-file');
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            fd.append('campaign_id',  document.getElementById('import-campaign-id').value);
+            fd.append('company_id',   document.getElementById('import-company-id').value || localStorage.getItem('company_id') || '');
+            fd.append('column_map',   JSON.stringify(columnMap));
             const pId = document.getElementById('import-pipeline-id').value;
             const sId = document.getElementById('import-stage-id').value;
-            if (pId) formData.append('pipeline_id', pId);
-            if (sId) formData.append('stage_id', sId);
+            if (pId) fd.append('pipeline_id', pId);
+            if (sId) fd.append('stage_id', sId);
 
-            formData.append('file', fileInput.files[0]);
+            try {
+                const res  = await authFetch('/api/leads/import', { method: 'POST', body: fd });
+                const data = await res.json();
 
-            const response = await authFetch('/api/leads/import', {
-                method: 'POST',
-                body: formData
-            });
+                if (!res.ok) {
+                    errEl.textContent = data.error || 'Erro na importação.';
+                    errEl.style.display = '';
+                    return;
+                }
 
-            const data = await response.json();
+                // Passo 3: resultado
+                document.getElementById('import-step-2').style.display = 'none';
+                document.getElementById('import-step-3').style.display = '';
+                const box = document.getElementById('import-result-box');
+                box.innerHTML = `
+                    <div style="font-size:40px; margin-bottom:12px;">✅</div>
+                    <h3 style="margin:0 0 8px; font-size:18px; color:var(--text-primary);">${data.imported} lead(s) importado(s)!</h3>
+                    ${data.duplicates ? `<p style="color:var(--muted); font-size:13px; margin:4px 0;">🔄 ${data.duplicates} duplicado(s) ignorados</p>` : ''}
+                    ${data.errors_count ? `<p style="color:#f59e0b; font-size:13px; margin:4px 0;">⚠️ ${data.errors_count} linha(s) com erro</p>` : ''}
+                    ${data.crm_pipeline ? `<p style="color:#22c55e; font-size:12px; margin:8px 0 0;">Pipeline: ${escHtml(data.crm_pipeline)} → ${escHtml(data.crm_stage || '1º estágio')}</p>` : ''}
+                    ${data.errors?.length ? `<div style="margin-top:12px; text-align:left; max-height:120px; overflow-y:auto; background:var(--bg-primary); border-radius:6px; padding:8px; font-size:11px; color:#f87171;">${data.errors.map(e=>escHtml(e)).join('<br>')}</div>` : ''}
+                `;
 
-            if (!response.ok) {
-                setMessage('import-message', 'error', data.error || 'Erro ao importar leads.');
-                return;
+                await loadAllData();
+
+            } catch (err) {
+                errEl.textContent = 'Erro de rede: ' + err.message;
+                errEl.style.display = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '↑ Importar Leads';
             }
+        }
 
-            let text = `Importação concluída. ${data.imported || 0} leads importados.`;
-            if (data.errors_count) {
-                text += ` ${data.errors_count} linha(s) com erro.`;
-            }
-
-            setMessage('import-message', 'success', text);
-            document.getElementById('import-form').reset();
-            document.getElementById('import-company-id').value = localStorage.getItem('company_id') || 1;
-            await loadAllData();
-        });
+        function importReset() {
+            _importPreviewData = null;
+            document.getElementById('import-step-3').style.display = 'none';
+            document.getElementById('import-step-2').style.display = 'none';
+            document.getElementById('import-step-1').style.display = '';
+            document.getElementById('import-file').value = '';
+            const lbl = document.getElementById('import-file-label');
+            if (lbl) { lbl.textContent = ''; lbl.style.display = 'none'; }
+            clearMessage('import-message');
+        }
+        // ══ FIM IMPORT WIZARD ═══════════════════════════════════════════════
 
         async function startCampaign(campaignId, filterStatuses = ["new", "novo"]) {
+
             try {
                 const response = await authFetch(`/api/campaign/${campaignId}/start`, {
                     method: 'POST',
@@ -3738,11 +4838,50 @@ async function deleteLead(leadId) {
 
             const notesWrap = elP('incomingLeadNotesWrap');
             if (notesWrap) {
-                if (lead.notes) {
-                    notesWrap.style.display = "block";
-                    elP('incomingLeadNotes').textContent = lead.notes;
+                notesWrap.style.display = "block";
+                const notesBox = elP('incomingLeadNotes');
+                notesBox.innerHTML = '<div class="act-timeline-loading"><span class="material-icons" style="font-size:16px;animation:spin 1s linear infinite;">refresh</span> Carregando...</div>';
+                if (lead.id) {
+                    authFetch(`/api/leads/${lead.id}/activity`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                            if (!data || !data.events) { notesBox.textContent = '—'; return; }
+                            const events = data.events;
+                            if (!events.length) {
+                                notesBox.innerHTML = '<div class="act-empty">Sem atividades registradas</div>';
+                                return;
+                            }
+                            const fmtDt = iso => {
+                                if (!iso) return '';
+                                const d = new Date(iso);
+                                return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+                            };
+                            const escHtml = s => s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+                            let html = '<div class="act-timeline">';
+                            events.forEach((ev, i) => {
+                                const isLast = i === events.length - 1;
+                                html += `<div class="act-row${isLast ? ' act-row-last' : ''}">
+                                    <div class="act-connector">
+                                        <div class="act-dot" style="background:${ev.color};box-shadow:0 0 0 3px ${ev.color}22;">
+                                            <span class="material-icons" style="font-size:10px;color:#fff;">${ev.icon}</span>
+                                        </div>
+                                        ${!isLast ? '<div class="act-line"></div>' : ''}
+                                    </div>
+                                    <div class="act-content">
+                                        <div class="act-header">
+                                            <span class="act-title" style="color:${ev.color};">${escHtml(ev.title)}</span>
+                                            <span class="act-time">${fmtDt(ev.created_at)}</span>
+                                        </div>
+                                        ${ev.body ? `<div class="act-body">${escHtml(ev.body)}</div>` : ''}
+                                    </div>
+                                </div>`;
+                            });
+                            html += '</div>';
+                            notesBox.innerHTML = html;
+                        })
+                        .catch(() => { notesBox.textContent = '—'; });
                 } else {
-                    notesWrap.style.display = "none";
+                    notesBox.textContent = '—';
                 }
             }
 
@@ -3762,8 +4901,11 @@ async function deleteLead(leadId) {
             
             if (shouldOpen) {
                 elP('premiumIncomingCallPopup').classList.add('active');
+                // Reset para aba CRM e carrega script da campanha
+                if (window._pcallTab) window._pcallTab('crm');
+                if (window._loadCallScript) window._loadCallScript(data.campaign_id || lead.campaign_id);
             }
-            
+
             if (connectWrap) {
                 if (data.audio_bridged) {
                     // Áudio já está na Persistent Bridge! Oculta o botão de conectar manualmente.
@@ -3911,6 +5053,30 @@ async function deleteLead(leadId) {
             } catch(e) { alert('Erro ao salvar: ' + e.message); }
         }
         window.savePremiumCRMOnly = savePremiumCRMOnly;
+
+        // ── Script de chamada (tab switcher) ──────────────────────────────────
+        window._pcallTab = function(tab) {
+            document.getElementById('pcallTabCrm').classList.toggle('active', tab === 'crm');
+            document.getElementById('pcallTabScript').classList.toggle('active', tab === 'script');
+            document.getElementById('pcallPanelCrm').style.display    = tab === 'crm'    ? '' : 'none';
+            document.getElementById('pcallPanelScript').style.display = tab === 'script' ? '' : 'none';
+        };
+
+        window._loadCallScript = function(campaignId) {
+            if (!campaignId) return;
+            const box = document.getElementById('pcallScriptContent');
+            if (!box) return;
+            authFetch(`/api/campaign/${campaignId}`)
+                .then(r => r.ok ? r.json() : null)
+                .then(c => {
+                    if (c && c.call_script && c.call_script.trim()) {
+                        box.textContent = c.call_script.trim();
+                    } else {
+                        box.innerHTML = '<span style="color:var(--text-secondary);font-size:12px;">Nenhum script definido para esta campanha.</span>';
+                    }
+                })
+                .catch(() => {});
+        };
 
         // Desligar apenas — usa REST API para terminar a chamada do lead.
         // Não chama hangupCall() diretamente para não corromper o Device SDK.
@@ -4098,10 +5264,24 @@ async function deleteLead(leadId) {
                             </div>
 
                             ${isInCall ? `
-                                <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; font-size: 13px;">
+                                <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; font-size: 13px; margin-bottom: 10px;">
                                     <div style="color: var(--muted); font-size: 11px; margin-bottom: 4px;">CONECTADO COM:</div>
                                     <div style="font-weight: 600; color: #fff;">${agent.active_call.lead_name || 'Lead'}</div>
                                     <div style="color: #60a5fa; font-size: 12px; margin-top: 2px;">${agent.active_call.phone_number || '—'}</div>
+                                </div>
+                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                  <button onclick="supervisorListenLive('${escHtml(agent.active_call.conference_name || '')}')"
+                                      style="flex:1; min-width:80px; padding:7px 6px; border-radius:8px; border:none; background:#6366f1; color:#fff; font-size:11px; font-weight:600; cursor:pointer;" title="Ouvir sem falar">
+                                      🎧 Ouvir
+                                  </button>
+                                  <button onclick="supervisorWhisper('${escHtml(agent.active_call.conference_name || '')}', 'whisper')"
+                                      style="flex:1; min-width:80px; padding:7px 6px; border-radius:8px; border:1px solid #6366f1; background:transparent; color:#818cf8; font-size:11px; font-weight:600; cursor:pointer;" title="Falar só com o agente">
+                                      🗣 Whisper
+                                  </button>
+                                  <button onclick="supervisorWhisper('${escHtml(agent.active_call.conference_name || '')}', 'barge')"
+                                      style="flex:1; min-width:80px; padding:7px 6px; border-radius:8px; border:1px solid #ef4444; background:transparent; color:#f87171; font-size:11px; font-weight:600; cursor:pointer;" title="Entrar na chamada (todos ouvem)">
+                                      📢 Barge
+                                  </button>
                                 </div>
                             ` : `
                                 <div style="color: var(--muted); font-size: 13px; font-style: italic; padding: 10px 0;">
@@ -4116,6 +5296,40 @@ async function deleteLead(leadId) {
                 console.error("Erro no monitor supervisor:", err);
             }
         }
+
+        window.supervisorListenLive = async function(conferenceName) {
+            if (!conferenceName) { alert('Conferência não disponível.'); return; }
+            const btn = event?.target?.closest('button');
+            if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            try {
+                const res  = await authFetch('/api/supervisor/listen-live', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ conference_name: conferenceName }),
+                });
+                const data = await res.json();
+                if (!res.ok) alert(data.error || 'Erro ao entrar na chamada.');
+                else alert('Conectando como ouvinte — o webphone receberá a chamada.');
+            } catch(e) { alert('Erro de rede: ' + e.message); }
+            finally { if (btn) { btn.disabled = false; btn.textContent = '🎧 Ouvir'; } }
+        };
+
+        window.supervisorWhisper = async function(conferenceName, mode) {
+            if (!conferenceName) { alert('Conferência não disponível.'); return; }
+            const label = mode === 'whisper' ? 'whisper (só o agente ouve você)' : 'barge (todos ouvem)';
+            if (!confirm(`Entrar na chamada em modo ${label}?`)) return;
+            const btn = event?.target?.closest('button');
+            if (btn) { btn.disabled = true; btn.textContent = '...'; }
+            try {
+                const res  = await authFetch('/api/supervisor/whisper', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ conference_name: conferenceName, mode }),
+                });
+                const data = await res.json();
+                if (!res.ok) alert(data.error || 'Erro.');
+                else alert(`Conectando em modo ${mode} — o webphone receberá a chamada.`);
+            } catch(e) { alert('Erro de rede: ' + e.message); }
+            finally { if (btn) { btn.disabled = false; btn.textContent = mode === 'whisper' ? '🗣 Whisper' : '📢 Barge'; } }
+        };
 
         // Intercepta mudança de seção para carregar monitor se necessário
         const originalSwitchSection = window.switchSection;
@@ -4329,33 +5543,51 @@ async function deleteLead(leadId) {
                     </button>
                 </div>
 
-                <!-- RIGHT COLUMN (CRM rápido) -->
+                <!-- RIGHT COLUMN (Script / CRM rápido) -->
                 <div class="pcall-crm-panel">
-                    <div>
-                        <label class="pcall-field-label">Mover para Etapa</label>
-                        <select id="premiumStageId" class="pcall-select">
-                            <option value="">Manter etapa atual...</option>
-                        </select>
+                    <!-- Tab switcher -->
+                    <div class="pcall-tabs">
+                        <button class="pcall-tab active" id="pcallTabCrm"  onclick="window._pcallTab('crm')">CRM</button>
+                        <button class="pcall-tab"        id="pcallTabScript" onclick="window._pcallTab('script')">Script</button>
                     </div>
-                    <div>
-                        <label class="pcall-field-label">Resultado da Ligação</label>
-                        <select id="premiumQualification" class="pcall-select">
-                            <option value="">Selecione o resultado...</option>
-                            <option value="atendeu">Atendeu — Positivo</option>
-                            <option value="reuniao_agendada">Reunião Agendada</option>
-                            <option value="proposta_enviada">Proposta Enviada</option>
-                            <option value="ganho">Ganho / Fechamento</option>
-                            <option value="sem_interesse">Sem Interesse</option>
-                            <option value="retornar_depois">Retornar Depois</option>
-                            <option value="caixa_postal">Caixa Postal</option>
-                            <option value="nao_atendeu">Não Atendeu</option>
-                            <option value="numero_invalido">Número Inválido</option>
-                            <option value="perdido">Perdido</option>
-                        </select>
+
+                    <!-- CRM tab -->
+                    <div id="pcallPanelCrm">
+                        <div>
+                            <label class="pcall-field-label">Mover para Etapa</label>
+                            <select id="premiumStageId" class="pcall-select">
+                                <option value="">Manter etapa atual...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="pcall-field-label">Resultado da Ligação
+                                <span style="font-weight:400; font-size:10px; color:var(--text-secondary); margin-left:6px;">atalhos: G A R S C N I P M · Enter=salvar · Esc=fechar</span>
+                            </label>
+                            <select id="premiumQualification" class="pcall-select">
+                                <option value="">Selecione o resultado...</option>
+                                <option value="atendeu">[A] Atendeu — Positivo</option>
+                                <option value="reuniao_agendada">[M] Reunião Agendada</option>
+                                <option value="proposta_enviada">[P] Proposta Enviada</option>
+                                <option value="ganho">[G] Ganho / Fechamento</option>
+                                <option value="sem_interesse">[S] Sem Interesse</option>
+                                <option value="retornar_depois">[R] Retornar Depois</option>
+                                <option value="caixa_postal">[C] Caixa Postal</option>
+                                <option value="nao_atendeu">[N] Não Atendeu</option>
+                                <option value="numero_invalido">[I] Número Inválido</option>
+                                <option value="perdido">Perdido</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="pcall-field-label">Anotações do Atendimento</label>
+                            <textarea id="premiumNotes" class="pcall-textarea" placeholder="Resumo do atendimento..."></textarea>
+                        </div>
                     </div>
-                    <div>
-                        <label class="pcall-field-label">Anotações do Atendimento</label>
-                        <textarea id="premiumNotes" class="pcall-textarea" placeholder="Resumo do atendimento..."></textarea>
+
+                    <!-- Script tab -->
+                    <div id="pcallPanelScript" style="display:none;">
+                        <div class="pcall-script-box" id="pcallScriptContent">
+                            <span style="color:var(--text-secondary);font-size:12px;">Nenhum script definido para esta campanha.</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4386,11 +5618,14 @@ async function deleteLead(leadId) {
             --bg-primary: #0f172a;
             --bg-secondary: #1e293b;
             --bg-card: #1e293b;
+            --surface: #1e293b;
             --border: #334155;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --sidebar-bg: #0f172a;
             --sidebar-text: #f1f5f9;
+            --input-bg: rgba(0,0,0,0.25);
+            --input-border: #334155;
         }
 
         /* Base */
@@ -4890,12 +6125,13 @@ async function deleteLead(leadId) {
         const list = Array.isArray(campaigns) ? campaigns : (campaigns.campaigns || []);
 
         if (!list.length) {
-            el.innerHTML = `
-                <div style="text-align:center; padding:40px 20px; color:#6b7280;">
-                    <div style="font-size:40px; margin-bottom:12px;">📋</div>
-                    <p style="font-size:15px; font-weight:600; color:#9ca3af; margin-bottom:4px;">Nenhuma campanha cadastrada</p>
-                    <p style="font-size:13px; color:#6b7280;">Crie sua primeira campanha usando o formulário acima.</p>
-                </div>`;
+            renderEmptyState(el, {
+                icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+                title: 'Nenhuma campanha ainda',
+                desc:  'Crie sua primeira campanha para começar a discagem.',
+                ctaLabel:  'Nova Campanha',
+                ctaAction: "document.getElementById('campaign-name') && document.getElementById('campaign-name').focus()",
+            });
             populateCampaignSelects(list);
             return;
         }
@@ -4927,6 +6163,8 @@ async function deleteLead(leadId) {
                         </div>
                         <div style="font-size:12px; color:#6b7280; padding-left:17px;">
                             ${_statusLabel(c.status)} · ${total} leads · ${pending} pendentes
+                            ${c.dial_mode && c.dial_mode !== 'manual' ? ` · <span style="color:#6366f1;font-weight:600;">${c.dial_mode === 'predictive' ? '⚡ Preditivo' : '▶ Auto'}</span>` : ''}
+                            ${c.caller_id_pool ? ` · <span style="color:#22c55e;font-size:11px;" title="${escHtml(c.caller_id_pool)}">📞 Pool ativo</span>` : ''}
                         </div>
                     </div>
 
@@ -4944,6 +6182,7 @@ async function deleteLead(leadId) {
                                      <button class="btn btn-warning" onclick="startDialerOverlay(${c.id}, ['voicemail', 'caixa_postal'])" style="font-size:10px; padding:6px 10px; background:#f59e0b; border:none; color:white; border-radius:8px;">📳 Ligar Voicemails</button>
                                    </div>`
                         }
+                        <button class="btn btn-secondary" onclick="openCampaignSettings(${c.id})" style="font-size:12px; padding:8px 12px;" title="Configurações avançadas">⚙</button>
                         <button class="btn btn-secondary" onclick="resetCampaignLeads(${c.id})" style="font-size:12px; padding:8px 14px;">↺ Resetar</button>
                         <button class="btn btn-danger" onclick="confirmDeleteCampaign(${c.id}, '${escHtml(c.name)}')" style="font-size:12px; padding:8px 12px;">✕</button>
                     </div>
@@ -4979,9 +6218,11 @@ async function deleteLead(leadId) {
         const name = document.getElementById('campaign-name').value.trim();
         if (!name) return;
 
-        const pipelineId = document.getElementById('campaign-pipeline-id').value;
-        const stageId = document.getElementById('campaign-stage-id').value;
-        const mobileOnly = document.getElementById('campaign-mobile-only').checked;
+        const pipelineId      = document.getElementById('campaign-pipeline-id').value;
+        const stageId         = document.getElementById('campaign-stage-id').value;
+        const mobileOnly      = document.getElementById('campaign-mobile-only').checked;
+        const dialMode        = document.getElementById('campaign-dial-mode')?.value || 'auto';
+        const predictiveRatio = parseFloat(document.getElementById('campaign-predictive-ratio')?.value || '1.5');
 
         const btn = e.submitter;
         if (btn) btn.disabled = true;
@@ -4993,8 +6234,10 @@ async function deleteLead(leadId) {
                 body: JSON.stringify({
                     name,
                     default_pipeline_id: pipelineId ? Number(pipelineId) : null,
-                    default_stage_id: stageId ? Number(stageId) : null,
-                    mobile_only: mobileOnly,
+                    default_stage_id:    stageId    ? Number(stageId)    : null,
+                    mobile_only:         mobileOnly,
+                    dial_mode:           dialMode,
+                    predictive_ratio:    dialMode === 'predictive' ? predictiveRatio : null,
                 }),
             });
             const data = await res.json();
@@ -5004,6 +6247,8 @@ async function deleteLead(leadId) {
             }
             setMessage('campaign-message', 'success', `Campanha "${name}" criada!`);
             document.getElementById('campaign-name').value = '';
+            if (document.getElementById('campaign-dial-mode')) document.getElementById('campaign-dial-mode').value = 'auto';
+            _togglePredictiveRatio();
             await reloadCampaigns();
         } catch (err) {
             setMessage('campaign-message', 'error', 'Erro de rede: ' + err.message);
@@ -5011,6 +6256,12 @@ async function deleteLead(leadId) {
             if (btn) btn.disabled = false;
         }
     });
+
+    function _togglePredictiveRatio() {
+        const mode = document.getElementById('campaign-dial-mode')?.value;
+        const wrap = document.getElementById('campaign-predictive-ratio-wrap');
+        if (wrap) wrap.style.display = mode === 'predictive' ? '' : 'none';
+    }
 
     async function reloadCampaigns() {
         try {
@@ -5346,10 +6597,25 @@ async function deleteLead(leadId) {
                 statusText = '📲 Discar: ' + (session.current_lead_phone || '—');
                 statusColor = '#f59e0b'; // amarelo
                 break;
-            case 'paused':
-                statusText = '⏸️ Discador pausado';
-                statusColor = '#ef4444'; // vermelho
+            case 'paused': {
+                const reason = session.pause_reason;
+                if (reason === 'dialing_window') {
+                    const start = session.allowed_hours_start ?? 8;
+                    const end   = session.allowed_hours_end ?? 20;
+                    statusText  = `🕐 Fora da janela de discagem — retomada automática às ${String(start).padStart(2,'0')}:00`;
+                    statusColor = '#f59e0b';
+                } else if (reason === 'insufficient_credit') {
+                    statusText  = '💳 Saldo insuficiente — recarregue para continuar';
+                    statusColor = '#ef4444';
+                } else if (reason === 'twilio_config_error') {
+                    statusText  = '⚠️ Erro de configuração Twilio — verifique as credenciais';
+                    statusColor = '#ef4444';
+                } else {
+                    statusText  = '⏸️ Discador pausado' + (reason ? ` (${reason})` : '');
+                    statusColor = '#ef4444';
+                }
                 break;
+            }
             case 'stopped':
                 statusText = '⏹️ Campanha interrompida';
                 statusColor = '#ef4444';
@@ -5398,20 +6664,139 @@ async function deleteLead(leadId) {
         }
     }
 
-    function _startDialerPoller() {
-        _stopDialerPoller();
+    // ─── WEBSOCKET (Socket.IO) com fallback para polling ─────────────────────
+    // Se socket.io estiver disponível, usa eventos em tempo real.
+    // Se não estiver (CDN bloqueado, erro de rede), cai silenciosamente no polling.
+    let _wsConnected = false;
+
+    function _initSocketIO() {
+        if (typeof io === 'undefined') {
+            console.warn('[WS] socket.io não disponível — usando polling como fallback');
+            return false;
+        }
+        try {
+            const socket = io({ transports: ['websocket', 'polling'] });
+            window._voxSocket = socket;
+
+            socket.on('connect', () => {
+                _wsConnected = true;
+                const token = localStorage.getItem('voxflow_token') || sessionStorage.getItem('voxflow_token');
+                socket.emit('join', { token });
+                console.info('[WS] Conectado ao VoxFlow real-time');
+            });
+
+            socket.on('disconnect', () => {
+                _wsConnected = false;
+                console.warn('[WS] Desconectado — reativando polling como fallback');
+                // Reativa poller se havia campanha ativa
+                if (_dialerCampaignId && !_dialerPoller) _startPollingFallback();
+            });
+
+            // Atualização de status do discador em tempo real
+            socket.on('dialer_status', (data) => {
+                if (!data || !data.session) return;
+                if (data.campaign_id && data.campaign_id !== _dialerCampaignId) return;
+                _stopPollingFallback(); // para o poller se WS assumiu
+                _updateDialerOverlayUI(data.session);
+            });
+
+            // Notificações de sistema (saldo, voicemail alto, etc.)
+            socket.on('notification', (data) => {
+                if (!data) return;
+                const level = data.level || 'info'; // 'info' | 'warning' | 'error'
+                const icon  = level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+                if (typeof showToast === 'function') {
+                    showToast(`${icon} ${data.message}`, level === 'error' ? 'error' : 'info');
+                }
+            });
+
+            // Atualização de chamada (AMD resultado, etc.)
+            socket.on('call_update', (data) => {
+                if (!data) return;
+                if (data.result === 'voicemail') {
+                    if (typeof addDialerOverlayLog === 'function') {
+                        addDialerOverlayLog(`📭 Caixa postal detectada (AMD: ${data.amd || '—'})`, '#f59e0b');
+                    }
+                } else if (data.result === 'human') {
+                    if (typeof addDialerOverlayLog === 'function') {
+                        addDialerOverlayLog(
+                            `👤 Humano detectado${data.uncertain ? ' (incerto)' : ''} — transferindo para operador`,
+                            '#22c55e'
+                        );
+                    }
+                }
+            });
+
+            // Atualização de lead individual (status mudou sem ação do operador)
+            socket.on('lead_update', (data) => {
+                if (!data) return;
+                // Atualiza badge de status no card de lead ativo se for o mesmo
+                const nameEl = document.getElementById('currentLeadName');
+                if (nameEl && data.lead_id && nameEl.dataset.leadId === String(data.lead_id)) {
+                    if (data.status && typeof addDialerOverlayLog === 'function') {
+                        addDialerOverlayLog(`🔄 Lead atualizado: ${data.status}`, '#6366f1');
+                    }
+                }
+                // Recarrega lista de leads se visível
+                if (typeof loadLeads === 'function') {
+                    loadLeads();
+                }
+            });
+
+            // Atualização de campanha (pausada, finalizada, etc.)
+            socket.on('campaign_update', (data) => {
+                if (!data) return;
+                if (data.campaign_id && data.campaign_id !== _dialerCampaignId) return;
+                if (data.status === 'paused' || data.status === 'stopped' || data.status === 'finished') {
+                    if (typeof addDialerOverlayLog === 'function') {
+                        const labels = { paused: '⏸ Pausada', stopped: '⏹ Parada', finished: '✅ Finalizada' };
+                        addDialerOverlayLog(labels[data.status] || `Campanha: ${data.status}`, '#64748b');
+                    }
+                    _stopPollingFallback();
+                }
+                // Re-renderiza estado do overlay
+                if (data.session && typeof _updateDialerOverlayUI === 'function') {
+                    _updateDialerOverlayUI(data.session);
+                }
+            });
+
+            socket.on('connect_error', (err) => {
+                console.warn('[WS] Erro de conexão:', err.message);
+            });
+
+            return true;
+        } catch (err) {
+            console.warn('[WS] Falha ao inicializar socket.io:', err);
+            return false;
+        }
+    }
+
+    // Fallback polling — usado quando WS não está disponível ou desconecta
+    function _startPollingFallback() {
+        if (_dialerPoller) return;
         _dialerPoller = setInterval(async () => {
-            if (!_dialerCampaignId) return;
+            if (!_dialerCampaignId || _wsConnected) return; // WS assumiu
             try {
                 const res  = await authFetch(`/api/dialer/auto/status/${_dialerCampaignId}`);
                 const data = await res.json();
                 _updateDialerOverlayUI(data);
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error('[POLL]', e); }
         }, 2500);
     }
 
-    function _stopDialerPoller() {
+    function _stopPollingFallback() {
         if (_dialerPoller) { clearInterval(_dialerPoller); _dialerPoller = null; }
+    }
+
+    // API pública — chamada por startDialerOverlay / openDialerOverlay
+    function _startDialerPoller() {
+        _stopDialerPoller();
+        if (!_wsConnected) _startPollingFallback(); // fallback se sem WS
+        // Se WS conectado, eventos dialer_status cuidam das atualizações
+    }
+
+    function _stopDialerPoller() {
+        _stopPollingFallback();
     }
 
     // ─── AUTO-INIT: carrega dados ao abrir a página ──────────────────────────
@@ -5419,6 +6804,10 @@ async function deleteLead(leadId) {
         // Verifica token antes de carregar
         const token = localStorage.getItem('voxflow_token') || sessionStorage.getItem('voxflow_token');
         if (!token) return; // página de login cuidará do redirecionamento
+
+        // Inicia conexão WebSocket (Socket.IO) o mais cedo possível
+        // Se não disponível, o fallback de polling assume automaticamente
+        _initSocketIO();
 
         // Garante que o CRM tenha pelo menos uma pipeline padrão
         try {
@@ -5627,9 +7016,35 @@ async function deleteLead(leadId) {
     }
 
     // ─── Configurações ───────────────────────────────────────────────────────
-    function saveCompanySettings() {
-        // Mock ou API se implementada
-        setMessage('settings-message','success','Configurações salvas localmente.');
+    async function loadCompanySettings() {
+        try {
+            const r = await authFetch('/api/settings/company');
+            if (!r.ok) return;
+            const data = await r.json();
+            const nameEl    = document.getElementById('settings-company-name');
+            const segmentEl = document.getElementById('settings-segment');
+            if (nameEl)    nameEl.value    = data.name    || '';
+            if (segmentEl) segmentEl.value = data.segment || '';
+        } catch(e) { console.error('Erro ao carregar configurações', e); }
+    }
+    window.loadCompanySettings = loadCompanySettings;
+
+    async function saveCompanySettings() {
+        const name    = (document.getElementById('settings-company-name')?.value || '').trim();
+        const segment = (document.getElementById('settings-segment')?.value || '').trim();
+        try {
+            const r = await authFetch('/api/settings/company', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, segment }),
+            });
+            if (r.ok) {
+                setMessage('settings-message', 'success', 'Configurações salvas com sucesso.');
+            } else {
+                const err = await r.json().catch(() => ({}));
+                setMessage('settings-message', 'error', err.error || 'Erro ao salvar.');
+            }
+        } catch(e) { setMessage('settings-message', 'error', 'Erro de conexão.'); }
     }
 
     async function loadRegulatorySettings() {
@@ -6036,6 +7451,67 @@ async function deleteLead(leadId) {
         }
     }
 
+    // ── AMD Metrics ───────────────────────────────────────────────────────────
+    let _amdPanelOpen = true;
+
+    function toggleAMDPanel() {
+        _amdPanelOpen = !_amdPanelOpen;
+        const body = document.getElementById('amd-panel-body');
+        if (body) body.style.display = _amdPanelOpen ? '' : 'none';
+    }
+
+    async function loadAMDMetrics() {
+        const qs = _anParams();
+        try {
+            const r = await authFetch(`/api/analytics/amd?${qs}`);
+            if (!r.ok) throw new Error('amd api error');
+            const d = await r.json();
+
+            const fmt = (v) => v !== undefined ? `${v}%` : '—';
+            document.getElementById('amd-human-pct').textContent     = fmt(d.human?.pct);
+            document.getElementById('amd-human-count').textContent    = `${d.human?.count ?? '—'} chamadas`;
+            document.getElementById('amd-machine-pct').textContent    = fmt(d.machine?.pct);
+            document.getElementById('amd-machine-count').textContent  = `${d.machine?.count ?? '—'} chamadas`;
+            document.getElementById('amd-unknown-pct').textContent    = fmt(d.unknown?.pct);
+            document.getElementById('amd-unknown-count').textContent  = `${d.unknown?.count ?? '—'} chamadas`;
+            document.getElementById('amd-recovered-pct').textContent  = fmt(d.false_positives_recovered?.pct);
+            document.getElementById('amd-recovered-count').textContent = `${d.false_positives_recovered?.count ?? '—'} recuperados`;
+
+            const tableDiv = document.getElementById('amd-campaign-table');
+            if (d.campaign_breakdown && d.campaign_breakdown.length > 0) {
+                const rows = d.campaign_breakdown.map(c => `
+                    <tr>
+                        <td style="padding:10px 12px;color:var(--text-primary);font-weight:600;">${c.campaign_name || 'Sem nome'}</td>
+                        <td style="padding:10px 12px;text-align:center;">${c.total}</td>
+                        <td style="padding:10px 12px;text-align:center;color:#22c55e;font-weight:700;">${c.human_pct}%</td>
+                        <td style="padding:10px 12px;text-align:center;color:#ef4444;font-weight:700;">${c.machine_pct}%</td>
+                        <td style="padding:10px 12px;text-align:center;color:#f59e0b;font-weight:700;">${c.unknown_pct}%</td>
+                        <td style="padding:10px 12px;text-align:center;color:#8b5cf6;">${c.recovered}</td>
+                    </tr>
+                `).join('');
+                tableDiv.innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border);">
+                                <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Campanha</th>
+                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Total</th>
+                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Humano</th>
+                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Máquina</th>
+                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Unknown</th>
+                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Recuperados</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+            } else if (d.total_with_amd === 0) {
+                tableDiv.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px 0;font-size:13px;">Nenhuma chamada com dados AMD no período selecionado.</p>';
+            }
+        } catch(e) {
+            console.error('[AMD Metrics]', e);
+        }
+    }
+
     async function loadFunnelOnly() {
         try {
             const qs = _anParams();
@@ -6254,11 +7730,14 @@ async function deleteLead(leadId) {
             --bg-primary: #0f172a;
             --bg-secondary: #1e293b;
             --bg-card: #1e293b;
+            --surface: #1e293b;
             --border: #334155;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --sidebar-bg: #0f172a;
             --sidebar-text: #f1f5f9;
+            --input-bg: rgba(0,0,0,0.25);
+            --input-border: #334155;
         }
 
         /* Base */
@@ -7136,6 +8615,197 @@ async function deleteLead(leadId) {
     })();
     </script>
 
+    <!-- Modal Follow-up Sequence -->
+    <div id="followUpModal" style="display:none; position:fixed; z-index:999998; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); align-items:flex-start; justify-content:center; overflow-y:auto; padding:24px 0;">
+      <div style="background:var(--surface,#1e293b); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:28px; max-width:620px; width:94%; margin:auto; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <h3 id="fu-modal-title" style="margin:0; font-size:17px; font-weight:700; color:var(--text-primary,#f1f5f9);">Nova sequência</h3>
+          <button onclick="closeFollowUpModal()" style="background:none; border:none; color:#9ca3af; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+        <input type="hidden" id="fu-edit-id">
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
+          <div style="flex:2; min-width:180px;">
+            <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:5px;">Nome da sequência</label>
+            <input type="text" id="fu-name" placeholder="Ex: Retorno para quem atendeu" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; box-sizing:border-box;">
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:5px;">Gatilho (classificação)</label>
+            <select id="fu-trigger" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+              <option value="atendeu">Atendeu</option>
+              <option value="venda">Venda</option>
+              <option value="reuniao_agendada">Reunião agendada</option>
+              <option value="retornar">Retornar</option>
+              <option value="sem_interesse">Sem interesse</option>
+              <option value="caixa_postal">Caixa postal</option>
+              <option value="nao_atendeu">Não atendeu</option>
+              <option value="numero_invalido">Número inválido</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:5px;">Campanha (opcional — vazio = todas)</label>
+          <select id="fu-campaign" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+            <option value="">Todas as campanhas</option>
+          </select>
+        </div>
+
+        <!-- Steps builder -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <label style="font-size:13px; font-weight:600; color:#94a3b8;">Etapas da sequência</label>
+            <button onclick="fuAddStep()" style="background:none; border:1px solid rgba(255,255,255,0.15); color:#6366f1; font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer; font-weight:600;">+ Etapa</button>
+          </div>
+          <div id="fu-steps-container" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Steps injected by JS -->
+          </div>
+          <p id="fu-steps-empty" style="font-size:13px; color:#64748b; font-style:italic; padding:8px 0;">Nenhuma etapa. Clique em "+ Etapa" para adicionar.</p>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px;">
+          <input type="checkbox" id="fu-is-active" checked style="width:15px; height:15px; cursor:pointer; accent-color:#6366f1;">
+          <label for="fu-is-active" style="font-size:13px; color:#94a3b8; cursor:pointer;">Sequência ativa</label>
+        </div>
+
+        <div id="fu-modal-msg" style="font-size:13px; min-height:18px; margin-bottom:12px;"></div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button onclick="closeFollowUpModal()" style="padding:10px 20px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-size:13px; cursor:pointer;">Cancelar</button>
+          <button onclick="saveFollowUpSequence()" style="padding:10px 22px; border-radius:10px; border:none; background:#6366f1; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal DNC Adicionar -->
+    <div id="addDncModal" style="display:none; position:fixed; z-index:999998; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); align-items:center; justify-content:center;">
+      <div style="background:var(--surface,#1e293b); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:24px; max-width:420px; width:92%; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+        <h3 style="margin:0 0 16px; font-size:16px; color:var(--text-primary,#f1f5f9);">Adicionar ao DNC</h3>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:13px; color:#94a3b8;">Número (formato E.164 recomendado)</label>
+          <input type="tel" id="dnc-add-phone" placeholder="+5511999990001" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; margin-top:4px; box-sizing:border-box;">
+        </div>
+        <div class="field" style="margin-bottom:18px;">
+          <label style="font-size:13px; color:#94a3b8;">Motivo (opcional)</label>
+          <input type="text" id="dnc-add-reason" placeholder="Ex: Solicitou não ligar" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; margin-top:4px; box-sizing:border-box;">
+        </div>
+        <div id="dnc-add-msg" style="font-size:13px; min-height:18px; margin-bottom:12px;"></div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button onclick="document.getElementById('addDncModal').style.display='none'" style="padding:9px 18px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-size:13px; cursor:pointer;">Cancelar</button>
+          <button onclick="dncAddSingle()" style="padding:9px 20px; border-radius:10px; border:none; background:#ef4444; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">Bloquear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Configurações da Campanha -->
+    <div id="campaignSettingsModal" style="display:none; position:fixed; z-index:999999; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); align-items:center; justify-content:center; overflow-y:auto;">
+      <div style="background:var(--surface,#1e293b); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:28px 28px 24px; max-width:560px; width:94%; margin:auto; box-shadow:0 20px 50px rgba(0,0,0,0.6); position:relative; top:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;">
+          <h3 style="margin:0; font-size:17px; font-weight:700; color:var(--text-primary,#f1f5f9);">⚙ Configurações da campanha</h3>
+          <button onclick="closeCampaignSettings()" style="background:none; border:none; color:#9ca3af; font-size:20px; cursor:pointer; line-height:1;">✕</button>
+        </div>
+        <input type="hidden" id="cs-campaign-id">
+
+        <!-- Caller ID Pool -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">
+            Caller ID Pool
+            <span style="font-weight:400; font-size:11px; color:#64748b;"> — números separados por vírgula ou nova linha (ex: +5511999990000)</span>
+          </label>
+          <textarea id="cs-caller-id-pool" rows="3" placeholder="+5511999990001&#10;+5511999990002&#10;+5511999990003"
+            style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.25); color:#f1f5f9; font-size:13px; resize:vertical; box-sizing:border-box; font-family:monospace;"></textarea>
+          <div id="cs-caller-id-preview" style="font-size:11px; color:#6366f1; margin-top:4px;"></div>
+        </div>
+
+        <!-- Modo de discagem + Ratio -->
+        <div style="display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:160px;">
+            <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Modo de discagem</label>
+            <select id="cs-dial-mode" onchange="_csTogglePredictive()" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+              <option value="manual">Manual</option>
+              <option value="auto">Auto (Sequencial)</option>
+              <option value="predictive">Preditivo</option>
+            </select>
+          </div>
+          <div id="cs-predictive-wrap" style="flex:1; min-width:140px; display:none;">
+            <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">Ratio preditivo</label>
+            <input type="number" id="cs-predictive-ratio" min="1" max="3" step="0.1" value="1.5"
+              style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+          </div>
+        </div>
+
+        <!-- Ring timeout -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:6px;">
+            Ring timeout <span style="font-weight:400; font-size:11px; color:#64748b;">(segundos, 20–90)</span>
+          </label>
+          <input type="number" id="cs-ring-timeout" min="20" max="90" value="50"
+            style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+        </div>
+
+        <!-- Janela de discagem -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:13px; font-weight:600; color:#94a3b8; display:block; margin-bottom:10px;">Janela de discagem</label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <div style="flex:1; min-width:110px;">
+              <label style="font-size:11px; color:#64748b;">Início (hora)</label>
+              <input type="number" id="cs-hours-start" min="0" max="23" value="8"
+                style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; margin-top:4px;">
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <label style="font-size:11px; color:#64748b;">Fim (hora)</label>
+              <input type="number" id="cs-hours-end" min="0" max="23" value="20"
+                style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; margin-top:4px;">
+            </div>
+            <div style="flex:2; min-width:160px;">
+              <label style="font-size:11px; color:#64748b;">Timezone</label>
+              <select id="cs-timezone" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px; margin-top:4px;">
+                <option value="America/Sao_Paulo">São Paulo (BRT)</option>
+                <option value="America/Manaus">Manaus (AMT)</option>
+                <option value="America/Belem">Belém (BRT)</option>
+                <option value="America/Fortaleza">Fortaleza (BRT)</option>
+                <option value="America/Recife">Recife (BRT)</option>
+                <option value="America/Porto_Velho">Porto Velho (AMT)</option>
+                <option value="America/Rio_Branco">Rio Branco (ACT)</option>
+                <option value="America/Noronha">Noronha (FNT)</option>
+              </select>
+            </div>
+          </div>
+          <!-- Dias da semana -->
+          <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Dias permitidos</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <label id="cs-day-0" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="0" onchange="_csUpdateWeekdays()" style="display:none;"> Dom
+            </label>
+            <label id="cs-day-1" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="1" onchange="_csUpdateWeekdays()" style="display:none;"> Seg
+            </label>
+            <label id="cs-day-2" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="2" onchange="_csUpdateWeekdays()" style="display:none;"> Ter
+            </label>
+            <label id="cs-day-3" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="3" onchange="_csUpdateWeekdays()" style="display:none;"> Qua
+            </label>
+            <label id="cs-day-4" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="4" onchange="_csUpdateWeekdays()" style="display:none;"> Qui
+            </label>
+            <label id="cs-day-5" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="5" onchange="_csUpdateWeekdays()" style="display:none;"> Sex
+            </label>
+            <label id="cs-day-6" style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#94a3b8; transition:all .15s;">
+              <input type="checkbox" value="6" onchange="_csUpdateWeekdays()" style="display:none;"> Sáb
+            </label>
+          </div>
+        </div>
+
+        <div id="cs-message" style="font-size:13px; min-height:20px; margin-bottom:14px;"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button onclick="closeCampaignSettings()" style="padding:10px 20px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-size:13px; cursor:pointer;">Cancelar</button>
+          <button onclick="saveCampaignSettings()" style="padding:10px 22px; border-radius:10px; border:none; background:#6366f1; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">Salvar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal Wipe Data -->
     <div id="wipeDataModal" class="modal" style="display:none; position:fixed; z-index:999999; left:0; top:0; width:100vw; height:100vh; background-color:rgba(0,0,0,0.6); align-items:center; justify-content:center;">
         <div class="modal-content" style="background:var(--surface); padding:24px; border-radius:16px; max-width:400px; width:90%; border:1px solid rgba(255,255,255,0.1); box-shadow:0 10px 25px rgba(0,0,0,0.5); pointer-events:auto;">
@@ -7150,5 +8820,871 @@ async function deleteLead(leadId) {
             </div>
         </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         COMMAND PALETTE — Cmd+K / Ctrl+K
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="cmdPaletteOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9000; backdrop-filter:blur(3px);" onclick="closeCmdPalette()"></div>
+    <div id="cmdPalette" role="dialog" aria-label="Busca rápida" style="
+        display:none; position:fixed; top:15vh; left:50%; transform:translateX(-50%);
+        z-index:9001; width:min(640px,94vw);
+        background:var(--bg-card); border:1px solid var(--border);
+        border-radius:16px; box-shadow:0 32px 80px rgba(0,0,0,0.35);
+        overflow:hidden; font-family:'Inter',sans-serif;">
+
+        <!-- Search bar -->
+        <div style="display:flex; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid var(--border);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="cmdInput" type="text" placeholder="Buscar leads, campanhas, ações..." autocomplete="off" style="
+                flex:1; background:none; border:none; outline:none;
+                font-size:16px; color:var(--text-primary); font-family:inherit;">
+            <kbd style="font-size:11px; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border); border-radius:5px; padding:2px 7px;">Esc</kbd>
+        </div>
+
+        <!-- Results -->
+        <div id="cmdResults" style="max-height:420px; overflow-y:auto; padding:6px 0;"></div>
+
+        <!-- Footer hints -->
+        <div style="display:flex; gap:16px; padding:10px 16px; border-top:1px solid var(--border); font-size:11px; color:var(--text-secondary);">
+            <span><kbd style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">↑↓</kbd> navegar</span>
+            <span><kbd style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">Enter</kbd> abrir</span>
+            <span><kbd style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:1px 5px;">Esc</kbd> fechar</span>
+        </div>
+    </div>
+
+    <style>
+    .cmd-item {
+        display:flex; align-items:center; gap:12px;
+        padding:10px 16px; cursor:pointer;
+        transition:background .1s;
+    }
+    .cmd-item:hover, .cmd-item.active {
+        background:var(--bg-secondary);
+    }
+    .cmd-icon {
+        width:32px; height:32px; border-radius:8px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        font-size:14px;
+    }
+    .cmd-label { font-size:14px; font-weight:500; color:var(--text-primary); }
+    .cmd-sub   { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+    .cmd-badge {
+        margin-left:auto; font-size:11px; font-weight:600;
+        padding:2px 8px; border-radius:99px; flex-shrink:0;
+    }
+    .cmd-section-label {
+        padding:6px 16px 4px; font-size:11px; font-weight:700;
+        text-transform:uppercase; letter-spacing:.06em;
+        color:var(--text-secondary);
+    }
+
+    /* ── Popup call script tabs ─────────────────────────────────────────────── */
+    .pcall-tabs { display:flex; gap:6px; margin-bottom:10px; }
+    .pcall-tab {
+        flex:1; padding:5px 0; font-size:12px; font-weight:600; border-radius:6px;
+        border:1px solid var(--border); background:transparent; color:var(--text-secondary);
+        cursor:pointer; transition:all .15s;
+    }
+    .pcall-tab.active {
+        background:var(--accent-blue); color:#fff; border-color:var(--accent-blue);
+    }
+    .pcall-script-box {
+        background:var(--surface-2,var(--surface)); border:1px solid var(--border);
+        border-radius:8px; padding:10px 12px; font-size:12px; line-height:1.6;
+        color:var(--text-primary); white-space:pre-wrap; overflow-y:auto;
+        max-height:260px; min-height:80px;
+    }
+
+    /* ── Lead Activity Timeline ─────────────────────────────────────────────── */
+    .act-timeline { padding:4px 0; }
+    .act-row { display:flex; gap:10px; }
+    .act-connector { display:flex; flex-direction:column; align-items:center; width:22px; flex-shrink:0; }
+    .act-dot {
+        width:22px; height:22px; border-radius:50%; display:flex;
+        align-items:center; justify-content:center; flex-shrink:0; z-index:1;
+    }
+    .act-line { width:2px; flex:1; min-height:10px; background:var(--border); margin:2px 0; }
+    .act-content { flex:1; padding-bottom:12px; min-width:0; }
+    .act-row-last .act-content { padding-bottom:4px; }
+    .act-header { display:flex; justify-content:space-between; align-items:baseline; gap:6px; margin-bottom:2px; }
+    .act-title { font-size:12px; font-weight:600; }
+    .act-time { font-size:11px; color:var(--text-secondary); white-space:nowrap; }
+    .act-body { font-size:11px; color:var(--text-secondary); line-height:1.4; }
+    .act-empty { font-size:12px; color:var(--text-secondary); padding:8px 0; }
+    .act-timeline-loading { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:6px; padding:4px 0; }
+    </style>
+
+    <script>
+    // ── Command Palette ──────────────────────────────────────────────────────
+    (function(){
+        const ACTIONS = [
+            { icon:'📊', label:'Dashboard',        sub:'Painel de operação',        action:()=>showSection('dashboard') },
+            { icon:'📋', label:'Campanhas',         sub:'Gerenciar campanhas',       action:()=>showSection('campaigns') },
+            { icon:'👥', label:'Leads',             sub:'Lista de leads',            action:()=>showSection('leads') },
+            { icon:'📞', label:'Chamadas',          sub:'Histórico de chamadas',     action:()=>showSection('calls') },
+            { icon:'📈', label:'Analytics',         sub:'KPIs e métricas',           action:()=>showSection('analytics') },
+            { icon:'📥', label:'Importar Leads',    sub:'Upload CSV / XLSX',         action:()=>showSection('import') },
+            { icon:'⚙️', label:'Configurações',     sub:'Twilio, conta, segurança',  action:()=>showSection('settings') },
+            { icon:'🎧', label:'Webphone',          sub:'Operação manual',           action:()=>showSection('operation') },
+            { icon:'👤', label:'Usuários',          sub:'Equipe e permissões',       action:()=>showSection('users') },
+            { icon:'💳', label:'Meu Crédito',       sub:'Saldo e recarga',           action:()=>showSection('credito') },
+            { icon:'➕', label:'Nova Campanha',     sub:'Criar campanha de discagem',action:()=>{ showSection('campaigns'); setTimeout(()=>document.getElementById('campaign-name')&&document.getElementById('campaign-name').focus(),300); } },
+        ];
+
+        let _open    = false;
+        let _active  = 0;
+        let _results = [];
+        let _debounce = null;
+
+        function openCmdPalette() {
+            document.getElementById('cmdPaletteOverlay').style.display = 'block';
+            document.getElementById('cmdPalette').style.display = 'block';
+            const inp = document.getElementById('cmdInput');
+            inp.value = '';
+            _active = 0;
+            _open = true;
+            setTimeout(()=>inp.focus(), 50);
+            _renderDefault();
+        }
+
+        function closeCmdPalette() {
+            document.getElementById('cmdPaletteOverlay').style.display = 'none';
+            document.getElementById('cmdPalette').style.display = 'none';
+            _open = false;
+            _results = [];
+        }
+
+        window.closeCmdPalette = closeCmdPalette;
+
+        function _renderDefault() {
+            _results = ACTIONS.map(a => ({ type:'action', ...a }));
+            _render(_results, '');
+        }
+
+        function _render(items, query) {
+            const el = document.getElementById('cmdResults');
+            if (!items.length) {
+                el.innerHTML = `<div style="padding:32px 16px; text-align:center; color:var(--text-secondary); font-size:14px;">Nenhum resultado para "${query}"</div>`;
+                return;
+            }
+
+            let html = '';
+            let lastType = null;
+            items.forEach((item, i) => {
+                if (item.type !== lastType) {
+                    const labels = { action:'Ações rápidas', lead:'Leads', campaign:'Campanhas', call:'Chamadas' };
+                    html += `<div class="cmd-section-label">${labels[item.type] || item.type}</div>`;
+                    lastType = item.type;
+                }
+                const badgeHtml = item.badge
+                    ? `<span class="cmd-badge" style="background:${item.badgeColor||'var(--bg-secondary)'}; color:${item.badgeTxt||'var(--text-secondary)'}">${item.badge}</span>`
+                    : '';
+                html += `<div class="cmd-item${i===_active?' active':''}" data-idx="${i}" onclick="_cmdSelect(${i})">
+                    <div class="cmd-icon" style="background:${item.iconBg||'var(--bg-secondary)'};">${item.icon}</div>
+                    <div style="min-width:0;">
+                        <div class="cmd-label">${_highlight(item.label, query)}</div>
+                        ${item.sub ? `<div class="cmd-sub">${item.sub}</div>` : ''}
+                    </div>
+                    ${badgeHtml}
+                </div>`;
+            });
+            el.innerHTML = html;
+        }
+
+        function _highlight(text, query) {
+            if (!query) return text;
+            const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+            return text.replace(re, '<mark style="background:rgba(37,99,235,0.18);color:var(--accent);border-radius:2px;">$1</mark>');
+        }
+
+        window._cmdSelect = function(idx) {
+            const item = _results[idx];
+            if (!item) return;
+            if (item.action) item.action();
+            closeCmdPalette();
+        };
+
+        async function _search(query) {
+            if (!query.trim()) { _renderDefault(); return; }
+            const q = query.toLowerCase();
+
+            // Filter actions
+            const actions = ACTIONS
+                .filter(a => a.label.toLowerCase().includes(q) || (a.sub||'').toLowerCase().includes(q))
+                .map(a => ({ type:'action', ...a }));
+
+            // API search — leads and campaigns in parallel
+            let leads = [], campaigns = [];
+            try {
+                const [lr, cr] = await Promise.all([
+                    authFetch(`/api/leads?search=${encodeURIComponent(query)}&per_page=5`),
+                    authFetch(`/api/campaigns?search=${encodeURIComponent(query)}&per_page=5`),
+                ]);
+                if (lr.ok) { const d = await lr.json(); leads = (d.leads||d||[]).slice(0,5); }
+                if (cr.ok) { const d = await cr.json(); campaigns = (d.campaigns||d||[]).slice(0,5); }
+            } catch(e) {}
+
+            const leadItems = leads.map(l => ({
+                type:'lead', icon:'👤', iconBg:'rgba(37,99,235,0.08)',
+                label: l.name || l.numero_1 || 'Lead #'+l.id,
+                sub: [l.company_name, l.numero_1].filter(Boolean).join(' · '),
+                badge: l.status, badgeColor:'var(--bg-secondary)', badgeTxt:'var(--text-secondary)',
+                action: ()=>{ showSection('leads'); },
+            }));
+
+            const campItems = campaigns.map(c => ({
+                type:'campaign', icon:'📋', iconBg:'rgba(139,92,246,0.08)',
+                label: c.name,
+                sub: `${c.status} · ${c.leads_total||0} leads`,
+                badge: c.status,
+                badgeColor: c.status==='running'?'rgba(22,163,74,0.1)':'var(--bg-secondary)',
+                badgeTxt: c.status==='running'?'#16a34a':'var(--text-secondary)',
+                action: ()=>showSection('campaigns'),
+            }));
+
+            _results = [...actions, ...leadItems, ...campItems];
+            _active  = 0;
+            _render(_results, query);
+        }
+
+        // Input handler
+        document.getElementById('cmdInput').addEventListener('input', e => {
+            clearTimeout(_debounce);
+            _debounce = setTimeout(()=>_search(e.target.value), 200);
+        });
+
+        // Keyboard navigation
+        document.getElementById('cmdInput').addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                _active = Math.min(_active+1, _results.length-1);
+                _render(_results, document.getElementById('cmdInput').value);
+                _scrollActive();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                _active = Math.max(_active-1, 0);
+                _render(_results, document.getElementById('cmdInput').value);
+                _scrollActive();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                window._cmdSelect(_active);
+            } else if (e.key === 'Escape') {
+                closeCmdPalette();
+            }
+        });
+
+        function _scrollActive() {
+            const el = document.querySelector('#cmdResults .cmd-item.active');
+            if (el) el.scrollIntoView({ block:'nearest' });
+        }
+
+        // Global Cmd+K / Ctrl+K shortcut
+        document.addEventListener('keydown', e => {
+            const isMac  = navigator.platform.toUpperCase().includes('MAC');
+            const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+            if (cmdKey && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                _open ? closeCmdPalette() : openCmdPalette();
+            }
+            if (e.key === 'Escape' && _open) closeCmdPalette();
+        });
+
+        // Expose for button/menu trigger
+        window.openCmdPalette = openCmdPalette;
+    })();
+
+    // ─── Reports & CSV Export ────────────────────────────────────────────────
+    window.exportCSV = async function(type) {
+        const msgEl = document.getElementById('export-msg');
+        if (msgEl) { msgEl.textContent = 'Gerando arquivo...'; msgEl.style.color = '#6366f1'; }
+
+        let url = `/api/analytics/export/${type}`;
+        const params = new URLSearchParams();
+
+        if (type === 'leads') {
+            const camp   = document.getElementById('export-leads-campaign')?.value;
+            const status = document.getElementById('export-leads-status')?.value;
+            if (camp)   params.set('campaign_id', camp);
+            if (status) params.set('status', status);
+        }
+        if (type === 'calls') {
+            const from = document.getElementById('export-calls-from')?.value;
+            const to   = document.getElementById('export-calls-to')?.value;
+            if (from) params.set('from', from);
+            if (to)   params.set('to', to);
+        }
+        if (params.toString()) url += '?' + params.toString();
+
+        try {
+            const res = await authFetch(url);
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                if (msgEl) { msgEl.textContent = d.error || 'Erro ao exportar.'; msgEl.style.color = '#ef4444'; }
+                return;
+            }
+            const blob = await res.blob();
+            const a    = document.createElement('a');
+            a.href     = URL.createObjectURL(blob);
+            a.download = `${type}_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(a.href);
+            if (msgEl) { msgEl.textContent = 'Download iniciado!'; msgEl.style.color = '#22c55e'; setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 3000); }
+        } catch(e) {
+            if (msgEl) { msgEl.textContent = 'Erro de rede: ' + e.message; msgEl.style.color = '#ef4444'; }
+        }
+    };
+
+    // Populate reports campaign selects when section opens
+    document.querySelector('[data-section="reports"]')?.addEventListener('click', async () => {
+        setTimeout(async () => {
+            // KPIs
+            try {
+                const [lr, cr] = await Promise.all([
+                    authFetch('/api/leads?per_page=1'),
+                    authFetch('/api/campaigns'),
+                ]);
+                const ld = await lr.json();
+                const cd = await cr.json();
+                const totalLeads = ld.total || 0;
+                const newLeads   = ld.new_count || 0;
+                const campaigns  = Array.isArray(cd) ? cd : (cd.campaigns || []);
+                document.getElementById('report-total-leads')?.textContent !== undefined &&
+                    (document.getElementById('report-total-leads').textContent = totalLeads);
+                document.getElementById('report-new-leads')?.textContent !== undefined &&
+                    (document.getElementById('report-new-leads').textContent = newLeads || '—');
+                document.getElementById('report-total-campaigns')?.textContent !== undefined &&
+                    (document.getElementById('report-total-campaigns').textContent = campaigns.length);
+                // Populate campaign filter
+                const sel = document.getElementById('export-leads-campaign');
+                if (sel) {
+                    sel.innerHTML = '<option value="">Todas as campanhas</option>' +
+                        campaigns.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+                }
+            } catch(e) {}
+            // Call count
+            try {
+                const cr2 = await authFetch('/api/calls?per_page=1');
+                const cd2 = await cr2.json();
+                const totalCalls = cd2.total || (cd2.calls || []).length || 0;
+                document.getElementById('report-total-calls')?.textContent !== undefined &&
+                    (document.getElementById('report-total-calls').textContent = totalCalls || '—');
+            } catch(e) {}
+        }, 80);
+    });
+
+    // ─── Follow-up Sequences ─────────────────────────────────────────────────
+    (function() {
+        let _fuTab = 'sequences';
+        let _fuEditId = null;
+        let _fuSteps = [];
+
+        const DISPOSITIONS = {
+            atendeu: 'Atendeu', venda: 'Venda', reuniao_agendada: 'Reunião agendada',
+            retornar: 'Retornar', sem_interesse: 'Sem interesse',
+            caixa_postal: 'Caixa postal', nao_atendeu: 'Não atendeu',
+            numero_invalido: 'Número inválido',
+        };
+        const ACTION_ICONS = { email: '📧', whatsapp: '💬', call: '📞' };
+
+        window.fuSwitchTab = function(tab) {
+            _fuTab = tab;
+            ['sequences', 'tasks'].forEach(t => {
+                const btn  = document.getElementById(`fu-tab-${t}`);
+                const pane = document.getElementById(`fu-pane-${t}`);
+                const active = t === tab;
+                if (btn)  { btn.style.background = active ? 'var(--accent)' : 'var(--bg-secondary)'; btn.style.color = active ? '#fff' : 'var(--text-secondary)'; }
+                if (pane) pane.style.display = active ? '' : 'none';
+            });
+            if (tab === 'sequences') fuLoadSequences();
+            if (tab === 'tasks')     fuLoadTasks();
+        };
+
+        // ── Sequences ──
+        window.fuLoadSequences = async function() {
+            const el = document.getElementById('fu-sequences-list');
+            if (!el) return;
+            el.innerHTML = '<p class="empty">Carregando...</p>';
+            try {
+                const res  = await authFetch('/api/followup/sequences');
+                const list = await res.json();
+                if (!list.length) { el.innerHTML = '<p class="empty" style="padding:20px 0;">Nenhuma sequência criada ainda.</p>'; return; }
+                el.innerHTML = list.map(s => `
+                  <div style="border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; background:var(--bg-card);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:160px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                          <span style="font-size:15px; font-weight:700; color:var(--text-primary);">${escHtml(s.name)}</span>
+                          <span style="font-size:10px; padding:2px 8px; border-radius:99px; background:${s.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(100,116,139,0.15)'}; color:${s.is_active ? '#22c55e' : '#64748b'}; font-weight:600;">${s.is_active ? 'Ativo' : 'Pausado'}</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-secondary);">
+                          Gatilho: <strong style="color:var(--text-primary);">${DISPOSITIONS[s.trigger_disposition] || s.trigger_disposition}</strong>
+                          · ${(s.steps||[]).length} etapa${(s.steps||[]).length !== 1 ? 's' : ''}
+                          ${s.campaign_id ? `· Campanha #${s.campaign_id}` : '· Todas as campanhas'}
+                        </div>
+                        ${(s.steps||[]).length ? `
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+                          ${(s.steps).map((step, i) => `
+                            <span style="font-size:11px; padding:3px 9px; border-radius:8px; background:rgba(99,102,241,0.1); color:#818cf8;">
+                              ${ACTION_ICONS[step.action] || '📌'} Etapa ${i+1}: ${step.action} em ${step.delay_minutes >= 1440 ? Math.round(step.delay_minutes/1440)+'d' : step.delay_minutes >= 60 ? Math.round(step.delay_minutes/60)+'h' : (step.delay_minutes||0)+'min'}
+                            </span>`).join('')}
+                        </div>` : ''}
+                      </div>
+                      <div style="display:flex; gap:6px; flex-shrink:0;">
+                        <button onclick="openEditFollowUpModal(${s.id})" style="padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:12px; cursor:pointer;">Editar</button>
+                        <button onclick="fuToggleActive(${s.id}, ${!s.is_active})" style="padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:transparent; color:${s.is_active ? '#f59e0b' : '#22c55e'}; font-size:12px; cursor:pointer;">${s.is_active ? 'Pausar' : 'Ativar'}</button>
+                        <button onclick="fuDeleteSequence(${s.id}, '${escHtml(s.name)}')" style="padding:7px 10px; border-radius:8px; border:1px solid rgba(239,68,68,0.3); background:transparent; color:#ef4444; font-size:12px; cursor:pointer;">✕</button>
+                      </div>
+                    </div>
+                  </div>`).join('');
+            } catch(e) { el.innerHTML = '<p class="empty">Erro ao carregar sequências.</p>'; }
+        };
+
+        window.fuToggleActive = async function(id, active) {
+            await authFetch(`/api/followup/sequences/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({is_active: active}) });
+            fuLoadSequences();
+        };
+
+        window.fuDeleteSequence = async function(id, name) {
+            if (!confirm(`Excluir a sequência "${name}"? Todas as tarefas pendentes serão removidas.`)) return;
+            await authFetch(`/api/followup/sequences/${id}`, { method:'DELETE' });
+            fuLoadSequences();
+        };
+
+        // ── Tasks ──
+        window.fuLoadTasks = async function() {
+            const el = document.getElementById('fu-tasks-list');
+            const badge = document.getElementById('fu-tasks-badge');
+            if (!el) return;
+            el.innerHTML = '<p class="empty">Carregando...</p>';
+            try {
+                const res  = await authFetch('/api/followup/tasks?status=pending&per_page=50');
+                const data = await res.json();
+                const tasks = data.tasks || [];
+                if (badge) { badge.textContent = data.total || 0; badge.style.display = data.total ? '' : 'none'; }
+                if (!tasks.length) { el.innerHTML = '<p class="empty" style="padding:20px 0;">Nenhuma tarefa pendente.</p>'; return; }
+                el.innerHTML = `
+                  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                      <tr style="border-bottom:1px solid var(--border);">
+                        <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Lead</th>
+                        <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Ação</th>
+                        <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Sequência</th>
+                        <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Agendado</th>
+                        <th style="width:140px;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${tasks.map(t => `
+                        <tr style="border-bottom:1px solid var(--border);">
+                          <td style="padding:10px 8px 10px 0;">
+                            <div style="font-weight:600; color:var(--text-primary);">${escHtml(t.lead_name || 'Lead')}</div>
+                            <div style="font-size:11px; color:var(--text-secondary); font-family:monospace;">${escHtml(t.lead_phone || '')}</div>
+                          </td>
+                          <td style="padding:10px 8px;">${ACTION_ICONS[t.action] || '📌'} ${escHtml(t.action)}</td>
+                          <td style="padding:10px 8px; color:var(--text-secondary); font-size:12px;">${escHtml(t.sequence_name || '')}</td>
+                          <td style="padding:10px 8px; color:var(--text-secondary); font-size:12px;">${t.scheduled_at ? new Date(t.scheduled_at).toLocaleString('pt-BR') : '—'}</td>
+                          <td style="padding:10px 0; display:flex; gap:6px;">
+                            <button onclick="fuMarkSent(${t.id})" style="padding:5px 10px; border-radius:7px; border:none; background:#22c55e; color:#fff; font-size:11px; cursor:pointer; font-weight:600;">✓ Feito</button>
+                            <button onclick="fuSkipTask(${t.id})" style="padding:5px 10px; border-radius:7px; border:1px solid var(--border); background:transparent; color:var(--text-secondary); font-size:11px; cursor:pointer;">Pular</button>
+                          </td>
+                        </tr>`).join('')}
+                    </tbody>
+                  </table>`;
+            } catch(e) { el.innerHTML = '<p class="empty">Erro ao carregar tarefas.</p>'; }
+        };
+
+        window.fuMarkSent = async function(id) {
+            await authFetch(`/api/followup/tasks/${id}/mark-sent`, { method:'POST' });
+            fuLoadTasks();
+        };
+        window.fuSkipTask = async function(id) {
+            await authFetch(`/api/followup/tasks/${id}/skip`, { method:'POST' });
+            fuLoadTasks();
+        };
+
+        // ── Modal ──
+        function _fuMsg(txt, type) {
+            const el = document.getElementById('fu-modal-msg');
+            if (!el) return;
+            el.textContent = txt;
+            el.style.color = type === 'error' ? '#ef4444' : '#22c55e';
+        }
+
+        function _fuRenderSteps() {
+            const container = document.getElementById('fu-steps-container');
+            const empty     = document.getElementById('fu-steps-empty');
+            if (!container) return;
+            if (!_fuSteps.length) { container.innerHTML = ''; empty.style.display = ''; return; }
+            empty.style.display = 'none';
+            container.innerHTML = _fuSteps.map((step, i) => `
+              <div style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:700; color:#6366f1; min-width:60px;">Etapa ${i+1}</span>
+                <select onchange="_fuUpdateStep(${i},'action',this.value)" style="flex:1; min-width:100px; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:12px;">
+                  <option value="call" ${step.action==='call'?'selected':''}>📞 Ligar</option>
+                  <option value="email" ${step.action==='email'?'selected':''}>📧 Email</option>
+                  <option value="whatsapp" ${step.action==='whatsapp'?'selected':''}>💬 WhatsApp</option>
+                </select>
+                <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:130px;">
+                  <input type="number" min="0" value="${step.delay_minutes||0}" onchange="_fuUpdateStep(${i},'delay_minutes',+this.value)"
+                    style="width:70px; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:12px;">
+                  <span style="font-size:12px; color:#64748b;">min após chamada</span>
+                </div>
+                <input type="text" value="${escHtml(step.template||'')}" placeholder="Mensagem / template (opcional)" onchange="_fuUpdateStep(${i},'template',this.value)"
+                  style="flex:3; min-width:160px; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:12px;">
+                <button onclick="_fuRemoveStep(${i})" style="background:none; border:none; color:#ef4444; font-size:16px; cursor:pointer; line-height:1; flex-shrink:0;">✕</button>
+              </div>`).join('');
+        }
+
+        window._fuUpdateStep = function(i, field, val) { _fuSteps[i][field] = val; };
+        window._fuRemoveStep = function(i) { _fuSteps.splice(i, 1); _fuRenderSteps(); };
+        window.fuAddStep     = function() { _fuSteps.push({ action:'call', delay_minutes:60, template:'' }); _fuRenderSteps(); };
+
+        async function _populateCampaignSelect() {
+            const sel = document.getElementById('fu-campaign');
+            if (!sel) return;
+            try {
+                const res  = await authFetch('/api/campaigns');
+                const raw  = await res.json();
+                const list = Array.isArray(raw) ? raw : (raw.campaigns || []);
+                const current = sel.value;
+                sel.innerHTML = '<option value="">Todas as campanhas</option>' +
+                    list.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+                if (current) sel.value = current;
+            } catch(e) {}
+        }
+
+        window.openCreateFollowUpModal = function() {
+            _fuEditId = null;
+            _fuSteps  = [];
+            document.getElementById('fu-modal-title').textContent = 'Nova sequência';
+            document.getElementById('fu-edit-id').value = '';
+            document.getElementById('fu-name').value = '';
+            document.getElementById('fu-trigger').value = 'atendeu';
+            document.getElementById('fu-campaign').value = '';
+            document.getElementById('fu-is-active').checked = true;
+            document.getElementById('fu-modal-msg').textContent = '';
+            _fuRenderSteps();
+            _populateCampaignSelect();
+            document.getElementById('followUpModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('fu-name')?.focus(), 80);
+        };
+
+        window.openEditFollowUpModal = async function(id) {
+            _fuEditId = id;
+            document.getElementById('fu-modal-title').textContent = 'Editar sequência';
+            document.getElementById('fu-modal-msg').textContent = '';
+            document.getElementById('followUpModal').style.display = 'flex';
+            await _populateCampaignSelect();
+            try {
+                const res  = await authFetch('/api/followup/sequences');
+                const list = await res.json();
+                const s    = list.find(x => x.id === id);
+                if (!s) { _fuMsg('Sequência não encontrada.', 'error'); return; }
+                document.getElementById('fu-edit-id').value    = s.id;
+                document.getElementById('fu-name').value       = s.name;
+                document.getElementById('fu-trigger').value    = s.trigger_disposition;
+                document.getElementById('fu-campaign').value   = s.campaign_id || '';
+                document.getElementById('fu-is-active').checked = !!s.is_active;
+                _fuSteps = JSON.parse(JSON.stringify(s.steps || []));
+                _fuRenderSteps();
+            } catch(e) { _fuMsg('Erro ao carregar.', 'error'); }
+        };
+
+        window.closeFollowUpModal = function() {
+            document.getElementById('followUpModal').style.display = 'none';
+        };
+
+        window.saveFollowUpSequence = async function() {
+            const name    = document.getElementById('fu-name')?.value.trim();
+            const trigger = document.getElementById('fu-trigger')?.value;
+            if (!name)    { _fuMsg('Informe o nome da sequência.', 'error'); return; }
+            if (!trigger) { _fuMsg('Selecione o gatilho.', 'error'); return; }
+
+            const payload = {
+                name,
+                trigger_disposition: trigger,
+                campaign_id: document.getElementById('fu-campaign')?.value ? +document.getElementById('fu-campaign').value : null,
+                is_active:   document.getElementById('fu-is-active')?.checked ?? true,
+                steps:       _fuSteps.map(s => ({ action: s.action, delay_minutes: +s.delay_minutes||0, template: s.template||'' })),
+            };
+
+            const id     = document.getElementById('fu-edit-id')?.value;
+            const url    = id ? `/api/followup/sequences/${id}` : '/api/followup/sequences';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res  = await authFetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (!res.ok) { _fuMsg(data.error || 'Erro ao salvar.', 'error'); return; }
+                _fuMsg(id ? 'Sequência atualizada!' : 'Sequência criada!', 'ok');
+                setTimeout(() => { closeFollowUpModal(); fuLoadSequences(); }, 700);
+            } catch(e) { _fuMsg('Erro de rede.', 'error'); }
+        };
+
+        // Auto-load when section opens
+        document.querySelector('[data-section="followup"]')?.addEventListener('click', () => {
+            setTimeout(() => fuLoadSequences(), 80);
+            // Also check pending tasks count
+            authFetch('/api/followup/tasks?status=pending&per_page=1').then(r => r.json()).then(d => {
+                const badge = document.getElementById('fu-tasks-badge');
+                if (badge) { badge.textContent = d.total||0; badge.style.display = d.total ? '' : 'none'; }
+            }).catch(()=>{});
+        });
+
+        document.getElementById('followUpModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeFollowUpModal();
+        });
+    })();
+
+    // ─── DNC (Do Not Call) ───────────────────────────────────────────────────
+    let _dncAll = [];
+    let dncCurrentPage = 1;
+    const DNC_PAGE_SIZE = 50;
+
+    function openAddDncModal() {
+        document.getElementById('dnc-add-phone').value = '';
+        document.getElementById('dnc-add-reason').value = '';
+        document.getElementById('dnc-add-msg').textContent = '';
+        document.getElementById('addDncModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('dnc-add-phone')?.focus(), 80);
+    }
+
+    async function dncAddSingle() {
+        const phone  = document.getElementById('dnc-add-phone')?.value.trim();
+        const reason = document.getElementById('dnc-add-reason')?.value.trim();
+        const msg    = document.getElementById('dnc-add-msg');
+        if (!phone) { msg.textContent = 'Informe o número.'; msg.style.color = '#ef4444'; return; }
+        const res  = await authFetch('/api/dnc', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone, reason}) });
+        const data = await res.json();
+        if (!res.ok) { msg.textContent = data.error || 'Erro ao adicionar.'; msg.style.color = '#ef4444'; return; }
+        msg.textContent = 'Número bloqueado!'; msg.style.color = '#22c55e';
+        setTimeout(() => { document.getElementById('addDncModal').style.display = 'none'; dncLoadPage(1); }, 700);
+    }
+
+    async function dncBulkImport() {
+        const raw = document.getElementById('dnc-bulk-input')?.value;
+        const msg = document.getElementById('dnc-bulk-msg');
+        const phones = (raw || '').split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+        if (!phones.length) { msg.textContent = 'Nenhum número encontrado.'; msg.style.color = '#ef4444'; return; }
+        msg.textContent = `Importando ${phones.length} números...`; msg.style.color = '#6366f1';
+        const res  = await authFetch('/api/dnc', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phones}) });
+        const data = await res.json();
+        if (!res.ok) { msg.textContent = data.error || 'Erro.'; msg.style.color = '#ef4444'; return; }
+        msg.textContent = `${data.count || phones.length} números importados!`; msg.style.color = '#22c55e';
+        document.getElementById('dnc-bulk-input').value = '';
+        dncLoadPage(1);
+    }
+
+    async function dncDelete(id) {
+        if (!confirm('Remover este número do DNC?')) return;
+        await authFetch(`/api/dnc/${id}`, { method:'DELETE' });
+        dncLoadPage(dncCurrentPage);
+    }
+
+    async function dncLoadPage(page) {
+        dncCurrentPage = Math.max(1, page);
+        const el = document.getElementById('dnc-list-container');
+        if (!el) return;
+        el.innerHTML = '<p class="empty">Carregando...</p>';
+        try {
+            const res  = await authFetch(`/api/dnc?page=${dncCurrentPage}&per_page=${DNC_PAGE_SIZE}`);
+            const data = await res.json();
+            _dncAll = data.items || [];
+            dncRenderFiltered();
+            // Pagination
+            const total = data.total || 0;
+            const pages = Math.ceil(total / DNC_PAGE_SIZE);
+            document.getElementById('dnc-page-info').textContent = total ? `Página ${dncCurrentPage} de ${pages} (${total} números)` : '';
+            document.getElementById('dnc-prev-btn').style.display = dncCurrentPage > 1 ? '' : 'none';
+            document.getElementById('dnc-next-btn').style.display = dncCurrentPage < pages ? '' : 'none';
+        } catch(e) { el.innerHTML = '<p class="empty">Erro ao carregar DNC.</p>'; }
+    }
+
+    function dncRenderFiltered() {
+        const q  = (document.getElementById('dnc-search')?.value || '').toLowerCase();
+        const el = document.getElementById('dnc-list-container');
+        if (!el) return;
+        const filtered = q ? _dncAll.filter(e => (e.phone || '').includes(q) || (e.reason || '').toLowerCase().includes(q)) : _dncAll;
+        if (!filtered.length) {
+            el.innerHTML = '<p class="empty" style="padding:20px 0;">Nenhum número na lista DNC.</p>';
+            return;
+        }
+        el.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Número</th>
+                <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Motivo</th>
+                <th style="text-align:left; padding:8px 0; color:var(--text-secondary); font-weight:600;">Adicionado em</th>
+                <th style="width:40px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(e => `
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:10px 0; font-family:monospace; color:var(--text-primary);">${escHtml(e.phone)}</td>
+                  <td style="padding:10px 0; color:var(--text-secondary);">${escHtml(e.reason || '—')}</td>
+                  <td style="padding:10px 0; color:var(--text-secondary); font-size:12px;">${e.created_at ? new Date(e.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+                  <td style="padding:10px 0;">
+                    <button onclick="dncDelete(${e.id})" style="background:none; border:none; cursor:pointer; color:#ef4444; font-size:16px; line-height:1;" title="Remover">✕</button>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+    }
+
+    // Auto-load when DNC section is opened
+    document.querySelector('[data-section="dnc"]')?.addEventListener('click', () => {
+        setTimeout(() => dncLoadPage(1), 80);
+    });
+
+    document.getElementById('addDncModal')?.addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+
+    // ─── Campaign Settings Modal ──────────────────────────────────────────────
+    (function() {
+        const WEEKDAY_ACTIVE = 'background:#6366f1 !important; border-color:#6366f1 !important; color:#fff !important;';
+
+        function _csMsg(text, type) {
+            const el = document.getElementById('cs-message');
+            if (!el) return;
+            el.textContent = text;
+            el.style.color = type === 'error' ? '#ef4444' : '#22c55e';
+        }
+
+        window._csTogglePredictive = function() {
+            const mode = document.getElementById('cs-dial-mode')?.value;
+            const wrap = document.getElementById('cs-predictive-wrap');
+            if (wrap) wrap.style.display = mode === 'predictive' ? '' : 'none';
+        };
+
+        window._csUpdateWeekdays = function() {
+            for (let i = 0; i <= 6; i++) {
+                const lbl = document.getElementById(`cs-day-${i}`);
+                const cb  = lbl?.querySelector('input');
+                if (!lbl || !cb) continue;
+                lbl.style.cssText = lbl.style.cssText.replace(/background:[^;]+;|border-color:[^;]+;|color:[^;]+;/g, '');
+                if (cb.checked) {
+                    lbl.style.background = '#6366f1';
+                    lbl.style.borderColor = '#6366f1';
+                    lbl.style.color = '#fff';
+                } else {
+                    lbl.style.background = 'rgba(0,0,0,0.2)';
+                    lbl.style.borderColor = 'rgba(255,255,255,0.1)';
+                    lbl.style.color = '#94a3b8';
+                }
+            }
+        };
+
+        window.openCampaignSettings = async function(campaignId) {
+            document.getElementById('cs-campaign-id').value = campaignId;
+            _csMsg('', '');
+            const modal = document.getElementById('campaignSettingsModal');
+            modal.style.display = 'flex';
+
+            try {
+                const res = await authFetch(`/api/campaign/${campaignId}`);
+                if (!res.ok) { _csMsg('Erro ao carregar campanha', 'error'); return; }
+                const c = await res.json();
+
+                // Caller ID pool
+                const pool = c.caller_id_pool || '';
+                document.getElementById('cs-caller-id-pool').value = pool.includes(',')
+                    ? pool.split(',').map(s => s.trim()).join('\n')
+                    : pool;
+                _csUpdateCallerIdPreview();
+
+                // Dial mode
+                const dm = document.getElementById('cs-dial-mode');
+                if (dm) { dm.value = c.dial_mode || 'auto'; window._csTogglePredictive(); }
+                const pr = document.getElementById('cs-predictive-ratio');
+                if (pr) pr.value = c.predictive_ratio || 1.5;
+
+                // Ring timeout
+                const rt = document.getElementById('cs-ring-timeout');
+                if (rt) rt.value = c.ring_timeout_seconds || 50;
+
+                // Hours
+                const hs = document.getElementById('cs-hours-start');
+                const he = document.getElementById('cs-hours-end');
+                if (hs) hs.value = c.allowed_hours_start ?? 8;
+                if (he) he.value = c.allowed_hours_end ?? 20;
+
+                // Timezone
+                const tz = document.getElementById('cs-timezone');
+                if (tz) tz.value = c.allowed_timezone || 'America/Sao_Paulo';
+
+                // Weekdays
+                const days = (c.allowed_weekdays || '1,2,3,4,5').split(',').map(Number);
+                for (let i = 0; i <= 6; i++) {
+                    const cb = document.querySelector(`#cs-day-${i} input`);
+                    if (cb) cb.checked = days.includes(i);
+                }
+                window._csUpdateWeekdays();
+
+            } catch(e) { _csMsg('Erro de rede', 'error'); }
+        };
+
+        window.closeCampaignSettings = function() {
+            document.getElementById('campaignSettingsModal').style.display = 'none';
+        };
+
+        window.saveCampaignSettings = async function() {
+            const id = document.getElementById('cs-campaign-id').value;
+            if (!id) return;
+
+            // Build caller_id_pool: normalize textarea (newlines or commas) → comma list
+            const poolRaw = document.getElementById('cs-caller-id-pool').value;
+            const pool = poolRaw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).join(',');
+
+            // Weekdays
+            const weekdays = [];
+            for (let i = 0; i <= 6; i++) {
+                const cb = document.querySelector(`#cs-day-${i} input`);
+                if (cb?.checked) weekdays.push(i);
+            }
+
+            const payload = {
+                caller_id_pool:       pool || null,
+                dial_mode:            document.getElementById('cs-dial-mode')?.value,
+                predictive_ratio:     parseFloat(document.getElementById('cs-predictive-ratio')?.value) || 1.5,
+                ring_timeout_seconds: parseInt(document.getElementById('cs-ring-timeout')?.value) || 50,
+                allowed_hours_start:  parseInt(document.getElementById('cs-hours-start')?.value) ?? 8,
+                allowed_hours_end:    parseInt(document.getElementById('cs-hours-end')?.value) ?? 20,
+                allowed_timezone:     document.getElementById('cs-timezone')?.value,
+                allowed_weekdays:     weekdays.join(','),
+            };
+
+            try {
+                const res = await authFetch(`/api/campaign/${id}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok) { _csMsg(data.error || 'Erro ao salvar', 'error'); return; }
+                _csMsg('Salvo com sucesso!', 'ok');
+                await reloadCampaigns();
+                setTimeout(closeCampaignSettings, 900);
+            } catch(e) { _csMsg('Erro de rede', 'error'); }
+        };
+
+        function _csUpdateCallerIdPreview() {
+            const poolEl = document.getElementById('cs-caller-id-pool');
+            const prev   = document.getElementById('cs-caller-id-preview');
+            if (!poolEl || !prev) return;
+            const nums = poolEl.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+            prev.textContent = nums.length ? `${nums.length} número${nums.length > 1 ? 's' : ''} no pool` : '';
+        }
+
+        document.getElementById('cs-caller-id-pool')?.addEventListener('input', _csUpdateCallerIdPreview);
+
+        // Close on backdrop click
+        document.getElementById('campaignSettingsModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeCampaignSettings();
+        });
+    })();
+    </script>
 </body>
 </html>

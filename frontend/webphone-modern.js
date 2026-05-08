@@ -176,9 +176,12 @@ function el(id) {
 }
 
 // Retorna headers com Authorization Bearer lido do localStorage.
+// Valida que o token tem formato JWT (3 segmentos) antes de enviar.
 // Merge com quaisquer headers extras (ex: Content-Type).
 function _authHeaders(extra = {}) {
-  const token = localStorage.getItem("voxflow_token") || localStorage.getItem("nexdial_token") || localStorage.getItem("token") || "";
+  const raw = localStorage.getItem("voxflow_token") || localStorage.getItem("nexdial_token") || localStorage.getItem("token") || "";
+  // Rejeita strings inválidas como "undefined", "null" ou tokens malformados
+  const token = (raw && raw.split('.').length === 3) ? raw : '';
   if (token) return { Authorization: `Bearer ${token}`, ...extra };
   return { ...extra };
 }

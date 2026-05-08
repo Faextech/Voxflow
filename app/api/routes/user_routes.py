@@ -11,7 +11,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request, g
 from werkzeug.security import generate_password_hash
 
-from app.auth import require_auth, require_role, generate_jwt_token
+from app.auth import require_auth, require_role, generate_jwt_token, log_audit
 from app.extensions import db
 from app.models.user import User
 from app.models.agent import Agent
@@ -155,6 +155,8 @@ def update_user_role(user_id):
         db.session.add(agent)
 
     db.session.commit()
+    log_audit('user_role_changed', resource_type='user', resource_id=user_id,
+              changes={'before': {'role': old_role}, 'after': {'role': new_role}})
 
     return jsonify({
         "message": f"Role alterada de '{old_role}' para '{new_role}'",
@@ -174,6 +176,8 @@ def delete_user(user_id):
     if not user:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
+    log_audit('user_deleted', resource_type='user', resource_id=user_id,
+              changes={'email': user.email, 'role': user.role})
     db.session.delete(user)
     db.session.commit()
 

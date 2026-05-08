@@ -8,9 +8,9 @@ class CallbackQueue(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # Relações principais
-    lead_id = db.Column(db.Integer, nullable=False)
-    call_id = db.Column(db.Integer, nullable=False)
+    company_id  = db.Column(db.Integer, nullable=True)
+    lead_id     = db.Column(db.Integer, nullable=False)
+    call_id     = db.Column(db.Integer, nullable=True)
     campaign_id = db.Column(db.Integer, nullable=False)
 
     # Controle de status
@@ -20,8 +20,10 @@ class CallbackQueue(db.Model):
         nullable=False
     )
 
-    # Prioridade (pode usar depois pra VIP, etc)
+    # 1=low, 2=medium, 3=high
     priority = db.Column(db.Integer, default=1)
+
+    notes = db.Column(db.Text, nullable=True)
 
     # Quando deve tentar novamente
     scheduled_for = db.Column(
@@ -50,17 +52,23 @@ class CallbackQueue(db.Model):
     )
 
     def to_dict(self):
+        from app.models.lead import Lead
+        lead = Lead.query.get(self.lead_id) if self.lead_id else None
         return {
-            "id": self.id,
-            "lead_id": self.lead_id,
-            "call_id": self.call_id,
-            "campaign_id": self.campaign_id,
-            "status": self.status,
-            "priority": self.priority,
-            "scheduled_for": self.scheduled_for.isoformat() if self.scheduled_for else None,
-            "attempts": self.attempts,
+            "id":               self.id,
+            "company_id":       self.company_id,
+            "lead_id":          self.lead_id,
+            "lead_name":        lead.name if lead else None,
+            "lead_phone":       lead.numero_1 if lead else None,
+            "call_id":          self.call_id,
+            "campaign_id":      self.campaign_id,
+            "status":           self.status,
+            "priority":         self.priority or 1,
+            "notes":            self.notes,
+            "scheduled_for":    self.scheduled_for.isoformat() if self.scheduled_for else None,
+            "attempts":         self.attempts,
             "reserved_agent_id": self.reserved_agent_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "created_at":       self.created_at.isoformat() if self.created_at else None,
         }
 
     def mark_reserved(self, agent_id: int):

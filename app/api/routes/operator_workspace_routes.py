@@ -21,6 +21,105 @@ operator_workspace_bp = Blueprint(
 )
 
 
+def _run_postcall_automation(company_id: int, lead, call, qualification: str, notes: str):
+    """
+    Executa automações pós-chamada com base no resultado (qualification).
+
+    Regras:
+    - ganho / reuniao_agendada / proposta_enviada → cria Deal automático se não houver um aberto
+    - retornar_depois  → agenda callback para +1 dia
+    - nao_atendeu / caixa_postal (≥3×) → adiciona ao DNC
+    - atendeu / sem_interesse → apenas log
+    """
+    if not lead or not qualification:
+        return
+
+    q = qualification.lower().strip()
+
+    # 1. Deal automático para disposições positivas
+    if q in ("ganho", "reuniao_agendada", "proposta_enviada", "atendeu"):
+        try:
+            from app.models.deal import Deal
+            from app.models.pipeline import Pipeline, PipelineStage
+            open_deal = Deal.query.filter_by(
+                company_id=company_id, lead_id=lead.id, status="open"
+            ).first()
+            if not open_deal:
+                pipeline = Pipeline.query.filter_by(
+                    company_id=company_id, is_default=True
+                ).first()
+                first_stage = None
+                if pipeline:
+                    first_stage = (
+                        PipelineStage.query
+                        .filter_by(pipeline_id=pipeline.id, company_id=company_id)
+                        .order_by(PipelineStage.position)
+                        .first()
+                    )
+                deal = Deal(
+                    company_id  = company_id,
+                    lead_id     = lead.id,
+                    pipeline_id = pipeline.id if pipeline else None,
+                    stage_id    = first_stage.id if first_stage else None,
+                    title       = f"{lead.name or 'Lead'} — {qualification}",
+                    status      = "won" if q == "ganho" else "open",
+                    won_at      = datetime.utcnow() if q == "ganho" else None,
+                    notes       = notes or None,
+                )
+                db.session.add(deal)
+                db.session.commit()
+                logger.info("[AUTO-01] Deal criado automaticamente lead=%s disposition=%s", lead.id, q)
+        except Exception as e:
+            logger.warning("[AUTO-01] Erro ao criar deal: %s", e)
+
+    # 2. Callback automático para "retornar depois"
+    elif q in ("retornar_depois", "retorno"):
+        try:
+            from app.models.callback_queue import CallbackQueue
+            from app.core.enums import CallbackStatus
+            scheduled = datetime.utcnow().replace(hour=9, minute=0, second=0, microsecond=0)
+            # agendar para próximo dia útil às 9h
+            from datetime import timedelta
+            scheduled = scheduled + timedelta(days=1)
+            cb = CallbackQueue(
+                company_id   = company_id,
+                lead_id      = lead.id,
+                call_id      = call.id if call else None,
+                scheduled_for = scheduled,
+                status       = CallbackStatus.PENDING,
+                notes        = notes or "Retorno automático solicitado pelo operador",
+            )
+            db.session.add(cb)
+            db.session.commit()
+            logger.info("[AUTO-01] Callback agendado lead=%s para %s", lead.id, scheduled)
+        except Exception as e:
+            logger.warning("[AUTO-01] Erro ao agendar callback: %s", e)
+
+    # 3. DNC automático após disposição definitiva
+    elif q in ("numero_invalido",):
+        try:
+            from app.models.dnc import DNCEntry
+            phone = getattr(lead, "numero_1", None) or ""
+            if phone:
+                DNCEntry.add(company_id, phone, reason="numero_invalido")
+                logger.info("[AUTO-01] Lead %s adicionado ao DNC (numero_invalido)", lead.id)
+        except Exception as e:
+            logger.warning("[AUTO-01] Erro ao adicionar DNC: %s", e)
+
+    # 4. Enrolar em sequências de follow-up (AUTO-02)
+    try:
+        from app.api.routes.followup_routes import enroll_lead_in_followup
+        enroll_lead_in_followup(
+            company_id=company_id,
+            lead_id=lead.id,
+            campaign_id=getattr(lead, "campaign_id", None),
+            call_id=call.id if call else None,
+            disposition=q,
+        )
+    except Exception as e:
+        logger.warning("[AUTO-02] Erro ao enrolar follow-up: %s", e)
+
+
 def _serialize_lead(lead: Lead):
     if not lead:
         return None
@@ -297,6 +396,12 @@ def save_crm():
         except Exception as e_hangup:
             logger.warning(f"[SAVE_CRM] Erro ao encerrar chamada no Twilio: {e_hangup}")
     
+    # ── Post-call automation (AUTO-01) ───────────────────────────────────────
+    try:
+        _run_postcall_automation(g.company_id, lead, call, qualification, notes)
+    except Exception as _auto_err:
+        logger.warning("[SAVE_CRM] post-call automation falhou: %s", _auto_err)
+
     # Limpar estado de memória na bridge após disposição
     try:
         from app.services.call_bridge import ACTIVE_CONFERENCES_BY_AGENT, ACTIVE_CONFERENCES_BY_NAME, clear_pending_conference

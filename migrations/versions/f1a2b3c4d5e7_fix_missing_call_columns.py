@@ -14,14 +14,29 @@ down_revision = 'd1a2b3c4d5e6'
 branch_labels = None
 depends_on = None
 
+_CALLS_COLUMNS = [
+    ("amd_result",   "VARCHAR(50)"),
+    ("amd_recovered","BOOLEAN DEFAULT FALSE"),
+    ("hangup_cause", "VARCHAR(100)"),
+    ("ringing_at",   "TIMESTAMP"),
+    ("answered_by",  "VARCHAR(50)"),
+]
+
 
 def upgrade():
-    # Use IF NOT EXISTS so this is safe to run even if some columns already exist
-    op.execute("ALTER TABLE calls ADD COLUMN IF NOT EXISTS amd_result VARCHAR(50)")
-    op.execute("ALTER TABLE calls ADD COLUMN IF NOT EXISTS amd_recovered BOOLEAN DEFAULT FALSE")
-    op.execute("ALTER TABLE calls ADD COLUMN IF NOT EXISTS hangup_cause VARCHAR(100)")
-    op.execute("ALTER TABLE calls ADD COLUMN IF NOT EXISTS ringing_at TIMESTAMP")
-    op.execute("ALTER TABLE calls ADD COLUMN IF NOT EXISTS answered_by VARCHAR(50)")
+    conn = op.get_bind()
+    dialect = conn.dialect.name
+
+    if dialect == "postgresql":
+        for col, col_type in _CALLS_COLUMNS:
+            conn.execute(sa.text(
+                f"ALTER TABLE calls ADD COLUMN IF NOT EXISTS {col} {col_type}"
+            ))
+    else:
+        existing = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(calls)"))}
+        for col, col_type in _CALLS_COLUMNS:
+            if col not in existing:
+                conn.execute(sa.text(f"ALTER TABLE calls ADD COLUMN {col} {col_type}"))
 
 
 def downgrade():

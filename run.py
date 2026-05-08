@@ -52,23 +52,34 @@ if __name__ == "__main__":
     app = create_app()
     port = int(os.getenv("PORT", 5000))
 
+    # Obtém instância SocketIO para suportar WebSocket
+    try:
+        from app.extensions import socketio as sio
+        _runner = sio.run
+    except Exception:
+        _runner = None
+
     if flask_env == "development":
         logger.info("NexDial iniciando em modo DESENVOLVIMENTO — http://localhost:%d", port)
         logger.info("Pressione CTRL+C para parar")
-        app.run(
-            host="0.0.0.0",
-            port=port,
-            debug=True,
-            use_reloader=True,
-        )
+        if _runner:
+            _runner(
+                app,
+                host="0.0.0.0",
+                port=port,
+                debug=True,
+                use_reloader=False,  # SocketIO e reloader não combinam bem
+                allow_unsafe_werkzeug=True,
+            )
+        else:
+            app.run(host="0.0.0.0", port=port, debug=True, use_reloader=True)
     else:
         # Em produção use Gunicorn (Procfile / Railway).
         # Este bloco é fallback caso `python run.py` seja chamado em produção.
         logger.warning(
             "Executando Flask built-in server em produção — use Gunicorn para performance."
         )
-        app.run(
-            host="0.0.0.0",
-            port=port,
-            debug=False,
-        )
+        if _runner:
+            _runner(app, host="0.0.0.0", port=port, debug=False)
+        else:
+            app.run(host="0.0.0.0", port=port, debug=False)

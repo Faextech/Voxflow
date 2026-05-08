@@ -1,55 +1,66 @@
-from flask import Blueprint, redirect, render_template, url_for
+import os
+from flask import Blueprint, send_from_directory
 
 pages_bp = Blueprint("pages", __name__)
 
-
-@pages_bp.route("/")
-def index():
-    """Landing page pública — rota raiz do site."""
-    return render_template("landing.html")
+_REACT_DIST = os.path.join(os.path.dirname(__file__), '..', 'static', 'react')
 
 
-@pages_bp.route("/app")
-def dashboard():
-    """Dashboard principal (requer login via JS)."""
-    return render_template("dashboard.html")
+def _serve_react():
+    """Serve o SPA React — qualquer rota não-API cai aqui."""
+    from flask import make_response
+    index = os.path.join(_REACT_DIST, 'index.html')
+    if os.path.exists(index):
+        response = make_response(send_from_directory(_REACT_DIST, 'index.html'))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    return (
+        "<h2>React build não encontrado.</h2>"
+        "<p>Execute: <code>cd frontend-react && npm run build</code></p>",
+        404,
+    )
 
 
-@pages_bp.route("/login")
-def login_page():
-    return render_template("login.html")
+@pages_bp.route("/assets/<path:filename>")
+def react_assets(filename: str):
+    """Serve os assets do build React (JS, CSS com hash)."""
+    assets_dir = os.path.join(_REACT_DIST, 'assets')
+    return send_from_directory(assets_dir, filename)
 
 
-@pages_bp.route("/register")
-def register_page():
-    return render_template("register.html")
-
-
-@pages_bp.route("/operacao")
-def operacao():
-    return redirect("/app")
-
-
-@pages_bp.route("/crm")
-def crm():
+@pages_bp.route("/legacy/crm")
+def legacy_crm():
+    from flask import render_template
     return render_template("crm.html")
 
+@pages_bp.route("/legacy/dashboard")
+def legacy_dashboard():
+    from flask import render_template
+    return render_template("dashboard.html")
 
-@pages_bp.route("/test-webphone")
-def test_webphone_page():
-    return render_template("test_webphone.html")
+# ── SPA catch-all: todas as rotas de página vão para o React ──────────────────
 
-
-@pages_bp.route("/suporte")
-def support_page():
-    return render_template("support.html")
-
-
+@pages_bp.route("/")
+@pages_bp.route("/login")
+@pages_bp.route("/register")
+@pages_bp.route("/app")
+@pages_bp.route("/app/<path:path>")
+@pages_bp.route("/crm")
 @pages_bp.route("/credito")
-def billing_page():
-    return render_template("billing.html")
-
-
+@pages_bp.route("/suporte")
 @pages_bp.route("/admin")
-def admin_panel():
-    return render_template("admin.html")
+@pages_bp.route("/operacao")
+@pages_bp.route("/test-webphone")
+def react_app(path=''):
+    """SPA fallback — qualquer rota de frontend vai para o React."""
+    return _serve_react()
+
+
+# Manter /react/* por compatibilidade com bookmarks antigos
+@pages_bp.route("/react")
+@pages_bp.route("/react/")
+@pages_bp.route("/react/<path:path>")
+def react_legacy(path=''):
+    return _serve_react()

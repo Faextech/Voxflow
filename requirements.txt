@@ -15,12 +15,16 @@ bcrypt==4.1.2
 python-dotenv==1.0.0
 cryptography==41.0.7
 
+# ─── Redis — estado de sessão, rate limiting, JWT blacklist ──────────────────
+redis==5.0.1
+
+# ─── Rate Limiting ───────────────────────────────────────────────────────────
+Flask-Limiter==3.5.0
+
 # ─── Twilio ──────────────────────────────────────────────────────────────────
 twilio==8.10.0
 
 # ─── Produção ────────────────────────────────────────────────────────────────
-# Nota: workers=1 + threads para manter estado em memória consistente
-# (AUTO_DIALER_SESSIONS, ACTIVE_CONFERENCES_BY_AGENT são dicts em memória)
 gunicorn==21.2.0
 # Serve arquivos estáticos com eficiência (sem Nginx separado)
 whitenoise==6.6.0
@@ -28,6 +32,9 @@ whitenoise==6.6.0
 # ─── Validação ───────────────────────────────────────────────────────────────
 email-validator==2.1.0
 python-dateutil==2.8.2
+
+# ─── Fuso horário ────────────────────────────────────────────────────────────
+pytz==2024.1
 
 # ─── Logging e Monitoramento ─────────────────────────────────────────────────
 python-json-logger==2.0.7
@@ -41,3 +48,13 @@ mercadopago==2.3.0
 
 # ─── Data ────────────────────────────────────────────────────────────────────
 pandas==2.2.2
+
+# ─── 2FA TOTP ────────────────────────────────────────────────────────────────
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+Pillow==10.2.0
+
+# ─── WebSocket (real-time — substitui polling de 1s) ─────────────────────────
+flask-socketio==5.3.6
+python-socketio==5.11.0
+python-engineio==4.9.0

@@ -58,6 +58,7 @@
             position: relative;
             z-index: 1;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
 
         .logo {
@@ -68,8 +69,7 @@
         }
         
         .logo svg {
-            width: 28px;
-            height: 28px;
+            width: 28px; height: 28px;
             color: var(--navy-800);
             margin-right: 8px;
         }
@@ -96,9 +96,7 @@
             font-size: 0.95rem;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
 
         label {
             display: block;
@@ -143,17 +141,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            gap: 8px;
         }
 
-        button:hover {
-            background: var(--brand-600);
-            transform: translateY(-2px);
-            box-shadow: 0 20px 25px -5px rgba(22, 163, 74, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
+        button:hover { background: var(--brand-600); transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(22, 163, 74, 0.3); }
+        button:active { transform: translateY(0); }
 
         .footer-links {
             margin-top: 32px;
@@ -162,15 +154,8 @@
             color: var(--muted);
         }
 
-        .footer-links a {
-            color: var(--brand-600);
-            text-decoration: none;
-            font-weight: 700;
-        }
-
-        .footer-links a:hover {
-            text-decoration: underline;
-        }
+        .footer-links a { color: var(--brand-600); text-decoration: none; font-weight: 700; }
+        .footer-links a:hover { text-decoration: underline; }
 
         .error-msg {
             background: #fef2f2;
@@ -186,13 +171,12 @@
         }
 
         .loading-spinner {
-            display: none;
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             border: 3px solid rgba(255,255,255,.8);
             border-radius: 50%;
             border-top-color: transparent;
             animation: spin 1s linear infinite;
+            display: none;
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -210,6 +194,52 @@
             margin-bottom: 12px;
             box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
         }
+
+        /* ── 2FA Step ── */
+        #step-2fa {
+            display: none;
+            animation: fadeSlideIn 0.3s ease;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .totp-info {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 0.875rem;
+            color: #166534;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .totp-info .icon { font-size: 1.2rem; flex-shrink: 0; }
+
+        .totp-code-input {
+            font-size: 2rem !important;
+            letter-spacing: 0.5em;
+            text-align: center;
+            font-weight: 700;
+            color: var(--navy-900);
+            padding: 16px !important;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .back-link:hover { color: var(--text); }
     </style>
 </head>
 <body>
@@ -221,116 +251,236 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
             <span>VoxFlow</span>
         </div>
-        
+
         <div id="supreme-indicator" style="display:none; text-align:center;">
             <div class="supreme-badge">Acesso Supremo</div>
         </div>
 
-        <h2>Bem-vindo de volta</h2>
-        <p class="subtitle">Acesse sua conta para começar a discar.</p>
+        <!-- ── STEP 1: Credenciais ── -->
+        <div id="step-credentials">
+            <h2>Bem-vindo de volta</h2>
+            <p class="subtitle">Acesse sua conta para começar a discar.</p>
 
-        <div id="error" class="error-msg"></div>
+            <div id="error" class="error-msg"></div>
 
-        <div class="form-group">
-            <label for="email">E-mail corporativo</label>
-            <input type="email" id="email" placeholder="seu@email.com" required>
+            <div class="form-group">
+                <label for="email">E-mail corporativo</label>
+                <input type="email" id="email" placeholder="seu@email.com" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+            </div>
+
+            <button id="login-btn" onclick="login()">
+                <span id="btn-text">Entrar na Plataforma</span>
+                <div id="spinner" class="loading-spinner"></div>
+            </button>
+
+            <div class="footer-links">
+                Não tem uma conta? <a href="/register">Criar agora</a>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="password">Senha</label>
-            <input type="password" id="password" placeholder="••••••••" required>
-        </div>
+        <!-- ── STEP 2: 2FA TOTP ── -->
+        <div id="step-2fa">
+            <h2>Verificação 2FA</h2>
+            <p class="subtitle">Autenticação de dois fatores ativada.</p>
 
-        <button id="login-btn" onclick="login()">
-            <span id="btn-text">Entrar na Plataforma</span>
-            <div id="spinner" class="loading-spinner"></div>
-        </button>
+            <div id="error-2fa" class="error-msg"></div>
 
-        <div class="footer-links">
-            Não tem uma conta? <a href="/register">Criar agora</a>
+            <div class="totp-info">
+                <span class="icon">🔐</span>
+                <span>Abra o <strong>Google Authenticator</strong> (ou app compatível) e insira o código de 6 dígitos gerado para o <strong>VoxFlow</strong>.</span>
+            </div>
+
+            <div class="form-group">
+                <label for="totp-code">Código TOTP</label>
+                <input
+                    type="text"
+                    id="totp-code"
+                    class="totp-code-input"
+                    placeholder="000000"
+                    maxlength="6"
+                    inputmode="numeric"
+                    pattern="[0-9]{6}"
+                    autocomplete="one-time-code"
+                >
+            </div>
+
+            <button id="btn-2fa" onclick="verify2FA()">
+                <span id="btn-2fa-text">Verificar e Entrar</span>
+                <div id="spinner-2fa" class="loading-spinner"></div>
+            </button>
+
+            <span class="back-link" onclick="goBackToCredentials()">← Voltar para o login</span>
         </div>
     </div>
 
     <script>
-        const emailInput = document.getElementById('email');
-        const supremeIndicator = document.getElementById('supreme-indicator');
+        // ── Estado ──────────────────────────────────────────────────────────
+        let _challengeToken = null; // token temporário retornado quando 2FA está ativo
 
-        emailInput.addEventListener('input', (e) => {
-            if (e.target.value.toLowerCase() === 'allan.consultoriajba@gmail.com') {
-                supremeIndicator.style.display = 'block';
-            } else {
-                supremeIndicator.style.display = 'none';
-            }
+        // ── UI helpers ──────────────────────────────────────────────────────
+        const $ = id => document.getElementById(id);
+
+        function showError(id, msg)  { $(id).innerText = msg; $(id).style.display = 'block'; }
+        function hideError(id)       { $(id).style.display = 'none'; }
+        function setLoading(btnId, spinnerId, textId, loading) {
+            $(btnId).disabled = loading;
+            $(spinnerId).style.display = loading ? 'block' : 'none';
+            $(textId).style.display    = loading ? 'none'  : 'block';
+        }
+
+        // ── STEP 1: Login normal ─────────────────────────────────────────────
+        $('email').addEventListener('input', e => {
+            $('supreme-indicator').style.display =
+                e.target.value.toLowerCase() === 'allan.consultoriajba@gmail.com' ? 'block' : 'none';
         });
 
         async function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorDiv = document.getElementById('error');
-            const btnText = document.getElementById('btn-text');
-            const spinner = document.getElementById('spinner');
-            const loginBtn = document.getElementById('login-btn');
+            const email    = $('email').value.trim();
+            const password = $('password').value;
 
-            if (!email || !password) {
-                errorDiv.innerText = 'Preencha todos os campos';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            errorDiv.style.display = 'none';
-            btnText.style.display = 'none';
-            spinner.style.display = 'block';
-            loginBtn.disabled = true;
+            if (!email || !password) { showError('error', 'Preencha todos os campos'); return; }
+            hideError('error');
+            setLoading('login-btn', 'spinner', 'btn-text', true);
 
             try {
-                const response = await fetch('/auth/login', {
+                const res  = await fetch('/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password }),
                 });
+                const data = await res.json();
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    errorDiv.innerText = data.error || 'Erro no login';
-                    errorDiv.style.display = 'block';
-                    btnText.style.display = 'block';
-                    spinner.style.display = 'none';
-                    loginBtn.disabled = false;
+                if (!res.ok) {
+                    showError('error', data.error || 'Credenciais inválidas');
+                    setLoading('login-btn', 'spinner', 'btn-text', false);
                     return;
                 }
 
-                const keysToRemove = ['voxflow_token', 'nexdial_token', 'token', 'user_id', 'company_id', 'voxflow_role', 'nexdial_role', 'voxflow_user_name', 'nexdial_user_name', 'user_email', 'agent_id'];
-                keysToRemove.forEach(k => localStorage.removeItem(k));
-                localStorage.setItem('voxflow_token', data.token);
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user_id', data.user_id);
-                localStorage.setItem('company_id', data.company_id);
-                localStorage.setItem('voxflow_role', data.role || 'agent');
-                localStorage.setItem('voxflow_user_name', data.name || '');
-                localStorage.setItem('user_email', email); // Salva o email para uso na UI
-                
-                if (data.agent_id) localStorage.setItem('agent_id', data.agent_id);
-
-                // Redireciona conforme role
-                if (data.role === 'superadmin') {
-                    window.location.href = '/admin';
-                } else {
-                    window.location.href = '/app';
+                // 2FA necessário?
+                if (data.requires_2fa) {
+                    _challengeToken = data.challenge_token || null;
+                    setLoading('login-btn', 'spinner', 'btn-text', false);
+                    _showStep2FA();
+                    return;
                 }
 
+                // Login completo (sem 2FA)
+                _storeSession(data, email);
+                _redirect(data.role);
+
             } catch (err) {
-                errorDiv.innerText = 'Erro ao conectar com o servidor';
-                errorDiv.style.display = 'block';
-                btnText.style.display = 'block';
-                spinner.style.display = 'none';
-                loginBtn.disabled = false;
+                showError('error', 'Erro ao conectar com o servidor');
+                setLoading('login-btn', 'spinner', 'btn-text', false);
             }
         }
 
-        // Atalho para Enter
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
+        // ── STEP 2: Verificar TOTP ───────────────────────────────────────────
+        function _showStep2FA() {
+            $('step-credentials').style.display = 'none';
+            $('step-2fa').style.display = 'block';
+            setTimeout(() => $('totp-code').focus(), 100);
+        }
+
+        function goBackToCredentials() {
+            _challengeToken = null;
+            $('step-2fa').style.display = 'none';
+            $('step-credentials').style.display = 'block';
+            $('totp-code').value = '';
+            hideError('error-2fa');
+        }
+
+        async function verify2FA() {
+            const code = $('totp-code').value.trim().replace(/\s/g, '');
+            if (!code || code.length !== 6) {
+                showError('error-2fa', 'Digite o código de 6 dígitos do seu app autenticador.');
+                return;
+            }
+            hideError('error-2fa');
+            setLoading('btn-2fa', 'spinner-2fa', 'btn-2fa-text', true);
+
+            try {
+                const body = { code };
+                if (_challengeToken) body.challenge_token = _challengeToken;
+
+                const res  = await fetch('/auth/login/2fa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',  // challenge_token pode estar em cookie HttpOnly
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError('error-2fa', data.error || 'Código inválido ou expirado.');
+                    $('totp-code').value = '';
+                    $('totp-code').focus();
+                    setLoading('btn-2fa', 'spinner-2fa', 'btn-2fa-text', false);
+                    return;
+                }
+
+                // Sucesso — armazena sessão e redireciona
+                const email = $('email').value.trim();
+                _storeSession(data, email);
+                _redirect(data.role);
+
+            } catch (err) {
+                showError('error-2fa', 'Erro ao conectar com o servidor');
+                setLoading('btn-2fa', 'spinner-2fa', 'btn-2fa-text', false);
+            }
+        }
+
+        // ── Helpers de sessão ────────────────────────────────────────────────
+        function _storeSession(data, email) {
+            // Valida que o token é um JWT real (3 segmentos) antes de armazenar.
+            // Evita salvar "undefined" ou "null" como string no localStorage.
+            if (!data.token || data.token.split('.').length !== 3) {
+                console.error('[AUTH] Token inválido recebido — abortando sessão', data.token);
+                return;
+            }
+
+            const keys = ['voxflow_token','nexdial_token','token','user_id','company_id',
+                          'voxflow_role','nexdial_role','voxflow_user_name','nexdial_user_name',
+                          'user_email','agent_id','voxflow_token_exp'];
+            keys.forEach(k => localStorage.removeItem(k));
+
+            localStorage.setItem('voxflow_token',    data.token);
+            localStorage.setItem('token',            data.token);
+            localStorage.setItem('user_id',          String(data.user_id));
+            localStorage.setItem('company_id',       String(data.company_id));
+            localStorage.setItem('voxflow_role',     data.role || 'agent');
+            localStorage.setItem('voxflow_user_name',data.name || '');
+            localStorage.setItem('user_email',       email);
+            if (data.agent_id) localStorage.setItem('agent_id', String(data.agent_id));
+            // Armazena expiração em ms para que _getTokenExpiry() funcione sem cookie HttpOnly
+            if (data.token_expires_in) {
+                localStorage.setItem('voxflow_token_exp', String(Date.now() + data.token_expires_in * 1000));
+            }
+        }
+
+        function _redirect(role) {
+            window.location.href = role === 'superadmin' ? '/admin' : '/app';
+        }
+
+        // ── Atalhos de teclado ───────────────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            if ($('step-2fa').style.display !== 'none') {
+                verify2FA();
+            } else {
+                login();
+            }
+        });
+
+        // Auto-avança ao digitar 6 dígitos no campo TOTP
+        $('totp-code').addEventListener('input', e => {
+            const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+            e.target.value = v;
+            if (v.length === 6) verify2FA();
         });
     </script>
 </body>

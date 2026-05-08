@@ -2,9 +2,11 @@ import logging
 import os
 import re
 from datetime import datetime
+from functools import wraps
 
 from flask import Blueprint, jsonify, request, g
 from twilio.twiml.voice_response import Dial, VoiceResponse
+from twilio.request_validator import RequestValidator
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,78 @@ from app.services.twilio_service import TwilioService
 from app.auth import require_auth
 
 twilio_voice_bp = Blueprint("twilio_voice", __name__, url_prefix="/api/twilio")
+
+
+def _get_twilio_auth_tokens() -> list[str]:
+    """Retorna lista de auth tokens candidatos para validação (empresa + fallback env)."""
+    tokens = []
+    # Tenta pegar pelo CallSid no banco
+    call_sid = request.values.get("CallSid") or request.values.get("call_sid")
+    if call_sid:
+        try:
+            call = Call.query.filter_by(call_sid=call_sid).first()
+            if call:
+                company = Company.query.get(call.company_id)
+                if company:
+                    from app.services.twilio_service import TwilioService as _TS
+                    svc = _TS.from_company(company)
+                    if svc.auth_token:
+                        tokens.append(svc.auth_token)
+        except Exception:
+            pass
+    # Fallback: auth token do env
+    env_token = (os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+    if env_token and env_token not in tokens:
+        tokens.append(env_token)
+    return tokens
+
+
+def twilio_webhook(f):
+    """
+    Decorator que valida a assinatura X-Twilio-Signature antes de processar o webhook.
+    Rejeita requests não autenticados com 403.
+    Desabilitado via TWILIO_VALIDATE_WEBHOOKS=false (útil em dev/ngrok).
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        skip = os.getenv("TWILIO_VALIDATE_WEBHOOKS", "true").lower() in ("false", "0", "no")
+        if skip:
+            return f(*args, **kwargs)
+
+        signature = request.headers.get("X-Twilio-Signature", "")
+        if not signature:
+            logger.warning("[TWILIO_SIG] Assinatura ausente em %s — rejeitando", request.path)
+            return jsonify({"error": "Forbidden"}), 403
+
+        # URL canônica: usa PUBLIC_BASE_URL se disponível para evitar proxy mismatch
+        base = (os.getenv("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+        url  = (base + request.path) if base else request.url
+        # Inclui query string quando presente
+        if request.query_string:
+            url = f"{url}?{request.query_string.decode()}"
+
+        params = dict(request.form) if request.method == "POST" else {}
+
+        auth_tokens = _get_twilio_auth_tokens()
+        if not auth_tokens:
+            logger.error("[TWILIO_SIG] Nenhum auth_token disponível — rejeitar é mais seguro")
+            return jsonify({"error": "Forbidden"}), 403
+
+        valid = False
+        for token in auth_tokens:
+            try:
+                if RequestValidator(token).validate(url, params, signature):
+                    valid = True
+                    break
+            except Exception:
+                continue
+
+        if not valid:
+            logger.warning("[TWILIO_SIG] Assinatura inválida para %s", request.path)
+            return jsonify({"error": "Forbidden"}), 403
+
+        return f(*args, **kwargs)
+    return decorated
 
 def update_lead_crm_status(lead_id, call_id, final_status, reason=""):
     """
@@ -155,6 +229,7 @@ def _base_url():
 
 
 @twilio_voice_bp.route("/browser-outgoing", methods=["GET", "POST"])
+@twilio_webhook
 def browser_outgoing():
     """
     Fluxo de saída do navegador:
@@ -480,16 +555,49 @@ def browser_outgoing():
 def amd_hold():
     """
     TwiML executado enquanto o AMD analisa a chamada.
-    Dizemos "Um momento" ao lead para que ele não repita "alô" (causa raiz de
-    falso-positivo: [alô]+[silêncio]+[alô] imita saudação de caixa postal).
-    O AMD analisa apenas o áudio QUE VEM do lead (microfone) — o <Say> vai
-    para o fone do lead mas não é captado pelo AMD. Ao confirmar humano,
-    /amd-callback redireciona via REST para /lead-entry → conferência.
+
+    - Mensagem inicial reduz o padrão alô+alô que causa falso-positivo no AMD
+      (o AMD analisa apenas o áudio DO lead, então o <Say> não interfere).
+    - Suporta mensagem e URL de música customizáveis por campanha via query params.
+    - Ao confirmar humano, /amd-callback redireciona via REST para /lead-entry.
     """
+    from app.models.campaign import Campaign
+    from flask import g
+
     response = VoiceResponse()
-    # Silêncio enquanto o AMD analisa. O falso-positivo alô+alô é tratado em
-    # /amd-callback: machine_start em < 6s → incerto → redireciona para operador.
-    response.pause(length=15)
+
+    # Configurações padrão
+    hold_message   = "Aguarde, transferindo para um de nossos atendentes."
+    hold_music_url = None
+    language       = "pt-BR"
+    hold_seconds   = 25
+
+    # Tenta carregar configurações customizadas da campanha (passadas como ?cid=)
+    campaign_id = request.values.get("cid")
+    if campaign_id:
+        try:
+            camp = Campaign.query.get(int(campaign_id))
+            if camp:
+                if getattr(camp, "hold_message", None):
+                    hold_message = camp.hold_message
+                if getattr(camp, "hold_music_url", None):
+                    hold_music_url = camp.hold_music_url
+                if getattr(camp, "hold_language", None):
+                    language = camp.hold_language
+        except Exception:
+            pass  # Usa defaults se campanha não encontrada
+
+    # Mensagem de abertura (mantém lead engajado, reduz alô+alô)
+    response.say(hold_message, language=language, voice="Polly.Camila")
+
+    # Música de espera (se configurada) ou pausa com mensagem periódica
+    if hold_music_url:
+        response.play(hold_music_url, loop=3)
+    else:
+        response.pause(length=hold_seconds)
+        response.say("Por favor, aguarde. Você será atendido em instantes.", language=language, voice="Polly.Camila")
+        response.pause(length=10)
+
     response.hangup()
     return str(response), 200, {"Content-Type": "text/xml"}
 
@@ -541,6 +649,7 @@ def wait_audio():
 
 
 @twilio_voice_bp.route("/status", methods=["POST"])
+@twilio_webhook
 def status():
     logger.info("=== /api/twilio/status ===")
     call_sid    = _get_request_value("CallSid")
@@ -642,8 +751,8 @@ def status():
                         _disp = "voicemail"
                     elif call.status == "amd_analyzing" and call_status in ("completed", "canceled", "failed", "no-answer", "busy"):
                         logger.warning("[STATUS] Chamada %s caiu (%s) ANTES do AMD concluir. Race condition detectada.", call_sid, call_status)
-                        raced = _sess.setdefault("_amd_raced_sids", set())
-                        raced.add(call_sid)
+                        from app.services import redis_service
+                        redis_service.set(f"amd:raced:{call_sid}", "1", ex=60)
                         _disp = "voicemail"
                         _force_advance = True
                     else:
@@ -669,8 +778,8 @@ def status():
                                 "[STATUS] Chamada %s com AMD ativo terminou (%s) antes do callback (amd-hold arch). Tratando como voicemail.",
                                 call_sid, call_status,
                             )
-                            raced = _sess.setdefault("_amd_raced_sids", set())
-                            raced.add(call_sid)
+                            from app.services import redis_service
+                            redis_service.set(f"amd:raced:{call_sid}", "1", ex=60)
                             _disp = "voicemail"
                             _force_advance = True
                             if call.lead_id:
@@ -685,152 +794,220 @@ def status():
 
 
 @twilio_voice_bp.route("/amd-callback", methods=["POST"])
+@twilio_webhook
 def amd_callback():
+    """
+    Webhook chamado pelo Twilio após análise AMD.
+    Melhorias Sprint 7:
+    - Usa threshold configurável por campanha (amd_duration_threshold_ms)
+    - Respeita unknown_amd_action da campanha (send_to_agent / hangup / retry)
+    - Registra amd_duration_ms e amd_result para métricas
+    - Emite evento WebSocket ao detectar humano
+    - Race condition tratada via Redis TTL 60s
+    """
     logger.info("=== /api/twilio/amd-callback ===")
     call_sid        = request.form.get("CallSid")
     answered_by     = (request.form.get("AnsweredBy") or "").strip().lower()
     conference_name = request.values.get("c") or request.values.get("conference_name")
 
-    logger.info("[AMD] CallSid: %s | AnsweredBy: %s | Conf: %s", call_sid, answered_by, conference_name)
+    logger.info("[AMD] CallSid=%s | AnsweredBy=%s | Conf=%s", call_sid, answered_by, conference_name)
 
     item = ACTIVE_CONFERENCES_BY_NAME.get(conference_name)
     if not item:
-        logger.warning("[AMD] Conference %s não encontrada na memória para a call %s", conference_name, call_sid)
+        logger.warning("[AMD] Conference %s não encontrada — SID=%s", conference_name, call_sid)
         return "", 204
 
-    # ── FASE 2: Verificar race condition — /status já tratou este SID ────────
     campaign_id = item.get("campaign_id")
     company_id  = item.get("company_id")
+
+    # ── Race condition: /status já processou este SID? ────────────────────────
+    from app.services import redis_service
+    raced_key = f"amd:raced:{call_sid}"
+    if redis_service.exists(raced_key):
+        redis_service.delete(raced_key)
+        logger.info("[AMD] Race condition detectada — SID %s já tratado em /status", call_sid)
+        return "", 204
+
+    # ── Carrega chamada do DB ─────────────────────────────────────────────────
+    c = Call.query.get(item["db_call_id"]) if item.get("db_call_id") else None
+
+    # Chamada já encerrou antes do AMD retornar → popup fantasma
+    if c and getattr(c, "ended_at", None):
+        logger.info("[AMD] Chamada %s já encerrou — ignorando AMD tardio", call_sid)
+        return "", 204
+
+    # ── Threshold configurável por campanha ───────────────────────────────────
+    # Padrão 6000ms. Carrega da campanha se disponível.
+    _threshold_ms = 6000
+    _unknown_action = "send_to_agent"  # padrão seguro
     if campaign_id:
         try:
-            from app.api.routes.auto_dialer import AUTO_DIALER_SESSIONS
-            _sess = AUTO_DIALER_SESSIONS.get(int(campaign_id))
-            if _sess:
-                raced = _sess.get("_amd_raced_sids", set())
-                if call_sid in raced:
-                    raced.discard(call_sid)
-                    logger.info("[AMD] SID %s já foi tratado como race condition em /status. Ignorando callback AMD tardio.", call_sid)
-                    return "", 204
-        except Exception as _re:
-            logger.debug("[AMD] Erro ao verificar race condition: %s", _re)
+            from app.models.campaign import Campaign
+            _camp = Campaign.query.get(campaign_id)
+            if _camp:
+                _threshold_ms   = getattr(_camp, "amd_duration_threshold_ms", None) or 6000
+                _unknown_action = getattr(_camp, "unknown_amd_action", None) or "send_to_agent"
+        except Exception:
+            pass
+    _threshold_s = _threshold_ms / 1000.0
 
-    c = None
-    if item.get("db_call_id"):
-        c = Call.query.get(item["db_call_id"])
-
-    is_machine = answered_by in ("machine_start", "machine_end_beep", "machine_end_silence", "machine_end_other", "fax")
-
-    # 'unknown' = AMD não conseguiu determinar com certeza.
-    # Tratamos SEMPRE como humano incerto (benefício da dúvida).
-    # A heurística anterior "unknown < 10s = máquina" causava falso-positivo no padrão
-    # alô+pausa+alô: o AMD retornava 'unknown' e a curta duração fazia o código
-    # classificar o humano como caixa postal. Máquinas legítimas retornam
-    # 'machine_start'/'machine_end_*' — 'unknown' genuíno deve ir para o operador.
-    if answered_by == "unknown" and not is_machine:
-        logger.info("[AMD] AnsweredBy=unknown → tratando como humano incerto (operador classifica)")
-        item["amd_uncertain"] = True
-
-    if c and getattr(c, "ended_at", None):
-        logger.info("[AMD] Chamada %s já encerrou (ended_at=%s). Forçando is_machine=True para ignorar popup fantasma.", call_sid, c.ended_at)
-        is_machine = True
-
-    # ── Calcula duração ANTES de qualquer ação para decidir certeza ──────────
-    # Deve acontecer ANTES de terminar a chamada.
+    # ── Duração desde atendimento ─────────────────────────────────────────────
     _call_duration = None
     if c and c.answered_at:
         _call_duration = (datetime.utcnow() - c.answered_at).total_seconds()
-    elif item.get("db_call_id"):
-        _c2 = Call.query.get(item["db_call_id"])
-        if _c2 and _c2.answered_at:
-            _call_duration = (datetime.utcnow() - _c2.answered_at).total_seconds()
-            if not c:
-                c = _c2
+    _amd_duration_ms = int(_call_duration * 1000) if _call_duration else None
 
-    # ── Reclassifica machine_start precoce como INCERTO ──────────────────────
-    # machine_start em < 6s = AMD detectou padrão de máquina muito cedo.
-    # Esse janela é exatamente onde humanos com padrão alô+pausa+alô caem:
-    #   T=0.7s  1º alô termina
-    #   T=2-3s  2º alô (lead sem resposta → repete)
-    #   T=3-5s  AMD dispara machine_start ← falso positivo
-    # machine_end_* (beep/silence/other) só dispara APÓS o greeting completo
-    # (8-15s), portanto é muito mais confiável.
-    # Solução: machine_start < 6s → tratar como humano incerto (redireciona para
-    # operador em vez de desligar). O operador ouve o lead e classifica.
+    # ── Classificação AMD ─────────────────────────────────────────────────────
+    is_machine = answered_by in (
+        "machine_start", "machine_end_beep",
+        "machine_end_silence", "machine_end_other", "fax"
+    )
+    is_uncertain = False
+
+    if answered_by == "unknown":
+        # unknown_amd_action configurável por campanha
+        if _unknown_action == "hangup":
+            is_machine  = True   # trata como máquina → encerra
+            answered_by = "machine_end_other"  # normaliza
+            logger.info("[AMD] unknown → hangup (campanha configurada)")
+        elif _unknown_action == "retry":
+            # Marca para retry — trata igual a no_answer
+            logger.info("[AMD] unknown → retry (campanha configurada)")
+            if c:
+                c.amd_result = "unknown"
+                c.status     = "no_answer"
+                db.session.commit()
+            if campaign_id and company_id:
+                from app.api.routes.auto_dialer import on_call_ended
+                on_call_ended(campaign_id, company_id, call_sid, "no_answer", force_advance=True)
+            return "", 200
+        else:
+            # send_to_agent (padrão) — benefício da dúvida
+            is_uncertain = True
+            logger.info("[AMD] unknown → send_to_agent (benefício da dúvida)")
+
+    # ── machine_start < threshold → incerto (alô+alô falso positivo) ─────────
     if is_machine and answered_by == "machine_start":
-        if _call_duration is None or _call_duration < 6:
+        if _call_duration is None or _call_duration < _threshold_s:
             logger.info(
-                "[AMD] machine_start em %.1fs < 6s → INCERTO (possível alô+alô). "
-                "Redirecionando para operador em vez de desligar.",
-                _call_duration or 0,
+                "[AMD] machine_start em %.1fs < %.1fs → INCERTO (threshold=%.0fms). "
+                "Possível padrão alô+alô. Enviando ao operador.",
+                _call_duration or 0, _threshold_s, _threshold_ms,
             )
-            is_machine = False
-            item["amd_uncertain"] = True
+            is_machine   = False
+            is_uncertain = True
+
+    # ── Salva resultado AMD no DB (métricas) ──────────────────────────────────
+    if c:
+        c.amd_result      = answered_by
+        if _amd_duration_ms and hasattr(c, "amd_duration_ms"):
+            c.amd_duration_ms = _amd_duration_ms
+        db.session.flush()
 
     if is_machine:
-        logger.info("[AMD] Máquina confirmada (%s, %.1fs). Encerrando chamada %s...",
-                    answered_by, _call_duration or 0, call_sid)
-
-        # Termina a chamada somente para detecções certas
+        # ── MÁQUINA CONFIRMADA ────────────────────────────────────────────────
+        logger.info("[AMD] ✗ Máquina (%s, %.1fs, threshold=%.1fs) — encerrando SID=%s",
+                    answered_by, _call_duration or 0, _threshold_s, call_sid)
         try:
-            company = Company.query.get(company_id or (g.company_id if hasattr(g, 'company_id') else None))
+            company = Company.query.get(company_id)
             if company:
                 svc = TwilioService.from_company(company, current_user_email=item.get("user_email"))
                 svc.client.calls(call_sid).update(status="completed")
         except Exception as e:
             logger.error("[AMD] Erro ao encerrar chamada (máquina): %s", e)
 
-        # machine_end_* ou machine_start tardio (≥6s) = voicemail real confirmado
         if c:
-            c.status     = "voicemail"
-            c.ended_at   = c.ended_at or datetime.utcnow()
-            c.amd_result = answered_by
+            c.status   = "voicemail"
+            c.ended_at = c.ended_at or datetime.utcnow()
             db.session.commit()
 
         update_lead_crm_status(item.get("lead_id"), item.get("db_call_id"), "voicemail", f"AMD: {answered_by}")
 
-        if campaign_id and company_id:
-            logger.info("[AMD] Caixa Postal confirmada. Avançando discador.")
-            item["lead_id"]       = None
-            item["db_call_id"]    = None
-            item["lead_call_sid"] = None
-            item["status"]        = "idle"
-            item["amd_uncertain"] = False
+        # Emite notificação WebSocket
+        try:
+            from app.services.socket_service import emit_call_update
+            if company_id:
+                emit_call_update(company_id, {
+                    "call_sid":  call_sid,
+                    "amd":       answered_by,
+                    "result":    "voicemail",
+                    "duration":  _call_duration,
+                })
+        except Exception:
+            pass
 
+        # Enrolar follow-up para voicemail automático (AMD)
+        _vm_lead_id = item.get("lead_id")
+        if _vm_lead_id and company_id:
+            try:
+                from app.api.routes.followup_routes import enroll_lead_in_followup
+                enroll_lead_in_followup(
+                    company_id=company_id,
+                    lead_id=_vm_lead_id,
+                    campaign_id=campaign_id,
+                    call_id=item.get("db_call_id"),
+                    disposition="caixa_postal",
+                )
+            except Exception as _fe:
+                logger.debug("[AMD] Erro enroll follow-up voicemail: %s", _fe)
+
+        if campaign_id and company_id:
+            item["lead_id"] = item["db_call_id"] = item["lead_call_sid"] = None
+            item["status"]  = "idle"
+            item["amd_uncertain"] = False
             from app.api.routes.auto_dialer import on_call_ended
             on_call_ended(campaign_id, company_id, call_sid, "voicemail", force_advance=True)
 
     else:
-        # ── Humano ou unknown ─────────────────────────────────────────────────
-        logger.info("[AMD] Humano detectado (%s). Redirecionando lead %s para conferência %s", answered_by, call_sid, conference_name)
+        # ── HUMANO (ou incerto → operador) ────────────────────────────────────
+        logger.info("[AMD] ✓ Humano (%s%.1fs) → redirecionando para conferência %s",
+                    "incerto " if is_uncertain else "",
+                    _call_duration or 0, conference_name)
 
-        # FASE 1 FIX: Redireciona a chamada via REST API para entrar na conferência
-        # (antes era apenas mudança de status em memória — a chamada ficava no /amd-hold)
+        # Redireciona via REST para lead-entry → entra na conference
         try:
-            company = Company.query.get(company_id or (g.company_id if hasattr(g, 'company_id') else None))
+            company = Company.query.get(company_id)
             if company:
                 svc = TwilioService.from_company(company, current_user_email=item.get("user_email"))
-                lead_entry_url = f"{_base_url()}/api/twilio/lead-entry?c={conference_name}&lead_id={item.get('lead_id', '')}"
+                lead_entry_url = (
+                    f"{_base_url()}/api/twilio/lead-entry"
+                    f"?c={conference_name}&lead_id={item.get('lead_id', '')}"
+                )
                 svc.client.calls(call_sid).update(url=lead_entry_url, method="POST")
-                logger.info("[AMD] Humano confirmado. Redirecionando %s para conference %s", call_sid, conference_name)
         except Exception as e:
-            logger.error("[AMD] Erro ao redirecionar chamada humano: %s", e)
+            logger.error("[AMD] Erro ao redirecionar humano: %s", e)
 
-        # BUG 1 FIX: Garantir ISO 8601 com sufixo Z para que o frontend parse corretamente
         _now_iso = datetime.utcnow().isoformat() + "Z"
         item["status"]           = "answered_waiting_agent"
         item["lead_answered_at"] = _now_iso
-        item["amd_uncertain"]    = False
+        item["amd_uncertain"]    = is_uncertain
         if item.get("agent_leg_call_sid"):
             item["audio_bridged"] = True
 
-        # Reler c do DB caso ainda não estivesse preenchido
         if not c and item.get("db_call_id"):
             c = Call.query.get(item["db_call_id"])
         if c:
             c.status      = "answered_waiting_agent"
             c.amd_result  = answered_by
-            c.answered_at = c.answered_at or datetime.utcnow()  # CRTICO: garantir answered_at no DB
+            c.answered_at = c.answered_at or datetime.utcnow()
+            if is_uncertain and hasattr(c, "amd_recovered"):
+                c.amd_recovered = True   # flag para métricas de falsos positivos
             db.session.commit()
+
+        # Emite evento WebSocket — frontend abre popup imediatamente
+        try:
+            from app.services.socket_service import emit_call_update
+            if company_id:
+                emit_call_update(company_id, {
+                    "call_sid":   call_sid,
+                    "amd":        answered_by,
+                    "result":     "human",
+                    "uncertain":  is_uncertain,
+                    "duration":   _call_duration,
+                    "conference": conference_name,
+                })
+        except Exception:
+            pass
 
         if campaign_id:
             from app.api.routes.auto_dialer import on_lead_answered
@@ -840,6 +1017,7 @@ def amd_callback():
 
 
 @twilio_voice_bp.route("/conference-events", methods=["GET", "POST"])
+@twilio_webhook
 def conference_events():
     logger.debug("=== /api/twilio/conference-events ===")
 
@@ -1374,6 +1552,7 @@ def amd_reclassify(call_id):
 
 
 @twilio_voice_bp.route("/lead-entry", methods=["POST"])
+@twilio_webhook
 def lead_entry():
     """
     Portão de Áudio Instantâneo (0ms delay):
@@ -1411,6 +1590,7 @@ def lead_entry():
 
 
 @twilio_voice_bp.route("/lead-to-bridge", methods=["POST"])
+@twilio_webhook
 def lead_to_bridge():
     """
     Acionado via REST API Redirect quando o AMD confirma Humano.
@@ -1439,6 +1619,7 @@ def lead_to_bridge():
 
 
 @twilio_voice_bp.route("/voice", methods=["GET", "POST"])
+@twilio_webhook
 def voice():
     logger.info("=== /api/twilio/voice chamado ===")
     from_ph = (_get_request_value("From") or "").strip()
@@ -1578,6 +1759,7 @@ def handle_call_status(call_sid, call_status, answered_by=None):
 
 
 @twilio_voice_bp.route("/client-status", methods=["GET", "POST"])
+@twilio_webhook
 def client_status():
     logger.debug("=== /api/twilio/client-status ===")
     logger.debug("[twilio] method = %s", request.method)
@@ -1586,6 +1768,7 @@ def client_status():
 
 
 @twilio_voice_bp.route("/bridge-action", methods=["GET", "POST"])
+@twilio_webhook
 def bridge_action():
     logger.debug("=== /api/twilio/bridge-action ===")
     logger.debug("[twilio] method = %s", request.method)

@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
-from app.auth import require_auth, require_role
+from app.auth import require_auth, require_role, rate_limit
 from app.extensions import db
 from app.models import Campaign, Lead, Call
 from app.models.company import Company
@@ -47,6 +47,14 @@ def serialize_campaign(campaign):
         "updated_at":      campaign.updated_at.isoformat() if campaign.updated_at else None,
         "default_pipeline_id": campaign.default_pipeline_id,
         "default_stage_id":    campaign.default_stage_id,
+        "call_script":          getattr(campaign, "call_script", None),
+        "caller_id_pool":       getattr(campaign, "caller_id_pool", None),
+        "predictive_ratio":     getattr(campaign, "predictive_ratio", 1.5),
+        "ring_timeout_seconds": getattr(campaign, "ring_timeout_seconds", 50),
+        "allowed_hours_start":  getattr(campaign, "allowed_hours_start", 8),
+        "allowed_hours_end":    getattr(campaign, "allowed_hours_end", 20),
+        "allowed_timezone":     getattr(campaign, "allowed_timezone", "America/Sao_Paulo"),
+        "allowed_weekdays":     getattr(campaign, "allowed_weekdays", "1,2,3,4,5"),
     }
 
 
@@ -136,7 +144,8 @@ def ping():
 
 @leads_bp.route("/campaign", methods=["POST"])
 @require_auth
-@require_role("admin", "agent")   # admin e agent podem criar campanhas
+@require_role("admin", "agent")
+@rate_limit(max_calls=30, window_seconds=60, key_prefix="campaign_create")
 def create_campaign():
     data = request.get_json() or {}
 
@@ -167,13 +176,19 @@ def create_campaign():
 @leads_bp.route("/campaigns", methods=["GET"])
 @require_auth
 def list_campaigns():
-    # Sempre filtra pelo tenant do usuário logado — sem query param company_id
-    campaigns = (
-        Campaign.query
-        .filter_by(company_id=g.company_id)
-        .order_by(Campaign.created_at.desc())
-        .all()
-    )
+    search   = request.args.get("search", "").strip()
+    per_page = request.args.get("per_page", type=int)
+
+    q = Campaign.query.filter_by(company_id=g.company_id)
+    if search:
+        q = q.filter(Campaign.name.ilike(f"%{search}%"))
+    q = q.order_by(Campaign.created_at.desc())
+
+    if per_page:
+        campaigns = q.limit(per_page).all()
+    else:
+        campaigns = q.all()
+
     return jsonify([serialize_campaign(c) for c in campaigns]), 200
 
 
@@ -210,9 +225,53 @@ def update_campaign(campaign_id):
     
     if "description" in data:
         campaign.description = data["description"]
-    
+
     if "status" in data:
         campaign.status = data["status"]
+
+    if "call_script" in data:
+        campaign.call_script = data["call_script"] or None
+
+    if "dial_mode" in data and data["dial_mode"] in ("manual", "auto", "predictive"):
+        campaign.dial_mode = data["dial_mode"]
+
+    if "predictive_ratio" in data:
+        try:
+            campaign.predictive_ratio = max(1.0, min(3.0, float(data["predictive_ratio"])))
+        except (TypeError, ValueError):
+            pass
+
+    if "caller_id_pool" in data:
+        raw = (data["caller_id_pool"] or "").strip()
+        campaign.caller_id_pool = raw if raw else None
+
+    if "ring_timeout_seconds" in data:
+        try:
+            campaign.ring_timeout_seconds = max(20, min(90, int(data["ring_timeout_seconds"])))
+        except (TypeError, ValueError):
+            pass
+
+    if "allowed_hours_start" in data:
+        try:
+            campaign.allowed_hours_start = max(0, min(23, int(data["allowed_hours_start"])))
+        except (TypeError, ValueError):
+            pass
+
+    if "allowed_hours_end" in data:
+        try:
+            campaign.allowed_hours_end = max(0, min(23, int(data["allowed_hours_end"])))
+        except (TypeError, ValueError):
+            pass
+
+    if "allowed_timezone" in data:
+        tz = (data["allowed_timezone"] or "").strip()
+        if tz:
+            campaign.allowed_timezone = tz
+
+    if "allowed_weekdays" in data:
+        raw = (data["allowed_weekdays"] or "").strip()
+        if raw:
+            campaign.allowed_weekdays = raw
 
     db.session.commit()
 
@@ -626,6 +685,7 @@ def create_lead():
 def list_leads():
     campaign_id = request.args.get("campaign_id", type=int)
     status      = request.args.get("status")
+    search      = request.args.get("search", "").strip()
     page        = request.args.get("page", 1, type=int)
     per_page    = request.args.get("per_page", 20, type=int)
 
@@ -635,6 +695,12 @@ def list_leads():
         query = query.filter(Lead.campaign_id == campaign_id)
     if status:
         query = query.filter(Lead.status == status)
+    if search:
+        query = query.filter(
+            Lead.name.ilike(f"%{search}%") |
+            Lead.numero_1.ilike(f"%{search}%") |
+            Lead.company_name.ilike(f"%{search}%")
+        )
 
     # Paginação
     pagination = query.order_by(Lead.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
@@ -674,10 +740,80 @@ def list_pending_leads():
     return jsonify([serialize_lead(l) for l in leads]), 200
 
 
+@leads_bp.route("/leads/import/preview", methods=["POST"])
+@require_auth
+@require_role("admin", "agent")
+def import_preview():
+    """
+    Lê os headers + 5 primeiras linhas do arquivo CSV/XLSX sem gravar nada.
+    Retorna: colunas detectadas, amostra de dados e sugestões de mapeamento automático.
+    Usado pelo frontend de mapeamento visual de colunas.
+    """
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "Arquivo não enviado"}), 400
+
+    filename = (file.filename or "").lower()
+    try:
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file, nrows=5, dtype=str)
+        else:
+            df = pd.read_excel(file, nrows=5, dtype=str)
+    except Exception as e:
+        return jsonify({"error": f"Erro ao ler arquivo: {str(e)}"}), 400
+
+    # Normaliza NaN para None
+    df = df.where(pd.notnull(df), None)
+
+    raw_cols = list(df.columns)
+    sample   = df.head(5).to_dict(orient="records")
+
+    # Auto-mapping: tenta detectar correspondência automática entre header do arquivo
+    # e campos do Lead (suporte PT-BR e EN)
+    LEAD_FIELDS = [
+        "name", "email", "company_name", "job_title", "city", "state", "notes",
+        "numero_1", "numero_2", "numero_3", "numero_4",
+        "numero_5", "numero_6", "numero_7", "numero_8",
+    ]
+
+    ALIASES: dict[str, str] = {
+        # PT-BR
+        "nome": "name", "empresa": "company_name", "cargo": "job_title",
+        "cidade": "city", "estado": "state",
+        "observacoes": "notes", "observações": "notes", "obs": "notes",
+        "telefone": "numero_1", "celular": "numero_1", "fone": "numero_1",
+        "tel": "numero_1", "phone": "numero_1", "mobile": "numero_1",
+        "tel1": "numero_1", "tel2": "numero_2", "tel3": "numero_3",
+        "whatsapp": "numero_1",
+        # EN
+        "company": "company_name", "title": "job_title",
+        "phone1": "numero_1", "phone2": "numero_2", "phone3": "numero_3",
+    }
+
+    suggestions: dict[str, str | None] = {}
+    for col in raw_cols:
+        normalized = col.strip().lower().replace(" ", "_").replace("-", "_")
+        if normalized in LEAD_FIELDS:
+            suggestions[col] = normalized
+        elif normalized in ALIASES:
+            suggestions[col] = ALIASES[normalized]
+        else:
+            suggestions[col] = None  # usuário deve mapear manualmente
+
+    return jsonify({
+        "columns":     raw_cols,
+        "sample":      sample,
+        "suggestions": suggestions,
+        "lead_fields": LEAD_FIELDS,
+    }), 200
+
+
 @leads_bp.route("/leads/import", methods=["POST"])
 @require_auth
 @require_role("admin", "agent")
+@rate_limit(max_calls=5, window_seconds=300, key_prefix="leads_import")
 def import_leads():
+
     """
     Importa leads de CSV ou XLSX.
 
@@ -706,23 +842,33 @@ def import_leads():
 
     try:
         if file.filename.endswith(".csv"):
-            df = pd.read_csv(file)
+            df = pd.read_csv(file, dtype=str)
         else:
-            df = pd.read_excel(file)
+            df = pd.read_excel(file, dtype=str)
     except Exception as e:
         return jsonify({"error": f"Erro ao ler arquivo: {str(e)}"}), 400
 
-    # Normaliza nomes de colunas — suporta PT-BR e EN
-    col_map = {
-        "nome":         "name",
-        "empresa":      "company_name",
-        "cargo":        "job_title",
-        "cidade":       "city",
-        "estado":       "state",
-        "observacoes":  "notes",
-        "observações":  "notes",
+    # ── Mapeamento personalizado (vem do UI de mapeamento visual) ───────────────
+    # column_map JSON: {"Coluna do arquivo": "campo_lead"} | None = ignorar coluna
+    import json as _json
+    raw_col_map = request.form.get("column_map")
+    if raw_col_map:
+        try:
+            user_col_map = _json.loads(raw_col_map)
+            rename_map = {k: v for k, v in user_col_map.items() if v}
+            df.rename(columns=rename_map, inplace=True)
+        except Exception:
+            pass  # fallback para auto-detect abaixo
+
+    # Auto-detect PT-BR → EN (só para colunas ainda não mapeadas)
+    auto_map = {
+        "nome": "name", "empresa": "company_name", "cargo": "job_title",
+        "cidade": "city", "estado": "state",
+        "observacoes": "notes", "observações": "notes",
+        "telefone": "numero_1", "celular": "numero_1",
+        "whatsapp": "numero_1", "phone": "numero_1",
     }
-    df.rename(columns=col_map, inplace=True)
+    df.rename(columns=auto_map, inplace=True)
     df.columns = [c.strip().lower() for c in df.columns]
 
     pipeline_id = request.form.get("pipeline_id", type=int)
@@ -766,9 +912,22 @@ def import_leads():
         res = str(val).strip()
         return res if res else None
 
-    imported = 0
-    skipped  = 0
-    errors   = []
+    imported   = 0
+    skipped    = 0
+    duplicates = 0
+    errors     = []
+
+    # ── Deduplication (AUTO-04) ──────────────────────────────────────────────
+    # Scope: company-wide by default; pass dedup_scope=campaign to restrict.
+    dedup_scope = request.form.get("dedup_scope", "company")
+    dedup_q = Lead.query.filter(Lead.company_id == g.company_id)
+    if dedup_scope == "campaign":
+        dedup_q = dedup_q.filter(Lead.campaign_id == campaign_id)
+    existing_phones = {
+        row[0] for row in dedup_q.with_entities(Lead.numero_1).all() if row[0]
+    }
+    # Also track phones seen in this batch (intra-file dedup)
+    batch_phones: set = set()
 
     # Obter próxima ordem de importação para esta campanha
     last_order = (
@@ -790,6 +949,13 @@ def import_leads():
             errors.append(f"Linha {index + 2}: 'numero_1' é obrigatório")
             skipped += 1
             continue
+
+        # Dedup check against DB + earlier rows in this batch
+        if numero_1 in existing_phones or numero_1 in batch_phones:
+            duplicates += 1
+            skipped += 1
+            continue
+        batch_phones.add(numero_1)
 
         last_order += 1
         lead = Lead(
@@ -836,6 +1002,7 @@ def import_leads():
         "message":      "Importação concluída",
         "imported":     imported,
         "skipped":      skipped,
+        "duplicates":   duplicates,
         "errors_count": len(errors),
         "errors":       errors[:20],
         "crm_pipeline": pipeline.name if pipeline else None,

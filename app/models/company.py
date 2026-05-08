@@ -41,6 +41,8 @@ class Company(db.Model):
     # ------------------------------------------------------------------
     # Informações Regulatórias (Identity Verification)
     # ------------------------------------------------------------------
+    segment           = db.Column(db.String(100), nullable=True)
+
     reg_type          = db.Column(db.String(50),  nullable=True)
     reg_name          = db.Column(db.String(255), nullable=True)
     reg_tax_id        = db.Column(db.String(50),  nullable=True)

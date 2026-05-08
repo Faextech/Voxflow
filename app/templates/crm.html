@@ -313,6 +313,29 @@
     /* ── RULES PANEL ── */
     .rule-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
     .rule-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+    /* ── RESPONSIVE — MOBILE ── */
+    @media (max-width: 900px) {
+        .crm-sidebar {
+            position: fixed; left: -240px; top: 0; bottom: 0;
+            width: var(--sidebar-width); z-index: 1000;
+            transition: left 0.25s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+        }
+        .crm-sidebar.open { left: 0; }
+        #crmMobileMenuBtn { display: flex !important; }
+        #crmMobileOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; }
+        #crmMobileOverlay.open { display: block; }
+        .board-header { padding: 8px 12px; }
+        .kanban-col { --col-width: 250px; }
+    }
+
+    @media (max-width: 600px) {
+        .kanban-col { --col-width: calc(100vw - 24px); }
+        .board-scroll { padding: 10px 12px; gap: 10px; }
+        .deal-card { padding: 10px 12px; }
+        .board-header { flex-wrap: wrap; gap: 8px; }
+        .board-actions { flex-wrap: wrap; gap: 6px; }
+    }
   </style>
 </head>
 <body>
@@ -372,8 +395,10 @@
 <!-- BODY -->
 <div class="crm-body">
 
+  <div id="crmMobileOverlay" onclick="toggleCRMSidebar()"></div>
+
   <!-- SIDEBAR -->
-  <div class="crm-sidebar">
+  <div class="crm-sidebar" id="crmSidebar">
     <div class="sidebar-section-label">Pipelines</div>
     <div id="pipelineList"></div>
     <div class="sidebar-add-btn" onclick="openCreatePipelineModal()">
@@ -400,6 +425,9 @@
   <div class="crm-main">
     <!-- Board header -->
     <div class="board-header" id="boardHeader" style="display:none">
+      <button id="crmMobileMenuBtn" onclick="toggleCRMSidebar()" aria-label="Menu" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--text-primary)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <h5 id="boardTitle">Pipeline</h5>
       <span class="badge" id="boardDealsCount" style="background:rgba(37,99,235,0.12);color:var(--accent);font-size:11px;padding:4px 10px;border-radius:6px;">0 deals</span>
       <div class="board-actions">
@@ -791,7 +819,7 @@ function logoutApp() {
 }
 
 function getToken() {
-  return localStorage.getItem('voxflow_token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+  return localStorage.getItem('voxflow_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
 }
 async function authFetch(url, opts = {}) {
   const token = getToken();
@@ -1701,6 +1729,85 @@ function formatRelTime(iso) {
   if (diff < 86400) return `${Math.floor(diff/3600)}h atrás`;
   return `${Math.floor(diff/86400)}d atrás`;
 }
+
+// ============================================================
+// WEBSOCKET — atualizações em tempo real
+// ============================================================
+(function _initCRMSocket() {
+    const token = localStorage.getItem('voxflow_token') || localStorage.getItem('token') || '';
+    if (!token || token.split('.').length !== 3) return;
+
+    // Carrega socket.io se não disponível
+    if (typeof io === 'undefined') {
+        const s = document.createElement('script');
+        s.src = '/socket.io/socket.io.js';
+        s.onload = _connect;
+        document.head.appendChild(s);
+    } else {
+        _connect();
+    }
+
+    function _connect() {
+        try {
+            const socket = io({ transports: ['websocket', 'polling'] });
+
+            socket.on('connect', () => {
+                socket.emit('join', { token });
+                console.info('[CRM-WS] Conectado ao VoxFlow real-time');
+            });
+
+            // Lead classificado pelo discador → atualiza pipeline
+            socket.on('lead_update', (data) => {
+                if (!data || !data.lead_id) return;
+                console.info('[CRM-WS] lead_update:', data);
+                // Recarrega cards do pipeline para refletir mudança de estágio
+                if (typeof loadPipeline === 'function') {
+                    loadPipeline();
+                } else if (typeof renderBoard === 'function') {
+                    renderBoard();
+                }
+            });
+
+            // Campanha atualizada → pode impactar deals vinculados
+            socket.on('campaign_update', (data) => {
+                if (!data) return;
+                console.info('[CRM-WS] campaign_update:', data);
+            });
+
+            // Notificações de sistema
+            socket.on('notification', (data) => {
+                if (!data || !data.message) return;
+                const level = data.level || 'info';
+                const icon  = level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:#1e293b;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease';
+                toast.textContent = `${icon} ${data.message}`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 5000);
+            });
+
+            socket.on('disconnect', () => console.warn('[CRM-WS] Desconectado'));
+        } catch (e) {
+            console.warn('[CRM-WS] Falha ao conectar socket.io:', e);
+        }
+    }
+})();
+
+function toggleCRMSidebar() {
+    const sidebar = document.getElementById('crmSidebar');
+    const overlay = document.getElementById('crmMobileOverlay');
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('open');
+}
+
+// Show mobile menu button only on narrow screens
+(function() {
+    const btn = document.getElementById('crmMobileMenuBtn');
+    if (!btn) return;
+    function checkWidth() { btn.style.display = window.innerWidth <= 900 ? 'inline-flex' : 'none'; }
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+})();
 </script>
 </body>
 </html>
