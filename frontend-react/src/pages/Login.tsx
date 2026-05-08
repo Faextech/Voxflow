@@ -88,6 +88,19 @@ export default function Login() {
     setTokens(access_token, csrf_token)
     setUser(user)
     
+    // Populate legacy local storage variables for the legacy iframe dashboard to read
+    localStorage.setItem('voxflow_token', access_token)
+    localStorage.setItem('token', access_token)
+    localStorage.setItem('user_id', String(user.id))
+    localStorage.setItem('company_id', String(user.company_id))
+    localStorage.setItem('voxflow_role', user.role || 'agent')
+    localStorage.setItem('voxflow_user_name', user.name || '')
+    localStorage.setItem('user_email', user.email)
+    if (d.agent_id) localStorage.setItem('agent_id', String(d.agent_id))
+    if (d.token_expires_in) {
+      localStorage.setItem('voxflow_token_exp', String(Date.now() + d.token_expires_in * 1000))
+    }
+
     if (user.role === 'superadmin') {
       window.location.href = '/admin'
     } else {
