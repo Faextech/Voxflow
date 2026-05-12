@@ -1,3 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --color-brand-50: #f0fdf4;
+  --color-brand-500: #16a34a;
+  --color-brand-600: #15803d;
+  --color-navy-800: #1e3a8a;
+  --color-navy-900: #0f1f5c;
+  --shadow-soft: 0 10px 40px -10px rgba(0,0,0,0.08);
+  --shadow-glow: 0 0 20px rgba(22, 163, 74, 0.4);
+}
+
 /* Custom Styles — VoxFlow */
 
 /* ═══════════════════════════════════════════════

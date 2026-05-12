@@ -70,16 +70,16 @@ export default function Login() {
     }
   }
 
-  function finishLogin(d: Record<string, unknown>) {
-    const access_token = (d.access_token ?? d.token) as string
-    const csrf_token   = (d.csrf_token ?? null) as string | null
-    const user = (d.user ?? {
+  function finishLogin(d: any) {
+    const access_token = d.access_token ?? d.token
+    const csrf_token   = d.csrf_token ?? undefined
+    const user = d.user ?? {
       id:         d.user_id,
       name:       d.name,
       email:      d.email,
       role:       d.role,
       company_id: d.company_id,
-    }) as Record<string, unknown>
+    }
     setTokens(access_token, csrf_token)
     setUser(user)
     

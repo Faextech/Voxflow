@@ -22,13 +22,13 @@ export function useSocket() {
       reconnection: true,
     })
 
-    _socket.on('dialer_status', (data: { session?: string, active_lead?: Record<string, unknown>, call_status?: string }) => {
+    _socket.on('dialer_status', (data: { session?: any, active_lead?: any, call_status?: any }) => {
       setSession(data?.session ?? null)
       if (data?.active_lead) setActiveLead(data.active_lead)
       if (data?.call_status) setCallStatus(data.call_status)
     })
 
-    _socket.on('call_update', (data: { status?: string, lead?: Record<string, unknown> }) => {
+    _socket.on('call_update', (data: { status?: any, lead?: any }) => {
       setCallStatus(data?.status ?? 'idle')
       if (data?.lead) setActiveLead(data.lead)
     })
