@@ -31,6 +31,9 @@ from app.api.routes.callback_routes import callback_bp
 
 
 def register_blueprints(app):
+    from app.extensions import csrf
+    csrf.exempt(auth_bp)
+    
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(leads_bp, url_prefix='/api')
     app.register_blueprint(calls_bp, url_prefix='/api')
