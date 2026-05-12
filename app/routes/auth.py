@@ -128,9 +128,12 @@ def login_get():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    logger.info(f"[LOGIN] Recebida tentativa de login — IP={request.remote_addr}")
     data  = request.get_json() or {}
     email = (data.get('email') or '').strip().lower()
     password = data.get('password')
+    
+    logger.debug(f"[LOGIN] Email fornecido: {email}")
 
     if not email or not password:
         return jsonify({'error': 'Email e senha são obrigatórios'}), 400
@@ -144,9 +147,12 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if not user or not check_password_hash(user.password_hash, password):
+        logger.warning(f"[LOGIN] Falha: Usuário não encontrado ou senha incorreta para {email}")
         log_audit('login_failed', resource_type='user', changes={'email': email}, status='failed',
                   error_message='Credenciais inválidas')
         return jsonify({'error': 'Credenciais inválidas'}), 401
+    
+    logger.info(f"[LOGIN] Sucesso: Usuário {email} autenticado (ID={user.id})")
 
     if user.status != 'active':
         log_audit('login_failed', resource_type='user', resource_id=user.id,
