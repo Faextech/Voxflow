@@ -97,7 +97,7 @@ export default function Login() {
     }
 
     if (user.role === 'superadmin') {
-      window.location.href = '/admin'
+      navigate('/app/dashboard', { replace: true })
     } else {
       navigate('/app/dashboard', { replace: true })
     }
