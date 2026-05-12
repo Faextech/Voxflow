@@ -1,9 +1,9 @@
-import { useState, useRef, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useState, useRef, type FormEvent, useEffect } from 'react'
+import { Navigate, useNavigate, Link } from 'react-router-dom'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
-import './Login.css'
+import { PhoneCall, ShieldCheck, Mail, Lock, ArrowRight, Loader2, ChevronLeft, ShieldAlert } from 'lucide-react'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
@@ -17,8 +17,7 @@ export default function Login() {
   const navigate    = useNavigate()
   const { setTokens, setUser, token } = useAuthStore()
 
-  // Redirect already-authenticated users — use declarative Navigate to avoid
-  // calling navigate() during the render phase (which causes issues in StrictMode).
+  // Redirect if already authenticated
   if (token) return <Navigate to="/app/dashboard" replace />
 
   async function handleSubmit(e: FormEvent) {
@@ -28,7 +27,7 @@ export default function Login() {
       const password = passwordRef.current?.value ?? ''
 
       if (!email || !password) {
-        toast.error('Preencha e-mail e senha')
+        toast.error('Por favor, preencha todos os campos.')
         return
       }
 
@@ -40,18 +39,20 @@ export default function Login() {
         if (d.requires_2fa) {
           setChallengeToken(d.challenge_token || null)
           setStep('2fa')
+          toast.success('Credenciais válidas! Digite o código 2FA.')
         } else {
           finishLogin(d)
         }
-      } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Credenciais inválidas')
+      } catch (err: any) {
+        const msg = err.response?.data?.error || 'Erro ao realizar login. Verifique suas credenciais.'
+        toast.error(msg)
       } finally {
         setLoading(false)
       }
     } else {
       const code = totpRef.current?.value.trim().replace(/\s/g, '') ?? ''
       if (!code || code.length !== 6) {
-        toast.error('Digite o código de 6 dígitos')
+        toast.error('O código deve ter 6 dígitos.')
         return
       }
 
@@ -62,8 +63,9 @@ export default function Login() {
 
         const res = await api.post('/auth/login/2fa', body)
         finishLogin(res.data)
-      } catch (err: unknown) {
-        toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Código inválido ou expirado.')
+      } catch (err: any) {
+        const msg = err.response?.data?.error || 'Código inválido ou expirado.'
+        toast.error(msg)
       } finally {
         setLoading(false)
       }
@@ -80,27 +82,17 @@ export default function Login() {
       role:       d.role,
       company_id: d.company_id,
     }
+    
     setTokens(access_token, csrf_token)
     setUser(user)
     
-    // Populate legacy localStorage so iframe-based dashboards can read the session
+    // Legacy sync
     localStorage.setItem('voxflow_token', access_token)
     localStorage.setItem('token', access_token)
     localStorage.setItem('user_id', String(user.id))
-    localStorage.setItem('company_id', String(user.company_id))
-    localStorage.setItem('voxflow_role', user.role || 'agent')
-    localStorage.setItem('voxflow_user_name', user.name || '')
-    localStorage.setItem('user_email', user.email)
-    if (d.agent_id) localStorage.setItem('agent_id', String(d.agent_id))
-    if (d.token_expires_in) {
-      localStorage.setItem('voxflow_token_exp', String(Date.now() + d.token_expires_in * 1000))
-    }
-
-    if (user.role === 'superadmin') {
-      navigate('/app/dashboard', { replace: true })
-    } else {
-      navigate('/app/dashboard', { replace: true })
-    }
+    
+    toast.success(`Bem-vindo de volta, ${user.name}!`)
+    navigate('/app/dashboard', { replace: true })
   }
 
   function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -110,107 +102,156 @@ export default function Login() {
   function handleTotpChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, '').slice(0, 6)
     e.target.value = v
-    // Auto-submit when 6 digits entered — matches legacy HTML behavior
     if (v.length === 6 && !loading) {
       handleSubmit({ preventDefault: () => {} } as FormEvent)
     }
   }
 
   return (
-    <div className="login-page-container">
-      <div className="hero-gradient"></div>
-      <div className="bg-pattern"></div>
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden font-inter selection:bg-brand-500/30">
+      <style>{`
+        .login-glass {
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .supreme-glow {
+          box-shadow: 0 0 40px rgba(234, 179, 8, 0.2);
+          border-color: rgba(234, 179, 8, 0.4);
+        }
+        .input-focus:focus {
+          border-color: #16a34a;
+          box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+      `}</style>
 
-      <div className="login-card">
-        <div className="login-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-          </svg>
-          <span>VoxFlow</span>
+      {/* Decorative Blobs */}
+      <div className="absolute top-0 -left-20 w-96 h-96 bg-brand-500/10 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-0 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]"></div>
+
+      <div className={`w-full max-w-md p-8 login-glass rounded-3xl shadow-2xl relative z-10 animate-slide-up ${showSupreme ? 'supreme-glow' : ''}`}>
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-flex items-center space-x-2 group mb-6">
+            <div className="bg-brand-500 p-2 rounded-xl group-hover:rotate-12 transition-transform shadow-lg shadow-brand-500/20">
+              <PhoneCall className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">VoxFlow</span>
+          </Link>
+          
+          {step === 'credentials' ? (
+            <>
+              <h2 className="text-2xl font-bold text-white">Bem-vindo de volta</h2>
+              <p className="text-slate-400 text-sm mt-2">Acesse sua conta para começar a vender.</p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold text-white">Verificação 2FA</h2>
+              <p className="text-slate-400 text-sm mt-2">Digite o código do seu aplicativo autenticador.</p>
+            </>
+          )}
         </div>
 
         {showSupreme && (
-          <div style={{ textAlign: 'center' }}>
-            <div className="supreme-badge">Acesso Supremo</div>
+          <div className="mb-6 flex justify-center">
+            <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center">
+              <ShieldCheck size={12} className="mr-2" />
+              Acesso Supremo Detectado
+            </span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {step === 'credentials' ? (
-            <div id="step-credentials">
-              <h2>Bem-vindo de volta</h2>
-              <p className="subtitle">Acesse sua conta para começar a discar.</p>
-
-              <div className="form-group">
-                <label htmlFor="email">E-mail corporativo</label>
-                <input 
-                  ref={emailRef} 
-                  type="email" 
-                  id="email" 
-                  placeholder="seu@email.com" 
-                  required 
-                  autoComplete="username" 
-                  onChange={handleEmailChange}
-                />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">E-mail</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                  <input 
+                    ref={emailRef}
+                    onChange={handleEmailChange}
+                    type="email" 
+                    className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none transition-all input-focus"
+                    placeholder="seu@email.com"
+                    autoComplete="email"
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="password">Senha</label>
-                <input 
-                  ref={passwordRef} 
-                  type="password" 
-                  id="password" 
-                  placeholder="••••••••" 
-                  required 
-                  autoComplete="current-password" 
-                />
-              </div>
-
-              <button type="submit" disabled={loading}>
-                {!loading && <span>Entrar na Plataforma</span>}
-                {loading && <div className="loading-spinner"></div>}
-              </button>
-
-              <div className="footer-links">
-                Não tem uma conta? <a href="/register">Criar agora</a>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Senha</label>
+                  <a href="#" className="text-xs text-brand-500 hover:text-brand-400 font-medium">Esqueceu?</a>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                  <input 
+                    ref={passwordRef}
+                    type="password" 
+                    className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3.5 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none transition-all input-focus"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </div>
               </div>
             </div>
           ) : (
-            <div id="step-2fa" className="step-2fa-active">
-              <h2>Verificação 2FA</h2>
-              <p className="subtitle">Autenticação de dois fatores ativada.</p>
-
-              <div className="totp-info">
-                <span className="icon">🔐</span>
-                <span>Abra o <strong>Google Authenticator</strong> (ou app compatível) e insira o código de 6 dígitos gerado para o <strong>VoxFlow</strong>.</span>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="totp-code">Código TOTP</label>
-                <input
+            <div className="space-y-4">
+              <div className="space-y-1.5 text-center">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Código de 6 dígitos</label>
+                <input 
                   ref={totpRef}
-                  type="text"
-                  id="totp-code"
-                  className="totp-code-input"
-                  placeholder="000000"
-                  maxLength={6}
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  autoComplete="one-time-code"
-                  autoFocus
                   onChange={handleTotpChange}
+                  type="text" 
+                  inputMode="numeric"
+                  className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-4 px-4 text-center text-3xl font-mono tracking-[0.5em] text-white outline-none transition-all input-focus"
+                  placeholder="000000"
+                  autoFocus
                 />
               </div>
-
-              <button type="submit" disabled={loading}>
-                {!loading && <span>Verificar e Entrar</span>}
-                {loading && <div className="loading-spinner"></div>}
+              <button 
+                type="button" 
+                onClick={() => setStep('credentials')}
+                className="w-full flex items-center justify-center text-sm text-slate-500 hover:text-white transition-colors"
+              >
+                <ChevronLeft size={16} className="mr-1" /> Voltar para o e-mail
               </button>
-
-              <span className="back-link" onClick={() => setStep('credentials')}>← Voltar para o login</span>
             </div>
           )}
+
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-slate-800 disabled:text-slate-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center transition-all group active:scale-95 shadow-xl shadow-brand-500/20"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <>
+                {step === 'credentials' ? 'Entrar Agora' : 'Verificar e Entrar'}
+                <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
+          </button>
         </form>
+
+        <div className="mt-8 text-center text-sm">
+          <span className="text-slate-500">Não tem uma conta?</span>
+          <Link to="/" className="ml-1 text-brand-500 hover:text-brand-400 font-bold">Falar com vendas</Link>
+        </div>
+      </div>
+
+      {/* Footer info */}
+      <div className="absolute bottom-8 text-slate-600 text-[10px] uppercase tracking-widest flex items-center space-x-4">
+        <span>© 2025 VoxFlow Inc.</span>
+        <span>•</span>
+        <span>Secure Session Active</span>
       </div>
     </div>
   )
