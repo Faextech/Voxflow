@@ -30,28 +30,37 @@ def react_assets(filename: str):
     return send_from_directory(assets_dir, filename)
 
 
+@pages_bp.route("/")
+def landing_page():
+    from flask import render_template
+    return render_template("landing.html")
+
+@pages_bp.route("/login")
+def login_page():
+    from flask import render_template
+    return render_template("login.html")
+
+@pages_bp.route("/register")
+def register_page():
+    from flask import render_template
+    return render_template("register.html")
+
+@pages_bp.route("/app/dashboard")
+@pages_bp.route("/dashboard")
+def dashboard_page():
+    from flask import render_template
+    return render_template("dashboard.html")
+
+@pages_bp.route("/crm")
 @pages_bp.route("/legacy/crm")
 def legacy_crm():
     from flask import render_template
     return render_template("crm.html")
 
-@pages_bp.route("/legacy/dashboard")
-def legacy_dashboard():
-    from flask import render_template
-    return render_template("dashboard.html")
-
-# ── SPA catch-all: todas as rotas de página vão para o React ──────────────────
-
-@pages_bp.route("/", defaults={'path': ''})
-@pages_bp.route("/<path:path>")
+# SPA catch-all movido para prefixo /v2 para evitar conflitos
+@pages_bp.route("/v2", defaults={'path': ''})
+@pages_bp.route("/v2/<path:path>")
 def react_app(path):
-    """
-    SPA fallback — qualquer rota que não seja asset ou API vai para o React.
-    Também tenta servir arquivos estáticos que estejam na raiz do build (ex: favicon.svg).
-    """
-    # Se o arquivo existe fisicamente na pasta do React, serve ele
     if path and os.path.isfile(os.path.join(_REACT_DIST, path)):
         return send_from_directory(_REACT_DIST, path)
-    
-    # Caso contrário, serve o index.html (SPA Fallback)
     return _serve_react()

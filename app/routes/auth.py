@@ -122,9 +122,9 @@ def register():
         'user_id':    user.id,
     }), 201
 
-
-
-
+@auth_bp.route('/login', methods=['GET'])
+def login_get():
+    return redirect(url_for('pages.login_page'))
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
