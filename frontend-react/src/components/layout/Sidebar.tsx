@@ -6,6 +6,11 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
 const links = [
   { to: '/app/dashboard',  icon: LayoutDashboard, label: 'Dashboard'    },
   { to: '/app/campaigns',  icon: GitBranch,       label: 'Campanhas'    },
@@ -27,17 +32,22 @@ const adminLinks = [
   { to: '/app/credito',    icon: CreditCard, label: 'Crédito'        },
 ]
 
-export function Sidebar() {
+export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const role    = useAuthStore(s => s.user?.role)
   const isAdmin = role === 'admin' || role === 'superadmin' || role === 'supervisor'
 
+  function handleLinkClick() {
+    // Close mobile sidebar when a link is clicked
+    onClose?.()
+  }
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sidebar-brand">
         <h1>Vox<span>Flow</span></h1>
       </div>
 
-      <div style={{ padding: '12px 0', flex: 1 }}>
+      <div style={{ padding: '12px 0', flex: 1, overflowY: 'auto' }}>
         <div className="menu-title">Operação</div>
         <nav className="menu">
           {links.map(({ to, icon: Icon, label }) => (
@@ -45,6 +55,7 @@ export function Sidebar() {
               key={to}
               to={to}
               className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}
+              onClick={handleLinkClick}
             >
               <Icon size={16} />
               {label}
@@ -61,6 +72,7 @@ export function Sidebar() {
                   key={to}
                   to={to}
                   className={({ isActive }) => `menu-link${isActive ? ' active' : ''}`}
+                  onClick={handleLinkClick}
                 >
                   <Icon size={16} />
                   {label}

@@ -1,10 +1,11 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, type CSSProperties } from 'react'
 
-interface CardProps  { children: ReactNode; className?: string }
+interface CardProps  { children: ReactNode; className?: string; style?: CSSProperties }
 interface HeaderProps { title: string; subtitle?: string; action?: ReactNode }
+interface BodyProps  { children: ReactNode; className?: string; style?: CSSProperties }
 
-export function Card({ children, className = '' }: CardProps) {
-  return <div className={`panel ${className}`}>{children}</div>
+export function Card({ children, className = '', style }: CardProps) {
+  return <div className={`panel ${className}`} style={style}>{children}</div>
 }
 
 export function CardHeader({ title, subtitle, action }: HeaderProps) {
@@ -19,6 +20,6 @@ export function CardHeader({ title, subtitle, action }: HeaderProps) {
   )
 }
 
-export function CardBody({ children, className = '' }: CardProps) {
-  return <div className={`panel-body ${className}`}>{children}</div>
+export function CardBody({ children, className = '', style }: BodyProps) {
+  return <div className={`panel-body ${className}`} style={style}>{children}</div>
 }

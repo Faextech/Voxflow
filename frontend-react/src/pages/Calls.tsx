@@ -34,7 +34,7 @@ export default function Calls() {
     { keepPreviousData: true } as object
   )
 
-  const allCalls: Call[] = Array.isArray(raw) ? raw : ((raw as any)?.calls ?? [])
+  const allCalls: Call[] = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.calls as Call[] ?? [])
   const total  = allCalls.length
   const pages  = Math.max(1, Math.ceil(total / PER))
   const calls  = allCalls.slice((page - 1) * PER, page * PER)

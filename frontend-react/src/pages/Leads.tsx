@@ -36,7 +36,7 @@ export default function Leads() {
       await create.mutateAsync(form)
       toast.success('Lead criado')
       setShowNew(false); setForm({}); refetch()
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro') }
   }
 
   async function handleDelete(id: number) {

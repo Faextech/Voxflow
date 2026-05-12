@@ -10,7 +10,7 @@ import type { Campaign } from '@/types'
 export default function Import() {
   const [file,       setFile]       = useState<File | null>(null)
   const [campaignId, setCampaignId] = useState('')
-  const [preview,    setPreview]    = useState<{ columns: string[]; rows: any[][] } | null>(null)
+  const [preview,    setPreview]    = useState<{ columns: string[]; rows: string[][] } | null>(null)
   const [mapping,    setMapping]    = useState<Record<string, string>>({})
   const [importing,  setImporting]  = useState(false)
   const [result,     setResult]     = useState<{ imported: number } | null>(null)
@@ -37,7 +37,7 @@ export default function Import() {
         if (lower.includes('empresa') || lower.includes('company')) auto[col] = 'company'
       })
       setMapping(auto)
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro ao ler arquivo') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro ao ler arquivo') }
   }
 
   async function handleImport() {
@@ -51,7 +51,7 @@ export default function Import() {
       const r = await api.post('/api/leads/import', fd)
       setResult({ imported: r.data.imported ?? r.data.total ?? 0 })
       toast.success(`${r.data.imported ?? r.data.total} leads importados`)
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro na importação') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro na importação') }
     finally { setImporting(false) }
   }
 
@@ -128,7 +128,7 @@ export default function Import() {
                   </thead>
                   <tbody>
                     {preview.rows.slice(0, 3).map((row, i) => (
-                      <tr key={i}>{row.map((cell: any, j: number) => <td key={j} className="px-2 py-1">{cell}</td>)}</tr>
+                      <tr key={i}>{row.map((cell: string, j: number) => <td key={j} className="px-2 py-1">{cell}</td>)}</tr>
                     ))}
                   </tbody>
                 </table>

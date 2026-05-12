@@ -3,22 +3,22 @@ import { useAuthStore } from '@/store/auth'
 import { useDialerStore } from '@/store/dialer'
 import { LogOut, Moon, Sun } from 'lucide-react'
 import { api } from '@/api/client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 function useDarkMode() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  // Initialize lazily from localStorage/media query — avoids setState-in-effect lint error
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('theme')
+    const prefersDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+    document.documentElement.classList.toggle('dark', prefersDark)
+    return prefersDark
+  })
   function toggle() {
     const next = !dark
     document.documentElement.classList.toggle('dark', next)
     localStorage.setItem('theme', next ? 'dark' : 'light')
     setDark(next)
   }
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    const prefersDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
-    document.documentElement.classList.toggle('dark', prefersDark)
-    setDark(prefersDark)
-  }, [])
   return { dark, toggle }
 }
 

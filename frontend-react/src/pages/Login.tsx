@@ -1,5 +1,5 @@
-import { useState, useRef, type FormEvent, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, type FormEvent } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/store/auth'
 import toast from 'react-hot-toast'
@@ -17,14 +17,9 @@ export default function Login() {
   const navigate    = useNavigate()
   const { setTokens, setUser, token } = useAuthStore()
 
-  useEffect(() => {
-    document.documentElement.classList.remove('dark')
-  }, [])
-
-  if (token) {
-    navigate('/app/dashboard', { replace: true })
-    return null
-  }
+  // Redirect already-authenticated users — use declarative Navigate to avoid
+  // calling navigate() during the render phase (which causes issues in StrictMode).
+  if (token) return <Navigate to="/app/dashboard" replace />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -48,8 +43,8 @@ export default function Login() {
         } else {
           finishLogin(d)
         }
-      } catch (err: any) {
-        toast.error(err?.response?.data?.error ?? 'Credenciais inválidas')
+      } catch (err: unknown) {
+        toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Credenciais inválidas')
       } finally {
         setLoading(false)
       }
@@ -62,33 +57,33 @@ export default function Login() {
 
       setLoading(true)
       try {
-        const body: any = { code }
+        const body: Record<string, string> = { code }
         if (challengeToken) body.challenge_token = challengeToken
 
         const res = await api.post('/auth/login/2fa', body)
         finishLogin(res.data)
-      } catch (err: any) {
-        toast.error(err?.response?.data?.error ?? 'Código inválido ou expirado.')
+      } catch (err: unknown) {
+        toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Código inválido ou expirado.')
       } finally {
         setLoading(false)
       }
     }
   }
 
-  function finishLogin(d: any) {
-    const access_token = d.access_token ?? d.token
-    const csrf_token   = d.csrf_token ?? null
-    const user = d.user ?? {
+  function finishLogin(d: Record<string, unknown>) {
+    const access_token = (d.access_token ?? d.token) as string
+    const csrf_token   = (d.csrf_token ?? null) as string | null
+    const user = (d.user ?? {
       id:         d.user_id,
       name:       d.name,
       email:      d.email,
       role:       d.role,
       company_id: d.company_id,
-    }
+    }) as Record<string, unknown>
     setTokens(access_token, csrf_token)
     setUser(user)
     
-    // Populate legacy local storage variables for the legacy iframe dashboard to read
+    // Populate legacy localStorage so iframe-based dashboards can read the session
     localStorage.setItem('voxflow_token', access_token)
     localStorage.setItem('token', access_token)
     localStorage.setItem('user_id', String(user.id))
@@ -109,10 +104,15 @@ export default function Login() {
   }
 
   function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.value.toLowerCase() === 'allan.consultoriajba@gmail.com') {
-      setShowSupreme(true)
-    } else {
-      setShowSupreme(false)
+    setShowSupreme(e.target.value.toLowerCase() === 'allan.consultoriajba@gmail.com')
+  }
+
+  function handleTotpChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+    e.target.value = v
+    // Auto-submit when 6 digits entered — matches legacy HTML behavior
+    if (v.length === 6 && !loading) {
+      handleSubmit({ preventDefault: () => {} } as FormEvent)
     }
   }
 
@@ -123,7 +123,9 @@ export default function Login() {
 
       <div className="login-card">
         <div className="login-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
           <span>VoxFlow</span>
         </div>
 
@@ -174,7 +176,7 @@ export default function Login() {
               </div>
             </div>
           ) : (
-            <div id="step-2fa" style={{ display: 'block', animation: 'fadeSlideIn 0.3s ease' }}>
+            <div id="step-2fa" className="step-2fa-active">
               <h2>Verificação 2FA</h2>
               <p className="subtitle">Autenticação de dois fatores ativada.</p>
 
@@ -195,10 +197,8 @@ export default function Login() {
                   inputMode="numeric"
                   pattern="[0-9]{6}"
                   autoComplete="one-time-code"
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, '').slice(0, 6)
-                    e.target.value = v
-                  }}
+                  autoFocus
+                  onChange={handleTotpChange}
                 />
               </div>
 

@@ -1,26 +1,37 @@
 import { useGet } from '@/hooks/useApi'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+
+interface AmdRow { campaign_id: number; campaign_name: string; total: number; voicemail: number; human: number; recovered: number }
+interface Pipeline { id: number; name: string; stages?: Array<{ id: number; name: string; deal_count?: number }> }
+interface Alert { level: string; message: string }
 
 export default function Analytics() {
-  const { data: pipelines } = useGet<any>(['analytics-pipelines'], '/api/analytics/pipelines')
-  const { data: amd }       = useGet<any>(['analytics-amd'], '/api/analytics/dashboard')
-  const { data: alerts }    = useGet<any>(['analytics-alerts'],   '/api/analytics/alerts')
+  const { data: pipelines } = useGet<{ pipelines: Pipeline[] }>(['analytics-pipelines'], '/api/analytics/pipelines')
+  const { data: amd }       = useGet<Record<string, unknown>>(['analytics-amd'], '/api/analytics/dashboard')
+  const { data: alerts }    = useGet<{ alerts: Alert[] }>(['analytics-alerts'], '/api/analytics/alerts')
 
   const alertList = alerts?.alerts ?? []
   const pipeList  = pipelines?.pipelines ?? []
 
+  function alertStyle(level: string): React.CSSProperties {
+    if (level === 'critical') return { background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: 'var(--accent-red)' }
+    if (level === 'warning')  return { background: 'rgba(217,119,6,0.1)',  border: '1px solid rgba(217,119,6,0.2)',  color: 'var(--accent-yellow)' }
+    return { background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.2)', color: 'var(--accent)' }
+  }
+
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-lg font-semibold text-slate-100">Analytics</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="page-header">
+        <div>
+          <h1>Analytics</h1>
+          <p>Métricas e análise de desempenho</p>
+        </div>
+      </div>
 
       {alertList.length > 0 && (
-        <div className="space-y-2">
-          {alertList.map((a: any, i: number) => (
-            <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm
-              ${a.level === 'critical' ? 'bg-red-500/10 border-red-500/30 text-red-300'
-              : a.level === 'warning'  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-              : 'bg-blue-500/10 border-blue-500/30 text-blue-300'}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {alertList.map((a, i) => (
+            <div key={i} className="alert" style={alertStyle(a.level)}>
               {a.level === 'critical' ? '🔴' : a.level === 'warning' ? '⚠️' : 'ℹ️'} {a.message}
             </div>
           ))}
@@ -32,37 +43,37 @@ export default function Analytics() {
         <Card>
           <CardHeader title="AMD — Detecção de Caixa Postal" />
           <CardBody>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px,1fr))', gap: '16px', marginBottom: '24px' }}>
               {[
-                { label: 'Total analisados', value: amd.total_amd     ?? 0 },
-                { label: 'Caixas postais',   value: amd.voicemail_pct ?? '—', suffix: amd.voicemail_pct != null ? '%' : '' },
-                { label: 'Recuperados',      value: amd.recovered     ?? 0 },
-                { label: 'Humanos',          value: amd.human_pct     ?? '—', suffix: amd.human_pct != null ? '%' : '' },
-              ].map(({ label, value, suffix = '' }) => (
-                <div key={label} className="bg-slate-700/40 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-slate-100">{value}{suffix}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+                { label: 'Total analisados', value: (amd.total_amd ?? 0) as number },
+                { label: 'Caixas postais',   value: amd.voicemail_pct != null ? `${amd.voicemail_pct}%` : '—' },
+                { label: 'Recuperados',      value: (amd.recovered ?? 0) as number },
+                { label: 'Humanos',          value: amd.human_pct != null ? `${amd.human_pct}%` : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="metric-card" style={{ textAlign: 'center' }}>
+                  <h3 style={{ fontSize: '1.5rem' }}>{String(value)}</h3>
+                  <small>{label}</small>
                 </div>
               ))}
             </div>
-            {amd.by_campaign?.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            {Array.isArray(amd.by_campaign) && (amd.by_campaign as AmdRow[]).length > 0 && (
+              <div className="table-container">
+                <table>
                   <thead>
-                    <tr className="border-b border-slate-700">
+                    <tr>
                       {['Campanha', 'Total', 'Caixa postal', 'Humano', 'Recuperados'].map(h => (
-                        <th key={h} className="text-left px-3 py-2 text-xs font-medium text-slate-400">{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {amd.by_campaign.map((row: any) => (
-                      <tr key={row.campaign_id} className="border-b border-slate-700/50">
-                        <td className="px-3 py-2 text-slate-300">{row.campaign_name}</td>
-                        <td className="px-3 py-2 text-slate-400">{row.total}</td>
-                        <td className="px-3 py-2 text-slate-400">{row.voicemail}</td>
-                        <td className="px-3 py-2 text-slate-400">{row.human}</td>
-                        <td className="px-3 py-2 text-slate-400">{row.recovered}</td>
+                    {(amd.by_campaign as AmdRow[]).map(row => (
+                      <tr key={row.campaign_id}>
+                        <td>{row.campaign_name}</td>
+                        <td className="td-muted">{row.total}</td>
+                        <td className="td-muted">{row.voicemail}</td>
+                        <td className="td-muted">{row.human}</td>
+                        <td className="td-muted">{row.recovered}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -78,15 +89,15 @@ export default function Analytics() {
         <Card>
           <CardHeader title="CRM — Pipelines" />
           <CardBody>
-            <div className="space-y-3">
-              {pipeList.map((p: any) => (
-                <div key={p.id} className="border border-slate-700 rounded-lg p-4">
-                  <p className="font-medium text-slate-200 mb-2">{p.name}</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {p.stages?.map((s: any) => (
-                      <div key={s.id} className="bg-slate-700/40 rounded px-3 py-2 text-center min-w-20">
-                        <p className="text-sm font-bold text-slate-100">{s.deal_count ?? 0}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 truncate max-w-24">{s.name}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {pipeList.map(p => (
+                <div key={p.id} className="panel" style={{ padding: '16px' }}>
+                  <p style={{ fontWeight: 500, marginBottom: '8px' }}>{p.name}</p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {p.stages?.map(s => (
+                      <div key={s.id} className="metric-card" style={{ textAlign: 'center', padding: '8px 12px', minWidth: '80px' }}>
+                        <h3 style={{ fontSize: '1.25rem' }}>{s.deal_count ?? 0}</h3>
+                        <small style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '96px' }}>{s.name}</small>
                       </div>
                     ))}
                   </div>

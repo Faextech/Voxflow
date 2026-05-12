@@ -27,7 +27,7 @@ export default function Credito() {
     ['billing-transactions'], '/api/billing/transactions'
   )
 
-  const transactions: Transaction[] = Array.isArray(txRaw) ? txRaw : ((txRaw as any)?.transactions ?? [])
+  const transactions: Transaction[] = Array.isArray(txRaw) ? txRaw : ((txRaw as Record<string, unknown>)?.transactions as Transaction[] ?? [])
 
   return (
     <div className="p-6 space-y-6">

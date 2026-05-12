@@ -22,13 +22,13 @@ export function useSocket() {
       reconnection: true,
     })
 
-    _socket.on('dialer_status', (data: any) => {
+    _socket.on('dialer_status', (data: { session?: string, active_lead?: Record<string, unknown>, call_status?: string }) => {
       setSession(data?.session ?? null)
       if (data?.active_lead) setActiveLead(data.active_lead)
       if (data?.call_status) setCallStatus(data.call_status)
     })
 
-    _socket.on('call_update', (data: any) => {
+    _socket.on('call_update', (data: { status?: string, lead?: Record<string, unknown> }) => {
       setCallStatus(data?.status ?? 'idle')
       if (data?.lead) setActiveLead(data.lead)
     })
@@ -38,7 +38,7 @@ export function useSocket() {
       _socket = null
       ready.current = false
     }
-  }, [token])
+  }, [token, setSession, setActiveLead, setCallStatus])
 
   return _socket
 }

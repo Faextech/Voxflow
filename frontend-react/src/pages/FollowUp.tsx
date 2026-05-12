@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGet, useMut } from '@/hooks/useApi'
-import { Card, CardHeader, CardBody } from '@/components/ui/Card'
+import { Card, CardBody } from '@/components/ui/Card'
 import { Table } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -16,7 +16,7 @@ function StepRow({ step, onChange, onRemove }: {
 }) {
   return (
     <div className="flex gap-2 items-center bg-slate-700/40 rounded-lg p-3">
-      <select className="w-28" value={step.action} onChange={e => onChange({ ...step, action: e.target.value as any })}>
+      <select className="w-28" value={step.action} onChange={e => onChange({ ...step, action: e.target.value as FollowUpStep['action'] })}>
         <option value="email">E-mail</option>
         <option value="whatsapp">WhatsApp</option>
         <option value="ligar">Ligar</option>
@@ -33,7 +33,7 @@ function StepRow({ step, onChange, onRemove }: {
 }
 
 function SequenceForm({ initial, onSave, onClose }: {
-  initial?: Partial<FollowUpSequence>; onSave: (d: any) => void; onClose: () => void
+  initial?: Partial<FollowUpSequence>; onSave: (d: Partial<FollowUpSequence>) => void; onClose: () => void
 }) {
   const [name,    setName]    = useState(initial?.name    ?? '')
   const [trigger, setTrigger] = useState(initial?.trigger ?? 'nao_atendeu')
@@ -96,12 +96,12 @@ export default function FollowUp() {
     )
 
   const create   = useMut('post',   '/api/followup/sequences',                              [['followup-sequences']])
-  const update   = useMut('put',    (v: any) => `/api/followup/sequences/${v.id}`,          [['followup-sequences']])
+  const update   = useMut('put',    (v: { id: number }) => `/api/followup/sequences/${v.id}`,          [['followup-sequences']])
   const remove   = useMut('delete', (v: { id: number }) => `/api/followup/sequences/${v.id}`, [['followup-sequences']])
   const markSent = useMut('post',   (v: { id: number }) => `/api/followup/tasks/${v.id}/mark-sent`, [['followup-tasks']])
   const skip     = useMut('post',   (v: { id: number }) => `/api/followup/tasks/${v.id}/skip`,      [['followup-tasks']])
 
-  async function handleSave(form: any) {
+  async function handleSave(form: Partial<FollowUpSequence>) {
     try {
       if (editItem) {
         await update.mutateAsync({ ...form, id: editItem.id })
@@ -111,7 +111,7 @@ export default function FollowUp() {
         toast.success('Sequência criada')
       }
       setShowNew(false); setEditItem(null); refetchSeq()
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro') }
   }
 
   const sequences = seqData ?? []

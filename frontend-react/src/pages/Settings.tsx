@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useGet, useMut } from '@/hooks/useApi'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import toast from 'react-hot-toast'
@@ -21,8 +20,9 @@ export default function Settings() {
     try {
       await api.put('/api/settings/company', companyForm)
       toast.success('Configurações salvas')
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? 'Erro')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } }
+      toast.error(err?.response?.data?.error ?? 'Erro')
     } finally { setSavingComp(false) }
   }
 
@@ -31,30 +31,36 @@ export default function Settings() {
     try {
       const r = await api.post('/api/settings/twilio/test')
       toast.success(`Twilio OK — ${r.data.account_name} (${r.data.status})`)
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error ?? 'Erro na conexão Twilio')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } } }
+      toast.error(err?.response?.data?.error ?? 'Erro na conexão Twilio')
     } finally { setTesting(false) }
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-2xl">
-      <h1 className="text-lg font-semibold text-slate-100">Configurações</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px' }}>
+      <div className="page-header">
+        <div>
+          <h1>Configurações</h1>
+          <p>Gerencie os dados da sua empresa</p>
+        </div>
+      </div>
 
       {/* Company */}
       <Card>
         <CardHeader title="Dados da empresa" />
-        <CardBody className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Nome da empresa</label>
+        <CardBody>
+          <div className="form-grid" style={{ marginBottom: '16px' }}>
+            <div className="field">
+              <label>Nome da empresa</label>
               <input
                 value={companyForm.name}
                 onChange={e => setCompanyForm(p => ({ ...p, name: e.target.value }))}
                 placeholder="Minha Empresa Ltda"
               />
             </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Segmento</label>
+            <div className="field">
+              <label>Segmento</label>
               <input
                 value={companyForm.segment}
                 onChange={e => setCompanyForm(p => ({ ...p, segment: e.target.value }))}
@@ -70,7 +76,7 @@ export default function Settings() {
       <Card>
         <CardHeader title="Integração Twilio" subtitle="Verifique se as credenciais estão funcionando" />
         <CardBody>
-          <p className="text-sm text-slate-400 mb-4">
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             As credenciais Twilio são configuradas pelo painel de administração. Utilize o botão abaixo para validar a conexão.
           </p>
           <Button variant="secondary" onClick={testTwilio} loading={testing}>
@@ -83,7 +89,7 @@ export default function Settings() {
       <Card>
         <CardHeader title="Zona de perigo" />
         <CardBody>
-          <p className="text-sm text-slate-400 mb-4">
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Apagar todos os dados da empresa (leads, chamadas, campanhas). Esta ação é irreversível.
           </p>
           <Button variant="danger" onClick={() => toast.error('Use o painel de configurações web para esta ação.')}>

@@ -1,10 +1,12 @@
 import { useGet, useMut } from '@/hooks/useApi'
 import { Card, CardHeader, CardBody } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Badge, statusBadge } from '@/components/ui/Badge'
+import { statusBadge } from '@/components/ui/Badge'
 import { Mic, Volume2, Radio } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Agent } from '@/types'
+
+type ApiErr = { response?: { data?: { error?: string } } }
 
 export default function Supervisor() {
   const { data, isLoading, refetch } = useGet<{ agents: Agent[]; total_active_conferences: number }>(
@@ -16,16 +18,16 @@ export default function Supervisor() {
 
   async function listen(conference_name: string) {
     try {
-      await listenMut.mutateAsync({ conference_name } as any)
+      await listenMut.mutateAsync({ conference_name } as never)
       toast.success('Entrando como ouvinte...')
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as ApiErr)?.response?.data?.error ?? 'Erro') }
   }
 
   async function whisper(conference_name: string, mode: 'whisper' | 'barge') {
     try {
-      await whisperMut.mutateAsync({ conference_name, mode } as any)
+      await whisperMut.mutateAsync({ conference_name, mode } as never)
       toast.success(mode === 'whisper' ? 'Modo whisper ativado' : 'Modo barge ativado')
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as ApiErr)?.response?.data?.error ?? 'Erro') }
   }
 
   const agents = data?.agents ?? []

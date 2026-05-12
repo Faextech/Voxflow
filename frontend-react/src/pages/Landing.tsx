@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { PhoneCall, Menu, X, ArrowRight, CheckCircle2, PhoneForwarded, LayoutDashboard, Users, RotateCcw, Laptop, TrendingUp, Upload, Settings, Check, Quote, Star, ChevronDown, Timer, PhoneOff, EyeOff, MessageCircle, Heart, Phone } from 'lucide-react'
+import { PhoneCall, Menu, X, CheckCircle2, PhoneForwarded, LayoutDashboard, Users, RotateCcw, Laptop, TrendingUp, Check, Star, Timer, PhoneOff, EyeOff, MessageCircle, Heart, Phone } from 'lucide-react'
 
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

@@ -31,16 +31,16 @@ export default function DNC() {
     try {
       await add.mutateAsync({ phone, reason })
       toast.success('Adicionado à DNC'); setPhone(''); setReason(''); refetch()
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro') }
   }
 
   async function handleBulk() {
     const phones = bulk.split('\n').map(s => s.trim()).filter(Boolean)
     if (!phones.length) return toast.error('Nenhum número encontrado')
     try {
-      await add.mutateAsync({ phones } as any)
+      await add.mutateAsync({ phones } as never)
       toast.success(`${phones.length} números importados`); setBulk(''); setShowAdd(false); refetch()
-    } catch (e: any) { toast.error(e?.response?.data?.error ?? 'Erro') }
+    } catch (e: unknown) { toast.error((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro') }
   }
 
   async function handleDelete(id: number) {
