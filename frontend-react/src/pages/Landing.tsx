@@ -121,7 +121,7 @@ export default function Landing() {
                           <span className="text-green-500 mr-2 text-lg leading-none">✦</span> Novo — Discagem automática com IA
                       </div>
                       <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 md:mb-6 leading-[1.1]">
-                          Sua equipe vende mais. <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sem esforço manual.</span>
+                          Sua equipe vende mais. <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-green-300">Sem esforço manual.</span>
                       </h1>
                       <p className="text-base md:text-xl text-indigo-100 opacity-90 mb-8 md:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                           Automatize sua operação de vendas e deixe sua equipe focada no que realmente importa: fechar negócios e aumentar a receita.
@@ -348,7 +348,7 @@ export default function Landing() {
                       </div>
                       <ul className="space-y-4 mb-8">
                           {['Até 20 operadores', 'Discagem avançada', 'CRM com pipeline', 'Relatórios por operador', 'Retorno automático', 'Suporte prioritário'].map((f, i) => (
-                              <li key={i} className="flex items-center text-indigo-50"><Check className="h-5 w-5 text-green-400 mr-3 shrink-0" /> {f}</li>
+                              <li key={i} className="flex items-center text-indigo-50"><Check className="h-5 w-5 text-brand-500 mr-3 shrink-0" /> {f}</li>
                           ))}
                       </ul>
                       <a href="https://wa.me/5500000000000" target="_blank" rel="noreferrer" className="block w-full py-3 px-4 bg-brand-500 text-white font-bold rounded-xl text-center hover:bg-brand-600 transition-colors shadow-glow">Falar com consultor</a>

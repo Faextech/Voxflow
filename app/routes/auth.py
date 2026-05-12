@@ -123,9 +123,7 @@ def register():
     }), 201
 
 
-@auth_bp.route('/login', methods=['GET'])
-def login_get():
-    return redirect(url_for('pages.login_page'))
+
 
 
 @auth_bp.route('/login', methods=['POST'])

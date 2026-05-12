@@ -35,8 +35,7 @@ def register_blueprints(app):
     app.register_blueprint(leads_bp, url_prefix='/api')
     app.register_blueprint(calls_bp, url_prefix='/api')
     app.register_blueprint(twilio_bp)  # já tem prefixo dentro do arquivo
-    app.register_blueprint(pages_bp)
-
+    
     app.register_blueprint(operator_bp)
     app.register_blueprint(call_bp)
     app.register_blueprint(dev_bp)
@@ -61,3 +60,6 @@ def register_blueprints(app):
     app.register_blueprint(dnc_bp)
     app.register_blueprint(followup_bp)
     app.register_blueprint(callback_bp)
+
+    # SPA catch-all deve ser o ÚLTIMO para não interceptar as APIs
+    app.register_blueprint(pages_bp)

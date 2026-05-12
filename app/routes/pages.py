@@ -42,25 +42,16 @@ def legacy_dashboard():
 
 # ── SPA catch-all: todas as rotas de página vão para o React ──────────────────
 
-@pages_bp.route("/")
-@pages_bp.route("/login")
-@pages_bp.route("/register")
-@pages_bp.route("/app")
-@pages_bp.route("/app/<path:path>")
-@pages_bp.route("/crm")
-@pages_bp.route("/credito")
-@pages_bp.route("/suporte")
-@pages_bp.route("/admin")
-@pages_bp.route("/operacao")
-@pages_bp.route("/test-webphone")
-def react_app(path=''):
-    """SPA fallback — qualquer rota de frontend vai para o React."""
-    return _serve_react()
-
-
-# Manter /react/* por compatibilidade com bookmarks antigos
-@pages_bp.route("/react")
-@pages_bp.route("/react/")
-@pages_bp.route("/react/<path:path>")
-def react_legacy(path=''):
+@pages_bp.route("/", defaults={'path': ''})
+@pages_bp.route("/<path:path>")
+def react_app(path):
+    """
+    SPA fallback — qualquer rota que não seja asset ou API vai para o React.
+    Também tenta servir arquivos estáticos que estejam na raiz do build (ex: favicon.svg).
+    """
+    # Se o arquivo existe fisicamente na pasta do React, serve ele
+    if path and os.path.isfile(os.path.join(_REACT_DIST, path)):
+        return send_from_directory(_REACT_DIST, path)
+    
+    # Caso contrário, serve o index.html (SPA Fallback)
     return _serve_react()
