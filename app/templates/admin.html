@@ -686,7 +686,7 @@
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     function logout() { localStorage.clear(); window.location.href = '/login'; }
-    function enterSystem() { window.location.href = '/app'; }
+    function enterSystem() { window.location.href = '/dashboard'; }
     function showToast(msg, type='success') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'show ' + type; setTimeout(() => t.className = '', 4000); }
     function esc(s) { if(!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
