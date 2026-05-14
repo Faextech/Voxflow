@@ -51,6 +51,21 @@ def dashboard_page():
     from flask import render_template
     return render_template("dashboard.html")
 
+@pages_bp.route("/admin")
+def admin_page():
+    from flask import render_template
+    return render_template("admin.html")
+
+@pages_bp.route("/billing")
+def billing_page():
+    from flask import render_template
+    return render_template("billing.html")
+
+@pages_bp.route("/support")
+def support_page():
+    from flask import render_template
+    return render_template("support.html")
+
 @pages_bp.route("/crm")
 @pages_bp.route("/legacy/crm")
 def legacy_crm():
