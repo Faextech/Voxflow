@@ -201,7 +201,14 @@ def create_app():
         from app.models.audit_log import AuditLog
         from app.models.dnc import DNCEntry
         from app.models.followup import FollowUpSequence, FollowUpTask
-        db.create_all()
+        # ── Migrações Automáticas ─────────────────────────────────────────────
+        try:
+            from flask_migrate import upgrade as _upgrade
+            _upgrade()
+            logger.info("[STARTUP] Banco de dados atualizado com sucesso.")
+        except Exception as _mig_err:
+            logger.error("[STARTUP] Falha ao rodar migrações: %s", _mig_err)
+            db.session.rollback()
 
         # ── Startup cleanup ───────────────────────────────────────────────────
         try:
@@ -230,6 +237,7 @@ def create_app():
                 db.session.commit()
         except Exception as _startup_err:
             logger.warning("[STARTUP] cleanup falhou (inofensivo): %s", _startup_err)
+            db.session.rollback()
 
         # ── Garante superadmin ────────────────────────────────────────────────
         try:
@@ -241,6 +249,7 @@ def create_app():
                 logger.info("[STARTUP] Usuário %s promovido a superadmin", _superadmin_email)
         except Exception as _su_err:
             logger.warning("[STARTUP] Promoção de superadmin falhou (inofensivo): %s", _su_err)
+            db.session.rollback()
 
     # ── Job periódico de cleanup (reseta leads presos após SIGKILL) ──────────
     _start_periodic_cleanup(app)
