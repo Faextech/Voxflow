@@ -72,7 +72,9 @@ def legacy_crm():
     from flask import render_template
     return render_template("crm.html")
 
-# SPA catch-all movido para prefixo /v2 para evitar conflitos
+# SPA catch-all em /app e /v2
+@pages_bp.route("/app", defaults={'path': ''})
+@pages_bp.route("/app/<path:path>")
 @pages_bp.route("/v2", defaults={'path': ''})
 @pages_bp.route("/v2/<path:path>")
 def react_app(path):
