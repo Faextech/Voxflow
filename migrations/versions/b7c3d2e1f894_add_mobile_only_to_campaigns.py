@@ -18,10 +18,15 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        "campaigns",
-        sa.Column("mobile_only", sa.Boolean(), nullable=False, server_default="0"),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_cols = [c["name"] for c in inspector.get_columns("campaigns")]
+
+    if "mobile_only" not in existing_cols:
+        op.add_column(
+            "campaigns",
+            sa.Column("mobile_only", sa.Boolean(), nullable=False, server_default="0"),
+        )
 
 
 def downgrade():

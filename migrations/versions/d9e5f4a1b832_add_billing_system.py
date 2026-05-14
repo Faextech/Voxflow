@@ -20,46 +20,55 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_cols = [c["name"] for c in inspector.get_columns("companies")]
+
     # Novos campos na tabela companies
     with op.batch_alter_table("companies") as batch_op:
-        batch_op.add_column(
-            sa.Column("credit_balance", sa.Numeric(12, 4), nullable=False, server_default="0")
-        )
-        batch_op.add_column(
-            sa.Column("cost_per_minute", sa.Numeric(8, 4), nullable=False, server_default="0.35")
-        )
-        batch_op.add_column(
-            sa.Column("twilio_subaccount_sid", sa.String(255), nullable=True)
-        )
+        if "credit_balance" not in existing_cols:
+            batch_op.add_column(
+                sa.Column("credit_balance", sa.Numeric(12, 4), nullable=False, server_default="0")
+            )
+        if "cost_per_minute" not in existing_cols:
+            batch_op.add_column(
+                sa.Column("cost_per_minute", sa.Numeric(8, 4), nullable=False, server_default="0.35")
+            )
+        if "twilio_subaccount_sid" not in existing_cols:
+            batch_op.add_column(
+                sa.Column("twilio_subaccount_sid", sa.String(255), nullable=True)
+            )
 
     # Nova tabela de transações de crédito
-    op.create_table(
-        "credit_transactions",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column(
-            "company_id",
-            sa.Integer(),
-            sa.ForeignKey("companies.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("type", sa.String(50), nullable=False),
-        sa.Column("amount", sa.Numeric(12, 4), nullable=False),
-        sa.Column("balance_after", sa.Numeric(12, 4), nullable=False),
-        sa.Column("description", sa.String(512), nullable=True),
-        sa.Column("call_sid", sa.String(100), nullable=True),
-        sa.Column("call_duration_seconds", sa.Integer(), nullable=True),
-        sa.Column("payment_id", sa.String(255), nullable=True),
-        sa.Column("payment_method", sa.String(50), nullable=True),
-        sa.Column("payment_status", sa.String(50), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-    )
-    op.create_index("ix_credit_transactions_company_id", "credit_transactions", ["company_id"])
-    op.create_index("ix_credit_transactions_call_sid", "credit_transactions", ["call_sid"])
+    tables = inspector.get_table_names()
+    if "credit_transactions" not in tables:
+        op.create_table(
+            "credit_transactions",
+            sa.Column("id", sa.Integer(), primary_key=True),
+            sa.Column(
+                "company_id",
+                sa.Integer(),
+                sa.ForeignKey("companies.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
+            sa.Column("type", sa.String(50), nullable=False),
+            sa.Column("amount", sa.Numeric(12, 4), nullable=False),
+            sa.Column("balance_after", sa.Numeric(12, 4), nullable=False),
+            sa.Column("description", sa.String(512), nullable=True),
+            sa.Column("call_sid", sa.String(100), nullable=True),
+            sa.Column("call_duration_seconds", sa.Integer(), nullable=True),
+            sa.Column("payment_id", sa.String(255), nullable=True),
+            sa.Column("payment_method", sa.String(50), nullable=True),
+            sa.Column("payment_status", sa.String(50), nullable=True),
+            sa.Column(
+                "created_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.func.now(),
+            ),
+        )
+        op.create_index("ix_credit_transactions_company_id", "credit_transactions", ["company_id"])
+        op.create_index("ix_credit_transactions_call_sid", "credit_transactions", ["call_sid"])
 
 
 def downgrade():

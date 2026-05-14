@@ -17,10 +17,15 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        "leads",
-        sa.Column("import_order", sa.Integer(), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_cols = [c["name"] for c in inspector.get_columns("leads")]
+
+    if "import_order" not in existing_cols:
+        op.add_column(
+            "leads",
+            sa.Column("import_order", sa.Integer(), nullable=True),
+        )
 
 
 def downgrade():

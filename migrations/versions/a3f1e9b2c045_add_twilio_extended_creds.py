@@ -21,18 +21,16 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        "companies",
-        sa.Column("twilio_api_key", sa.String(255), nullable=True),
-    )
-    op.add_column(
-        "companies",
-        sa.Column("twilio_api_secret", sa.String(512), nullable=True),
-    )
-    op.add_column(
-        "companies",
-        sa.Column("twilio_twiml_app_sid", sa.String(255), nullable=True),
-    )
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_cols = [c["name"] for c in inspector.get_columns("companies")]
+
+    if "twilio_api_key" not in existing_cols:
+        op.add_column("companies", sa.Column("twilio_api_key", sa.String(255), nullable=True))
+    if "twilio_api_secret" not in existing_cols:
+        op.add_column("companies", sa.Column("twilio_api_secret", sa.String(512), nullable=True))
+    if "twilio_twiml_app_sid" not in existing_cols:
+        op.add_column("companies", sa.Column("twilio_twiml_app_sid", sa.String(255), nullable=True))
 
 
 def downgrade():
