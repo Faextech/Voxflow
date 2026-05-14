@@ -351,8 +351,7 @@
                 const res  = await fetch('/auth/login', {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ email, password }),
                 });
@@ -413,8 +412,7 @@
                 const res  = await fetch('/auth/login/2fa', {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token() }}'
+                        'Content-Type': 'application/json'
                     },
                     credentials: 'include',  // challenge_token pode estar em cookie HttpOnly
                     body: JSON.stringify(body),
