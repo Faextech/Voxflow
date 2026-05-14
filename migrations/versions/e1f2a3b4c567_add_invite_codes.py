@@ -18,19 +18,24 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        'invite_codes',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('code', sa.String(20), nullable=False),
-        sa.Column('used', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('used_by_company_id', sa.Integer(), sa.ForeignKey('companies.id'), nullable=True),
-        sa.Column('used_at', sa.DateTime(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('expires_at', sa.DateTime(), nullable=True),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('code'),
-    )
-    op.create_index('ix_invite_codes_code', 'invite_codes', ['code'])
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    tables = inspector.get_table_names()
+
+    if 'invite_codes' not in tables:
+        op.create_table(
+            'invite_codes',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('code', sa.String(20), nullable=False),
+            sa.Column('used', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('used_by_company_id', sa.Integer(), sa.ForeignKey('companies.id'), nullable=True),
+            sa.Column('used_at', sa.DateTime(), nullable=True),
+            sa.Column('created_at', sa.DateTime(), nullable=True),
+            sa.Column('expires_at', sa.DateTime(), nullable=True),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('code'),
+        )
+        op.create_index('ix_invite_codes_code', 'invite_codes', ['code'])
 
 
 def downgrade():
