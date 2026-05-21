@@ -1,5 +1,7 @@
 # NexDial — Guia de Deploy para Produção
 
+> **Migração completa (conta nova):** veja [`deploy/MIGRACAO_DO_ZERO.md`](deploy/MIGRACAO_DO_ZERO.md)
+
 > **Status da Arquitetura:** ✅ Pronto para produção com conta de teste Twilio.
 > Troca para conta real = apenas atualizar variáveis de ambiente.
 
