@@ -5,7 +5,7 @@ Execute no painel [railway.app](https://railway.app) com login GitHub **Faextech
 ## 1. Novo projeto
 
 1. **New Project → Deploy from GitHub repo**
-2. Selecionar `shin-78/nexdial` (branch `main`)
+2. Selecionar `Faextech/Voxflow` (branch `main`)
 3. Railway detecta o [`Procfile`](../Procfile) automaticamente
 
 ## 2. Serviços de dados

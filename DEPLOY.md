@@ -22,18 +22,19 @@
 
 ## 1. GitHub (Faextech)
 
-Repositório: `https://github.com/shin-78/nexdial` (conta Faextech)
+Repositório: `https://github.com/Faextech/Voxflow` (conta Faextech)
 
 ```bash
 cd /Users/allan/nexdial
 
-git remote -v   # confirmar origin → github.com/shin-78/nexdial
-git push origin main
+git remote set-url origin https://github.com/Faextech/Voxflow.git
+git remote -v   # confirmar origin → github.com/Faextech/Voxflow
+git push -u origin main
 ```
 
-No Railway: login com GitHub Faextech → **New Project → Deploy from GitHub repo** → `nexdial`.
+No Railway: login com GitHub **Faextech** → **New Project → Deploy from GitHub repo** → `Faextech/Voxflow`.
 
-**Revogar acesso da conta antiga:** GitHub → Settings → Applications → desconectar Railway/contas antigas.
+**Importante:** desconecte o repositório antigo `shin-78/nexdial` do Railway (Settings → Disconnect) e revogue o acesso em GitHub → Settings → Applications.
 
 **O `.gitignore` já protege:**
 - `.env` — nunca vai para o Git ✅
