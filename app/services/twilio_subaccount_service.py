@@ -153,7 +153,7 @@ def create_twiml_app(company: Company) -> Optional[str]:
             friendly_name=f"VoxFlow App - {company.name}",
             voice_url=f"{backend_url}/api/twilio/browser-outgoing",
             voice_method="POST",
-            status_callback=f"{backend_url}/api/twilio/status-callback",
+            status_callback=f"{backend_url}/api/twilio/status",
             status_callback_method="POST"
         )
         company.twilio_twiml_app_sid = app.sid

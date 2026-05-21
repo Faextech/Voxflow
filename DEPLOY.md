@@ -20,20 +20,20 @@
 
 ---
 
-## 1. GitHub
+## 1. GitHub (Faextech)
+
+Repositório: `https://github.com/shin-78/nexdial` (conta Faextech)
 
 ```bash
 cd /Users/allan/nexdial
 
-git init  # pular se já existe
-git add .
-git commit -m "feat: production-ready deploy"
-
-# Criar repo em https://github.com/new (privado)
-git remote add origin https://github.com/SEU_USUARIO/nexdial.git
-git branch -M main
-git push -u origin main
+git remote -v   # confirmar origin → github.com/shin-78/nexdial
+git push origin main
 ```
+
+No Railway: login com GitHub Faextech → **New Project → Deploy from GitHub repo** → `nexdial`.
+
+**Revogar acesso da conta antiga:** GitHub → Settings → Applications → desconectar Railway/contas antigas.
 
 **O `.gitignore` já protege:**
 - `.env` — nunca vai para o Git ✅
@@ -75,7 +75,14 @@ Acesse https://neon.tech → criar projeto → copiar connection string.
 3. Selecione o repositório `nexdial`
 4. Railway detecta o `Procfile` automaticamente ✅
 
-### 3.2 O que acontece automaticamente
+### 3.2 Adicionar Redis (recomendado)
+
+1. **+ New → Database → Redis**
+2. Referenciar no serviço web: `REDIS_URL=${{Redis.REDIS_URL}}`
+
+> Sem Redis o health check reporta `redis: fallback_memory` e o discador usa 1 worker in-memory.
+
+### 3.3 O que acontece automaticamente
 
 ```
 Procfile detectado →
@@ -99,26 +106,35 @@ Procfile detectado →
 
 No Railway: **seu projeto → Settings → Variables → Add Variable**
 
-Configure **TODAS** estas variáveis:
+Configure **TODAS** estas variáveis (template completo em [`deploy/railway.env.template`](deploy/railway.env.template)):
+
+Gere chaves com: `python scripts/generate_production_keys.py`
 
 ```env
 # Flask
 FLASK_ENV=production
-SECRET_KEY=<gere com: python -c "import secrets; print(secrets.token_urlsafe(48))">
+SECRET_KEY=<gere com: python scripts/generate_production_keys.py>
 
 # Banco de Dados
-DATABASE_URL=postgresql://postgres:SENHA@db.PROJETO.supabase.co:5432/postgres
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# Redis (recomendado)
+REDIS_URL=${{Redis.REDIS_URL}}
 
 # Criptografia de credenciais Twilio por tenant
-FERNET_KEY=<gere com: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">
+FERNET_KEY=<gere com: python scripts/generate_production_keys.py>
 
-# Twilio (conta de TESTE — mude para real quando pronto)
+# Admin
+SUPERADMIN_EMAIL=seu@email.com
+
+# Twilio
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_PHONE_NUMBER=+55XXXXXXXXXX
 TWILIO_API_KEY=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_TWIML_APP_SID=APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_VALIDATE_WEBHOOKS=true
 
 # URLs (substituir pela URL real do Railway após deploy)
 BASE_URL=https://nexdial-production.up.railway.app
@@ -177,15 +193,24 @@ No Console Twilio → **Phone Numbers → seu número**:
 
 | Campo | Valor |
 |-------|-------|
-| **Voice URL** | `https://nexdial-production.up.railway.app/api/twilio/browser-outgoing` |
+| **Voice URL** | `https://nexdial-production.up.railway.app/api/twilio/voice` |
 | **Status Callback** | `https://nexdial-production.up.railway.app/api/twilio/status` |
 | **Method** | POST |
 
-### 6.3 Testar conectividade
+### 6.3 Atualizar webhooks automaticamente
+
+Após definir `BASE_URL` no `.env` local com credenciais Twilio:
 
 ```bash
+python scripts/update_twilio_urls.py
+```
+
+### 6.4 Testar conectividade
+
+```bash
+python scripts/validate_production.py --url https://SUA-URL.up.railway.app
 curl https://nexdial-production.up.railway.app/health
-# {"status": "ok", "message": "NexDial operacional", "env": "production", "timestamp": "..."}
+# {"status": "ok", "message": "VoxFlow operacional", "env": "production", "redis": "connected", ...}
 ```
 
 ---
@@ -339,3 +364,6 @@ PUBLIC_BASE_URL=https://api.nexdial.com
 - [ ] Domínio customizado configurado
 - [ ] MercadoPago webhook configurado
 - [ ] Monitoramento de logs no Railway ativo
+- [ ] Redis configurado (`redis: connected` no `/health`)
+- [ ] `python scripts/validate_production.py` passa todos os checks
+- [ ] Hostinger VPS: Evolution API preparada ([`deploy/hostinger/README.md`](deploy/hostinger/README.md))

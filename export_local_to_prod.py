@@ -11,12 +11,22 @@ import argparse
 import csv
 import io
 import json
+import os
 import sqlite3
 import sys
 import urllib.request
 import urllib.error
 
-RAILWAY_URL = "https://web-production-c66e0.up.railway.app"
+from dotenv import load_dotenv
+
+load_dotenv()
+
+RAILWAY_URL = (
+    os.getenv("PUBLIC_BASE_URL")
+    or os.getenv("BASE_URL")
+    or os.getenv("RAILWAY_URL")
+    or "https://web-production-c66e0.up.railway.app"
+).rstrip("/")
 LOCAL_DB    = "instance/nexdial.db"
 
 

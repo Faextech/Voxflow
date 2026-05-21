@@ -1,0 +1,57 @@
+# Hostinger VPS — Evolution API (preparatório)
+# Uso: copie para a VPS e ajuste senhas antes de subir.
+#
+#   scp -r deploy/hostinger/ root@IP_DA_VPS:/opt/nexdial-comms/
+#   ssh root@IP_DA_VPS
+#   cd /opt/nexdial-comms && docker compose up -d
+#
+# Não exponha a porta 8080 publicamente sem Nginx + SSL ou VPN.
+# Integração com o backend Railway ainda não implementada no código.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD:-change_me_strong_password}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis:/data
+
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SERVER_URL: http://127.0.0.1:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-change_me_api_key}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:-change_me_strong_password}@postgres:5432/evolution
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/0
+      LOG_LEVEL: ERROR
+    volumes:
+      - evolution_instances:/evolution/instances
+
+volumes:
+  evolution_pg:
+  evolution_redis:
+  evolution_instances:
