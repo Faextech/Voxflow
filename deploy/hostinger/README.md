@@ -1,55 +1,63 @@
-# Hostinger VPS — Comunicação (Evolution API)
+# Hostinger VPS — stack completo (substitui Railway)
 
-Stack preparatório para WhatsApp via Evolution API. **O backend NexDial ainda não consome esta API** — use apenas para preparar a infraestrutura.
+Um único VPS roda **tudo**:
 
-## Pré-requisitos
+| Serviço | Função |
+|---------|--------|
+| **nginx** | Porta 80 → app |
+| **web** | Flask/Gunicorn — CRM, login, Twilio webhooks |
+| **postgres** | Banco principal |
+| **redis** | Discador, sessões, AMD |
+| **evolution-api** | WhatsApp (porta 8080) |
 
-- VPS Hostinger com Ubuntu 22.04+
-- Acesso root via SSH
-- Docker e Docker Compose instalados
+Twilio continua na **nuvem Twilio** — webhooks apontam para o IP/domínio da VPS.
 
-## Setup rápido
+## Plano recomendado Hostinger
 
-```bash
-# Na VPS
-apt update && apt upgrade -y
-apt install -y docker.io docker-compose-plugin ufw
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
+**KVM 2** — 2 vCPU, 8 GB RAM (~R$ 44/mês)
 
-mkdir -p /opt/nexdial-comms
-cd /opt/nexdial-comms
-```
+## Deploy automático (do seu Mac)
 
-Copie `docker-compose.yml` e crie `.env`:
+Quando a VPS estiver criada com Ubuntu 22.04:
 
 ```bash
-cat > .env <<'EOF'
-EVOLUTION_DB_PASSWORD=sua_senha_forte_aqui
-EVOLUTION_API_KEY=sua_chave_api_forte_aqui
-EOF
-
-docker compose up -d
-docker compose ps
-curl -s http://127.0.0.1:8080/ | head
+bash scripts/deploy_hostinger.sh SEU_IP_VPS
 ```
 
-## Segurança
+Isso faz:
+1. Gera `.env` com senhas + Twilio do seu `.env` local
+2. Instala Docker na VPS
+3. Envia código via rsync
+4. `docker compose build && up`
+5. Configura webhooks Twilio
 
-- A porta `8080` está bindada em `127.0.0.1` — acesso externo só via Nginx reverse proxy + SSL ou VPN.
-- Troque `EVOLUTION_DB_PASSWORD` e `EVOLUTION_API_KEY` antes do primeiro `up`.
-- Não commite o `.env` da VPS no Git.
+## Deploy manual (terminal web Hostinger)
 
-## Próximos passos (código NexDial)
+```bash
+apt update && apt install -y docker.io docker-compose-plugin git
+git clone https://github.com/Faextech/Voxflow.git /opt/voxflow
+cd /opt/voxflow
+python3 scripts/generate_hostinger_env.py --ip SEU_IP   # ou copie .env do Mac
+cd deploy/hostinger && bash setup.sh
+```
 
-Quando integrar WhatsApp no backend Railway:
+## Após deploy
 
-1. Adicionar `EVOLUTION_API_URL` e `EVOLUTION_API_KEY` nas variáveis Railway
-2. Criar rotas webhook inbound no Flask
-3. Implementar envio real no `automation_engine.py` e follow-ups
+- App: `http://SEU_IP/`
+- Register: `http://SEU_IP/register` com `master@faextech.com.br`
+- Evolution: `http://SEU_IP:8080/`
 
-## Telefonia SIP / FreeSWITCH
+## HTTPS (recomendado para Twilio produção)
 
-Não implementado. A telefonia atual usa **Twilio na Railway** (Voice SDK + webhooks).
+Twilio exige **HTTPS** para webhooks em produção. Com domínio apontando para o IP:
+
+```bash
+apt install certbot python3-certbot-nginx
+certbot --nginx -d app.seudominio.com
+```
+
+Atualize `BASE_URL` / `PUBLIC_BASE_URL` e rode `python scripts/setup_twilio_completo.py --url https://app.seudominio.com`
+
+## Desativar Railway
+
+Após validar Hostinger, delete o projeto `voxflow` no Railway para parar cobrança.
