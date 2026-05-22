@@ -20,7 +20,7 @@ ssh -o StrictHostKeyChecking=accept-new "root@${IP}" bash -s <<'REMOTE'
 set -euo pipefail
 if ! command -v docker &>/dev/null; then
   apt-get update -qq
-  apt-get install -y docker.io docker-compose-plugin git curl ufw
+  apt-get install -y docker.io docker-compose-v2 git curl ufw rsync
   systemctl enable docker && systemctl start docker
 fi
 ufw allow 22/tcp 2>/dev/null || true
