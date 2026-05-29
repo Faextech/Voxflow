@@ -1,0 +1,70 @@
+/**
+ * VoxFlow — estados vazios (padrão Clint CRM)
+ */
+.empty-state,
+.vf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 24px;
+  text-align: center;
+  gap: 0;
+}
+
+.empty-state i,
+.empty-state .empty-state-icon,
+.vf-empty-icon,
+.vf-empty .empty-icon {
+  font-size: 48px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+  width: auto;
+  height: auto;
+  opacity: 1;
+}
+
+.empty-title,
+.vf-empty-title,
+.vf-empty h3,
+.vf-empty h4 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.empty-sub,
+.vf-empty p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+
+.empty-state .btn-primary,
+.vf-empty .btn-primary,
+.vf-empty-cta {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: var(--font-sans);
+}
+
+.empty-state .btn-primary:hover,
+.vf-empty .btn-primary:hover,
+.vf-empty-cta:hover {
+  background: var(--color-primary-dark);
+}
+
+.vf-empty-inline,
+.empty-state.compact {
+  padding: 32px 24px;
+}

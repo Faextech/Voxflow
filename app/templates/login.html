@@ -6,6 +6,7 @@
     <title>Login - VoxFlow</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
     <style>
         :root {
             --brand-500: #16a34a;
@@ -348,13 +349,16 @@
             setLoading('login-btn', 'spinner', 'btn-text', true);
 
             try {
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), 15000);
                 const res  = await fetch('/auth/login', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    signal: ctrl.signal,
                     body: JSON.stringify({ email, password }),
                 });
+                clearTimeout(timer);
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -372,11 +376,14 @@
                 }
 
                 // Login completo (sem 2FA)
-                _storeSession(data, email);
+                if (!_storeSession(data, email)) return;
                 _redirect(data.role);
 
             } catch (err) {
-                showError('error', 'Erro ao conectar com o servidor');
+                const msg = err.name === 'AbortError'
+                    ? 'Servidor demorou para responder. Tente novamente.'
+                    : 'Erro ao conectar com o servidor';
+                showError('error', msg);
                 setLoading('login-btn', 'spinner', 'btn-text', false);
             }
         }
@@ -444,7 +451,9 @@
             // Evita salvar "undefined" ou "null" como string no localStorage.
             if (!data.token || data.token.split('.').length !== 3) {
                 console.error('[AUTH] Token inválido recebido — abortando sessão', data.token);
-                return;
+                showError('error', 'Resposta de login inválida. Tente novamente.');
+                setLoading('login-btn', 'spinner', 'btn-text', false);
+                return false;
             }
 
             const keys = ['voxflow_token','nexdial_token','token','user_id','company_id',
@@ -464,10 +473,11 @@
             if (data.token_expires_in) {
                 localStorage.setItem('voxflow_token_exp', String(Date.now() + data.token_expires_in * 1000));
             }
+            return true;
         }
 
         function _redirect(role) {
-            window.location.href = role === 'superadmin' ? '/admin' : '/dashboard';
+            window.location.href = role === 'superadmin' ? '/admin' : '/app';
         }
 
         // ── Atalhos de teclado ───────────────────────────────────────────────

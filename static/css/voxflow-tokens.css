@@ -1,0 +1,93 @@
+/**
+ * VoxFlow Design System — tokens globais
+ * Única fonte de verdade para cores, radius, shadows e tipografia.
+ * Não hardcode cores fora deste arquivo.
+ */
+
+:root {
+  /* Brand */
+  --color-primary: #F97316;
+  --color-primary-light: #FFF7ED;
+  --color-primary-dark: #EA6C00;
+
+  --color-secondary: #1E40AF;
+  --color-secondary-light: #EFF6FF;
+
+  /* Surfaces */
+  --color-bg-global: #F8F9FB;
+  --color-surface: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-hover: #F3F4F6;
+
+  /* Text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  /* Layout & typography */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sidebar-width: 220px;
+  --transition-fast: 150ms ease;
+
+  /* Aliases — compatibilidade com templates existentes */
+  --bg-primary: var(--color-surface);
+  --bg-secondary: var(--color-bg-global);
+  --bg-card: var(--color-surface);
+  --bg-elevated: var(--color-surface);
+  --bg-hover: var(--color-hover);
+  --surface: var(--color-hover);
+  --border: var(--color-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --accent: var(--color-primary);
+  --accent-hover: var(--color-primary-dark);
+  --accent-glow: var(--color-primary-light);
+  --accent-green: var(--color-success);
+  --accent-red: var(--color-danger);
+  --accent-yellow: var(--color-warning);
+  --sidebar-bg: var(--color-surface);
+  --sidebar-text: var(--color-text-secondary);
+  --shadow: var(--shadow-card);
+  --input-bg: var(--color-bg-global);
+  --input-border: var(--color-border);
+  --primary: var(--color-primary);
+  --primary-color: var(--color-primary);
+  --primary-dark: var(--color-primary-dark);
+  --line: var(--color-border);
+  --green: var(--color-success);
+  --red: var(--color-danger);
+  --yellow: var(--color-warning);
+  --orange: var(--color-primary);
+  --radius: var(--radius-lg);
+  --sidebar-w: var(--sidebar-width);
+  --transition: var(--transition-fast);
+  --metric-color: var(--color-primary-light);
+  --metric-text: var(--color-primary);
+}
+
+/* Dark mode — conteúdo principal; sidebar permanece clara */
+html.dark {
+  --color-bg-global: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-hover: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --bg-primary: var(--color-surface);
+  --bg-secondary: var(--color-bg-global);
+  --bg-card: var(--color-surface);
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --input-border: var(--color-border);
+}

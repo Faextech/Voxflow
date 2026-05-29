@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def _run_followup_tasks(app):
-    """Executa tarefas de follow-up pendentes com scheduled_at <= agora."""
+    """Executa tarefas de follow-up pendentes (email real via Resend)."""
     with app.app_context():
         from datetime import datetime
         from app.models.followup import FollowUpTask
         from app.models.lead import Lead as _Lead
+        from app.models.email import EmailTemplate
+        from app.services import email_service
 
         due = FollowUpTask.query.filter(
             FollowUpTask.status == "pending",
@@ -27,43 +29,119 @@ def _run_followup_tasks(app):
 
         for task in due:
             try:
-                action   = task.action or "email"
-                lead     = _Lead.query.get(task.lead_id)
-                lead_name = lead.name if lead else f"Lead #{task.lead_id}"
+                action = task.action or "email"
+                lead = _Lead.query.get(task.lead_id)
+                if not lead:
+                    task.status = "skipped"
+                    continue
 
                 if action == "email":
-                    # Placeholder: log + mark sent (real send requer SMTP configurado)
-                    logger.info(
-                        "[FOLLOWUP] email → lead=%s template=%s (SMTP não configurado)",
-                        task.lead_id, task.template,
-                    )
-                    task.status      = "sent"
-                    task.executed_at = datetime.utcnow()
+                    if not lead.email or not email_service.validate_email(lead.email):
+                        task.status = "skipped"
+                        task.error = "Lead sem email válido"
+                        continue
+                    if email_service.is_unsubscribed(task.company_id, lead.email):
+                        task.status = "skipped"
+                        task.error = "unsubscribed"
+                        continue
+
+                    subject = "Mensagem da nossa equipe"
+                    html = task.template or "<p>Olá {{lead_name}}, entraremos em contato em breve.</p>"
+
+                    # template_id no JSON da sequência (step) ou campo template numérico
+                    tpl_id = None
+                    if task.template and str(task.template).isdigit():
+                        tpl_id = int(task.template)
+                    if tpl_id:
+                        tpl = EmailTemplate.query.filter_by(id=tpl_id, company_id=task.company_id).first()
+                        if tpl:
+                            subject, html = tpl.subject, tpl.body_html
+
+                    if "---" in (task.template or "") and not tpl_id:
+                        parts = task.template.split("---", 1)
+                        subject = parts[0].strip()
+                        html = parts[1].strip()
+
+                    result = email_service.send_to_lead(lead, subject, html, task.company_id)
+                    if result.get("skipped"):
+                        task.status = "skipped"
+                        task.error = "unsubscribed"
+                    elif result.get("ok"):
+                        task.status = "sent"
+                        task.executed_at = datetime.utcnow()
+                        email_service.log_send(
+                            task.company_id, lead.email, subject, result,
+                            lead_id=lead.id, followup_task_id=task.id,
+                        )
+                    else:
+                        task.status = "failed"
+                        task.error = result.get("error")
 
                 elif action == "whatsapp":
-                    # Placeholder: log + mark sent (real send requer Twilio Messaging)
                     logger.info(
-                        "[FOLLOWUP] whatsapp → lead=%s template=%s (Messaging não configurado)",
-                        task.lead_id, task.template,
+                        "[FOLLOWUP] whatsapp → lead=%s (Messaging não configurado)",
+                        task.lead_id,
                     )
-                    task.status      = "sent"
-                    task.executed_at = datetime.utcnow()
+                    task.status = "pending_manual"
 
                 elif action in ("ligar", "call"):
-                    # Marca como pendente manual — operador vê na aba Tarefas
                     task.status = "pending_manual"
-                    logger.info("[FOLLOWUP] ligação manual agendada → lead=%s", task.lead_id)
+                    logger.info("[FOLLOWUP] ligação manual → lead=%s", task.lead_id)
 
                 else:
-                    task.status      = "sent"
-                    task.executed_at = datetime.utcnow()
+                    task.status = "skipped"
 
             except Exception as _te:
-                logger.warning("[FOLLOWUP] Erro ao executar task %s: %s", task.id, _te)
+                logger.warning("[FOLLOWUP] Erro task %s: %s", task.id, _te)
                 task.status = "failed"
+                task.error = str(_te)
 
         db.session.commit()
         logger.info("[FOLLOWUP] %d tarefa(s) processadas", len(due))
+
+
+def _run_email_jobs(app):
+    with app.app_context():
+        from app.services.email_campaign_worker import run_due_campaigns, run_email_queue
+        run_email_queue()
+        run_due_campaigns()
+
+
+def _start_email_worker(app):
+    """Worker dedicado: follow-up + campanhas em massa (60s). Apenas 1 processo Gunicorn executa."""
+    import os
+    from app.services import redis_service
+
+    LEADER_KEY = "voxflow:email:worker_leader"
+    LEADER_TTL = 90
+    pid = str(os.getpid())
+
+    def _is_email_leader() -> bool:
+        current = redis_service.get_str(LEADER_KEY)
+        if current == pid:
+            redis_service.set(LEADER_KEY, pid, ex=LEADER_TTL)
+            return True
+        if current is None:
+            return redis_service.setnx(LEADER_KEY, pid, ex=LEADER_TTL)
+        return False
+
+    def _run():
+        while True:
+            time.sleep(60)
+            if not _is_email_leader():
+                continue
+            try:
+                _run_followup_tasks(app)
+            except Exception as e:
+                logger.warning("[EMAIL-WORKER] follow-up: %s", e)
+            try:
+                _run_email_jobs(app)
+            except Exception as e:
+                logger.warning("[EMAIL-WORKER] campanhas: %s", e)
+
+    t = threading.Thread(target=_run, daemon=True, name=f"EmailWorker-{pid}")
+    t.start()
+    logger.info("[STARTUP] Email worker thread PID %s (eleição de líder via Redis)", pid)
 
 
 def _is_call_active_on_twilio(call_sid: str, company_id: int) -> bool:
@@ -125,18 +203,15 @@ def _start_periodic_cleanup(app):
             except Exception as e:
                 logger.warning("[CLEANUP] Erro no job periódico: %s", e)
 
-            try:
-                _run_followup_tasks(app)
-            except Exception as e:
-                logger.warning("[FOLLOWUP] Erro no job periódico: %s", e)
-
     t = threading.Thread(target=_run, daemon=True, name="PeriodicCleanup")
     t.start()
     logger.info("[STARTUP] Job de cleanup + follow-up periódico iniciado (5min)")
 
 
 def create_app():
-    app = Flask(__name__)
+    _pkg = os.path.dirname(os.path.abspath(__file__))
+    _static = os.path.join(_pkg, "..", "static")
+    app = Flask(__name__, static_folder=_static, static_url_path="/static")
 
     from config import config as app_config
     app.config.from_object(app_config)
@@ -201,6 +276,21 @@ def create_app():
         from app.models.audit_log import AuditLog
         from app.models.dnc import DNCEntry
         from app.models.followup import FollowUpSequence, FollowUpTask
+        from app.models.account import Account
+        from app.models.contact import Contact
+        from app.models.deal_stage_history import DealStageHistory
+        from app.models.deal_contact import DealContact
+        from app.models.tag import Tag, LeadTag, DealTag
+        from app.models.custom_field import CustomField, CustomFieldValue
+        from app.models.webhook_outbound import WebhookOutbound
+        from app.models.integration import IntegrationProvider, IntegrationConnection, IntegrationCredential, IntegrationEvent
+        from app.models.whatsapp import WhatsAppConversation, WhatsAppMessage, WhatsAppTemplate
+        from app.models.system_models import Invitation, LoginHistory, IdempotencyKey
+        from app.models.email import (
+            EmailTemplate, EmailCampaign, EmailSend, EmailUnsubscribe,
+            EmailAccount, EmailDomain, EmailSignature, EmailAutomation,
+            EmailQueue, EmailEvent, EmailAuditLog,
+        )
         # ── Migrações Automáticas ─────────────────────────────────────────────
         try:
             from flask_migrate import upgrade as _upgrade
@@ -251,8 +341,22 @@ def create_app():
             logger.warning("[STARTUP] Promoção de superadmin falhou (inofensivo): %s", _su_err)
             db.session.rollback()
 
-    # ── Job periódico de cleanup (reseta leads presos após SIGKILL) ──────────
-    _start_periodic_cleanup(app)
+        # ── API keys por tenant (bootstrap) ───────────────────────────────────
+        try:
+            from app.services.platform.api_key_service import bootstrap_missing_api_keys
+            _keys_created = bootstrap_missing_api_keys()
+            if _keys_created:
+                logger.info("[STARTUP] API keys geradas para %s company(s)", _keys_created)
+        except Exception as _key_err:
+            logger.warning("[STARTUP] Bootstrap api_key falhou: %s", _key_err)
+
+    # ── Jobs inline (desligados em prod com workers dedicados) ─────────────
+    from app.config import settings as _settings
+    if not _settings.DISABLE_INLINE_WORKERS:
+        _start_periodic_cleanup(app)
+        _start_email_worker(app)
+    else:
+        logger.info("[STARTUP] Inline workers desabilitados (DISABLE_INLINE_WORKERS=1)")
 
     @app.route('/health', methods=['GET'])
     def health():
@@ -279,6 +383,8 @@ def create_app():
         path = request.path
         # Twilio webhooks não enviam cookies
         if path.startswith('/api/twilio/'):
+            return
+        if path.startswith('/api/email/webhook'):
             return
         # Auth endpoints (login usa rate-limit próprio; refresh/logout são safe)
         if path.startswith('/auth/'):

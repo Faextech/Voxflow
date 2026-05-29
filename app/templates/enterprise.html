@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise — VoxFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-empty.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/email.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise.css') }}">
+</head>
+<body>
+<div class="email-app ent-app" id="entApp">
+    <aside class="email-sidebar ent-sidebar" id="entSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <span class="brand-icon">⚡</span>
+                <div>
+                    <h1>Enterprise</h1>
+                    <p>CRM · WhatsApp · API</p>
+                </div>
+            </div>
+            <a href="/app" class="btn-back"><i class="fas fa-arrow-left"></i> Voltar</a>
+        </div>
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="nav-section-label">Visão geral</div>
+            <button class="nav-link active" data-page="overview"><span class="icon"><i class="fas fa-chart-pie"></i></span> Dashboard</button>
+
+            <div class="nav-section-label">Omnichannel</div>
+            <button class="nav-link" data-page="inbox"><span class="icon"><i class="fab fa-whatsapp"></i></span> Inbox WhatsApp</button>
+            <button class="nav-link" data-page="integrations"><span class="icon"><i class="fas fa-plug"></i></span> Integrações</button>
+
+            <div class="nav-section-label">CRM Enterprise</div>
+            <button class="nav-link" data-page="accounts"><span class="icon"><i class="fas fa-building"></i></span> Contas</button>
+            <button class="nav-link" data-page="contacts"><span class="icon"><i class="fas fa-address-book"></i></span> Contatos</button>
+            <button class="nav-link" data-page="tags"><span class="icon"><i class="fas fa-tags"></i></span> Tags</button>
+            <button class="nav-link" data-page="custom-fields"><span class="icon"><i class="fas fa-sliders-h"></i></span> Campos custom.</button>
+            <a href="/crm" class="nav-link nav-ext"><span class="icon"><i class="fas fa-columns"></i></span> Pipeline (Kanban)</a>
+
+            <div class="nav-section-label admin-only-nav" style="display:none;">Administração</div>
+            <button class="nav-link admin-only-nav" data-page="webhooks" style="display:none;"><span class="icon"><i class="fas fa-broadcast-tower"></i></span> Webhooks</button>
+            <button class="nav-link admin-only-nav" data-page="api-key" style="display:none;"><span class="icon"><i class="fas fa-key"></i></span> API Key</button>
+            <button class="nav-link admin-only-nav" data-page="invitations" style="display:none;"><span class="icon"><i class="fas fa-envelope-open-text"></i></span> Convites</button>
+            <a href="/api/v1/docs" target="_blank" rel="noopener" class="nav-link nav-ext"><span class="icon"><i class="fas fa-book"></i></span> API Docs</a>
+        </nav>
+        <div class="sidebar-status" id="sidebarStatus">
+            <span class="status-dot none" id="statusDot"></span>
+            <span id="statusText">Carregando...</span>
+        </div>
+    </aside>
+
+    <main class="email-main ent-main" id="entMain">
+        <div id="pageContainer"></div>
+    </main>
+</div>
+<script src="{{ url_for('static', filename='js/enterprise-app.js') }}"></script>
+</body>
+</html>

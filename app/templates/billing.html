@@ -9,109 +9,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-empty.css') }}">
 
     <style>
-        /* ── CSS Variables ── */
-        :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-card: #ffffff;
-            --border: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --accent: #2563eb;
-            --accent-green: #16a34a;
-            --accent-red: #dc2626;
-            --accent-yellow: #d97706;
-            --sidebar-bg: #1e293b;
-            --sidebar-text: #f1f5f9;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        html.dark {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #1e293b;
-            --border: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --sidebar-bg: #0f172a;
-            --sidebar-text: #f1f5f9;
-        }
-
-        /* ── Reset ── */
-        *, *::before, *::after { box-sizing: border-box; }
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            transition: background 0.2s, color 0.2s;
-        }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-        /* ── App Layout ── */
-        .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
-
-        /* ── Sidebar ── */
-        .sidebar {
-            background: var(--sidebar-bg);
-            border-right: 1px solid rgba(255,255,255,0.06);
-            display: flex; flex-direction: column;
-            height: 100vh; position: sticky; top: 0; overflow-y: auto;
-        }
-        .sidebar-brand {
-            padding: 20px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex; align-items: center; gap: 12px;
-        }
-        .sidebar-logo {
-            width: 38px; height: 38px;
-            background: linear-gradient(135deg, #1e3a8a, #16a34a);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(22,163,74,0.3);
-        }
-        .sidebar-brand-name { font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; }
-        .sidebar-brand-tag { font-size: 10px; color: #64748b; font-weight: 500; margin-top: 1px; }
-        .sidebar-nav { flex: 1; padding: 8px 8px 0; overflow-y: auto; }
-        .sidebar-section-label {
-            padding: 14px 8px 6px;
-            font-size: 10px; font-weight: 700; color: #475569;
-            text-transform: uppercase; letter-spacing: 0.08em;
-        }
-        .menu-link {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 12px; border-radius: 8px;
-            font-size: 13px; font-weight: 500;
-            color: var(--sidebar-text); text-decoration: none;
-            transition: all 0.2s; margin-bottom: 2px;
-            background: transparent; border: none; width: 100%; text-align: left; cursor: pointer;
-        }
-        .menu-link:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .menu-link.active { background: var(--accent); color: #ffffff !important; box-shadow: inset 3px 0 0 #60a5fa; }
-        .menu-link svg { width: 16px; height: 16px; flex-shrink: 0; }
-        .sidebar-footer {
-            margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.06);
-            padding: 12px 8px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
+        /* Tokens: voxflow-tokens.css — sidebar: voxflow-sidebar.css */
         .sidebar-theme-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; }
         .sidebar-theme-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; }
         .sidebar-user-row {
             display: flex; align-items: center; gap: 8px; padding: 8px;
-            border-radius: 8px; background: rgba(255,255,255,0.04);
+            border-radius: 8px; background: var(--color-bg-global);
         }
         .sidebar-user-avatar {
             width: 28px; height: 28px; border-radius: 50%;
-            background: linear-gradient(135deg, #2563eb, #16a34a);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
             color: #fff; font-size: 11px; font-weight: 700;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .sidebar-user-name { font-size: 12px; font-weight: 600; color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sidebar-user-name { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sidebar-logout-btn {
             background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.2);
             color: #ef4444; width: 26px; height: 26px; border-radius: 6px;
@@ -460,6 +378,16 @@
                 </div>
             </div>
 
+            <div id="page-error" class="alert alert-danger d-none" style="margin-bottom:16px;border-radius:10px;" role="alert"></div>
+            <div id="gateway-banner" class="d-none" style="margin-bottom:16px;padding:14px 18px;border-radius:10px;background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.35);color:var(--text-primary);font-size:13px;">
+                <strong><i class="fas fa-info-circle me-1"></i>Recarga PIX em configuração.</strong>
+                Entre em contato com o suporte para adicionar crédito manualmente enquanto o gateway é ativado.
+            </div>
+            <div id="twilio-info" class="d-none" style="margin-bottom:16px;padding:14px 18px;border-radius:10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);font-size:13px;color:var(--text-secondary);">
+                <i class="fas fa-shield-alt me-1" style="color:var(--accent);"></i>
+                Telefonia gerenciada pela plataforma — sua subconta Twilio é provisionada automaticamente.
+            </div>
+
             <!-- Stat Cards -->
             <div class="stat-cards">
                 <!-- Saldo -->
@@ -607,13 +535,29 @@
     let pollInterval = null;
 
     async function carregarDashboard() {
+      const errEl = document.getElementById('page-error');
       try {
         const resp = await fetch('/api/billing/dashboard', { headers: HEADERS });
         if (!resp.ok) {
           if (resp.status === 401) { window.location.href = '/login'; return; }
-          throw new Error('Erro ao carregar');
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'Não foi possível carregar seu saldo. Tente atualizar a página.');
         }
         const data = await resp.json();
+        if (errEl) errEl.classList.add('d-none');
+
+        const gwBanner = document.getElementById('gateway-banner');
+        const btnPix = document.getElementById('btn-pix');
+        if (data.payment_gateway_configured === false) {
+          gwBanner?.classList.remove('d-none');
+          if (btnPix) { btnPix.disabled = true; btnPix.style.opacity = '0.55'; }
+        } else {
+          gwBanner?.classList.add('d-none');
+          if (btnPix) { btnPix.disabled = false; btnPix.style.opacity = '1'; }
+        }
+        if (data.twilio_managed_by_platform) {
+          document.getElementById('twilio-info')?.classList.remove('d-none');
+        }
 
         const balance = data.balance;
         const balanceEl = document.getElementById('balance-value');
@@ -635,14 +579,21 @@
         if (topbarSaldo) topbarSaldo.textContent = `R$ ${balance.toFixed(2).replace('.', ',')}`;
 
         document.getElementById('cost-per-min').textContent = `R$ ${data.cost_per_minute.toFixed(4).replace('.', ',')}/minuto`;
+        if (data.margin_per_minute != null) {
+          document.getElementById('cost-per-min').textContent += ` · margem plataforma R$ ${data.margin_per_minute.toFixed(2).replace('.', ',')}/min`;
+        }
 
-        const spent = data.last_30_days.total_spent;
-        const calls = data.last_30_days.total_calls;
+        const spent = (data.last_30_days && data.last_30_days.total_spent) || 0;
+        const calls = (data.last_30_days && data.last_30_days.total_calls) || 0;
         document.getElementById('spent-value').textContent = `R$ ${spent.toFixed(2).replace('.', ',')}`;
         document.getElementById('calls-count').textContent = `${calls} chamada${calls !== 1 ? 's' : ''}`;
 
       } catch(e) {
         console.error(e);
+        if (errEl) {
+          errEl.textContent = e.message || 'Erro ao carregar créditos.';
+          errEl.classList.remove('d-none');
+        }
       }
     }
 
@@ -768,11 +719,10 @@
     async function verificarPagamento() {
       if (!pixPaymentId) return;
       try {
-        const resp = await fetch('/api/billing/balance', { headers: HEADERS });
+        const resp = await fetch(`/api/billing/payment/${pixPaymentId}/status`, { headers: HEADERS });
+        if (!resp.ok) return;
         const data = await resp.json();
-        const balanceEl = document.getElementById('balance-value');
-        const currentBalance = parseFloat(balanceEl.textContent.replace('R$ ', '').replace(',', '.')) || 0;
-        if (data.balance > currentBalance + 1) {
+        if (data.status === 'approved') {
           clearInterval(pollInterval);
           document.getElementById('pix-confirming').innerHTML =
             '<span style="color:var(--accent-green);font-weight:700;"><i class="fas fa-check-circle me-1"></i>Pagamento confirmado!</span>';

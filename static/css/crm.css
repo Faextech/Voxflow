@@ -1,0 +1,577 @@
+/**
+ * VoxFlow CRM Pipeline — Kanban (Etapa 3)
+ * Tokens: voxflow-tokens.css
+ */
+
+:root {
+  --col-bg: #F3F4F6;
+  --col-width: 255px;
+  --crm-pipeline-sidebar: 220px;
+}
+
+html.embed-mode {
+  --crm-pipeline-sidebar: 0px;
+}
+
+body.crm-app {
+  margin: 0;
+  background: var(--color-bg-global);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-primary);
+}
+
+.crm-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Pipeline sidebar (lista de pipelines) ── */
+.crm-sidebar {
+  width: var(--crm-pipeline-sidebar);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.crm-sidebar-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 14px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.crm-sidebar-back:hover {
+  color: var(--color-primary);
+}
+
+.crm-sidebar .sidebar-section-label {
+  padding: 16px 14px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.crm-sidebar .sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: 1px 8px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.crm-sidebar .sidebar-item:hover {
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+.crm-sidebar .sidebar-item.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.crm-sidebar .sidebar-item .pipeline-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.crm-sidebar .sidebar-item .badge-count {
+  margin-left: auto;
+  background: var(--color-hover);
+  color: var(--color-text-muted);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.crm-sidebar .sidebar-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 2px 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.crm-sidebar .sidebar-add-btn:hover {
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+.crm-sidebar .sidebar-footer {
+  display: none;
+}
+
+/* ── Main / board ── */
+.crm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.board-header {
+  padding: 20px 24px 16px;
+  background: var(--color-bg-global);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.board-header-text h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.board-header-text p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.board-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.board-deals-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-hover);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.board-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.board-scroll,
+.kanban-wrapper {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--color-bg-global);
+  scroll-behavior: smooth;
+  height: calc(100vh - 70px);
+}
+
+/* ── Kanban column ── */
+.kanban-col {
+  min-width: 255px;
+  max-width: 255px;
+  flex-shrink: 0;
+  background: #F3F4F6;
+  border-radius: var(--radius-lg);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 110px);
+  overflow: hidden;
+}
+
+.col-header,
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.col-dot,
+.kanban-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.col-header > span:not(.col-dot):not(.col-count):not(.kanban-col-dot):not(.kanban-col-count),
+.kanban-col-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.col-count,
+.kanban-col-count {
+  font-size: 11px;
+  font-weight: 600;
+  background: #E5E7EB;
+  color: var(--color-text-secondary);
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.col-menu-btn,
+.kanban-col-menu {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+.col-cards,
+.kanban-cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 60px;
+}
+
+.add-card-btn,
+.kanban-add {
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 12.5px;
+  padding: 9px 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: var(--font-sans);
+  transition: color 150ms ease;
+  flex-shrink: 0;
+  display: block;
+}
+
+.add-card-btn:hover,
+.kanban-add:hover {
+  color: var(--color-primary);
+  background: none;
+}
+
+/* ── Deal card ── */
+.deal-card,
+.kanban-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+  margin-bottom: 0;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.deal-card:hover,
+.kanban-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+  transform: translateY(-1px);
+}
+
+.deal-card .deal-title,
+.kanban-card-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.deal-card .deal-owner,
+.kanban-card-owner {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.deal-card .deal-progress-bar,
+.kanban-card-progress {
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 99px;
+  margin-top: 9px;
+  flex: none;
+}
+
+.deal-card .deal-progress-fill,
+.kanban-card-progress-bar {
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: 99px;
+  transition: width 300ms ease;
+}
+
+.deal-card.sortable-ghost { opacity: 0.4; }
+.deal-card.sortable-chosen { cursor: grabbing; }
+
+.deal-card .deal-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deal-card .deal-progress-wrap .deal-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 9px;
+}
+
+.deal-card .deal-progress-wrap .deal-progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.deal-card .deal-progress-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: right;
+}
+
+.deal-card .deal-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-success);
+  margin-top: 8px;
+}
+
+.deal-card .deal-actions {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  display: none;
+  gap: 3px;
+}
+
+.deal-card:hover .deal-actions { display: flex; }
+
+.deal-card .deal-actions button {
+  background: var(--color-bg-global);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.deal-card .deal-actions button:hover {
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+.deal-card.deal-won { border-left: 3px solid var(--color-success); }
+.deal-card.deal-lost { border-left: 3px solid var(--color-danger); opacity: 0.85; }
+
+/* ── Empty state ── */
+.empty-board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-board i {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.empty-board p {
+  font-size: 15px;
+  max-width: 320px;
+}
+
+/* ── Notifications (sem topnav) ── */
+.notif-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 340px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.25s;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+}
+
+.notif-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 150;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.notif-fab:hover {
+  background: var(--color-hover);
+}
+
+.notif-fab .notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--color-danger);
+  color: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.notif-fab .notif-badge.show { display: flex; }
+
+/* Embed — kanban full bleed */
+html.embed-mode .crm-sidebar,
+html.embed-mode #crmMobileOverlay,
+html.embed-mode .crm-sidebar-back,
+html.embed-mode .notif-fab {
+  display: none !important;
+}
+
+html.embed-mode .crm-body {
+  display: block;
+}
+
+html.embed-mode .crm-main {
+  min-height: 100vh;
+}
+
+html.embed-mode .kanban-col {
+  max-height: calc(100vh - 100px);
+}
+
+html.embed-mode .board-header {
+  padding: 12px 16px;
+}
+
+/* Bootstrap overrides */
+.crm-app .btn-primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.crm-app .btn-primary:hover {
+  background: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+}
+
+.crm-app .form-control:focus,
+.crm-app .form-select:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12) !important;
+}
+
+@media (max-width: 900px) {
+  .crm-sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transition: left 0.25s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .crm-sidebar.open { left: 0; }
+
+  #crmMobileMenuBtn { display: flex !important; }
+
+  #crmMobileOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  #crmMobileOverlay.open { display: block; }
+}

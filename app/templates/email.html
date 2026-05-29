@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emails — VoxFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-sidebar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-empty.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/email.css') }}">
+    <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed-mode');</script>
+    <style>
+    html.embed-mode .email-sidebar { display: none !important; }
+    html.embed-mode .email-app { grid-template-columns: 1fr !important; }
+    html.embed-mode body { overflow: auto !important; background: var(--color-bg-global); }
+    html.embed-mode .email-main { min-height: auto; height: auto; }
+    html.embed-mode .page-content { padding: 16px 20px 32px; }
+    </style>
+</head>
+<body>
+<div class="email-app" id="emailApp">
+    <aside class="email-sidebar" id="emailSidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <span class="brand-icon">📧</span>
+                <div>
+                    <h1>Email Marketing</h1>
+                    <p>Powered by Resend</p>
+                </div>
+            </div>
+            <a href="/app" class="btn-back"><i class="fas fa-arrow-left"></i> Voltar</a>
+        </div>
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="nav-section-label">Principal</div>
+            <button class="nav-link active" data-page="dashboard"><span class="icon"><i class="fas fa-chart-pie"></i></span> Dashboard</button>
+            <button class="nav-link" data-page="setup"><span class="icon"><i class="fas fa-magic"></i></span> Guia & Configuração</button>
+            <button class="nav-link" data-page="campaigns"><span class="icon"><i class="fas fa-paper-plane"></i></span> Campanhas</button>
+            <button class="nav-link" data-page="templates"><span class="icon"><i class="fas fa-file-alt"></i></span> Templates</button>
+            <button class="nav-link" data-page="automations"><span class="icon"><i class="fas fa-project-diagram"></i></span> Automações</button>
+
+            <div class="nav-section-label">Operação</div>
+            <button class="nav-link" data-page="outbox"><span class="icon"><i class="fas fa-inbox"></i></span> Caixa de Saída</button>
+            <button class="nav-link" data-page="history"><span class="icon"><i class="fas fa-history"></i></span> Histórico</button>
+            <button class="nav-link" data-page="contacts"><span class="icon"><i class="fas fa-users"></i></span> Contatos</button>
+        </nav>
+        <div class="sidebar-status" id="sidebarStatus">
+            <span class="status-dot none" id="statusDot"></span>
+            <span id="statusText">Verificando...</span>
+        </div>
+    </aside>
+
+    <main class="email-main" id="emailMain">
+        <div id="pageContainer"></div>
+    </main>
+</div>
+<script src="{{ url_for('static', filename='js/email-app.js') }}"></script>
+</body>
+</html>

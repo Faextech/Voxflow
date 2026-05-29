@@ -8,445 +8,114 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-sidebar.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-header.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-empty.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}">
+  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed-mode');</script>
   <style>
-    /* ── CSS Variables ── */
-    :root {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f8fafc;
-      --bg-card: #ffffff;
-      --border: #e2e8f0;
-      --text-primary: #0f172a;
-      --text-secondary: #64748b;
-      --accent: #2563eb;
-      --accent-green: #16a34a;
-      --accent-red: #dc2626;
-      --accent-yellow: #d97706;
-      --sidebar-bg: #1e293b;
-      --sidebar-text: #f1f5f9;
-      --shadow: 0 1px 3px rgba(0,0,0,0.1);
-      --col-bg: #f1f5f9;
-      --col-width: 272px;
-      --header-height: 60px;
-      --sidebar-width: 220px;
-    }
-    html.dark {
-      --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
-      --bg-card: #1e293b;
-      --border: #334155;
-      --text-primary: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --sidebar-bg: #0f172a;
-      --sidebar-text: #f1f5f9;
-      --col-bg: #1e293b;
-    }
-
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg-secondary);
-      font-family: 'Inter', sans-serif;
-      overflow: hidden; height: 100vh;
-      display: flex; flex-direction: column;
-      color: var(--text-primary);
-      transition: background 0.2s, color 0.2s;
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── TOP NAV ── */
-    .crm-topnav {
-      height: var(--header-height);
-      background: var(--sidebar-bg);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      display: flex; align-items: center; padding: 0 16px;
-      gap: 12px; flex-shrink: 0; z-index: 100;
-    }
-    .crm-topnav .brand {
-      display: flex; align-items: center; gap: 10px; text-decoration: none;
-    }
-    .brand-logo {
-      width: 34px; height: 34px;
-      background: linear-gradient(135deg, #1e3a8a, #16a34a);
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; flex-shrink: 0;
-      box-shadow: 0 3px 8px rgba(22,163,74,0.3);
-    }
-    .brand-name { font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; }
-    .nav-divider { width: 1px; height: 24px; background: rgba(255,255,255,0.12); margin: 0 4px; }
-    .crm-topnav .nav-links { display: flex; gap: 2px; }
-    .crm-topnav .nav-links a {
-      padding: 6px 12px; border-radius: 7px;
-      color: rgba(255,255,255,0.6); text-decoration: none;
-      font-size: 13px; font-weight: 500; transition: all 0.15s;
-    }
-    .crm-topnav .nav-links a:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
-    .crm-topnav .nav-links a.active {
-      background: rgba(37,99,235,0.25); color: #93c5fd; font-weight: 600;
-    }
-    .crm-topnav .spacer { flex: 1; }
-    .nav-icon-btn {
-      position: relative; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      cursor: pointer; padding: 7px 9px; border-radius: 8px; color: rgba(255,255,255,0.7);
-      transition: all 0.15s; line-height: 1;
-    }
-    .nav-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-    .notif-badge {
-      position: absolute; top: 3px; right: 3px;
-      background: #ef4444; color: #fff; border-radius: 50%;
-      width: 15px; height: 15px; font-size: 9px;
-      display: none; align-items: center; justify-content: center; font-weight: 700;
-    }
-    .notif-badge.show { display: flex; }
-    .user-avatar {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, #2563eb, #16a34a);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
-    }
-    .topnav-logout {
-      background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
-      color: #f87171; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif;
-      font-weight: 600; padding: 6px 12px; border-radius: 7px; transition: all 0.2s;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .topnav-logout:hover { background: rgba(239,68,68,0.2); color: #fca5a5; }
-
-    /* Theme toggle in topnav */
-    .theme-switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-    .theme-switch input { opacity: 0; width: 0; height: 0; }
-    .theme-slider {
-      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255,255,255,0.15); border-radius: 34px; transition: .3s;
-    }
-    .theme-slider::before {
-      position: absolute; content: ""; height: 16px; width: 16px;
-      left: 3px; bottom: 3px; background: #fff; border-radius: 50%;
-      transition: .3s; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
-    input:checked + .theme-slider { background: #2563eb; }
-    input:checked + .theme-slider::before { transform: translateX(18px); }
-
-    /* ── MAIN LAYOUT ── */
-    .crm-body { display: flex; flex: 1; overflow: hidden; }
-
-    /* ── SIDEBAR ── */
-    .crm-sidebar {
-      width: var(--sidebar-width); background: var(--sidebar-bg);
-      display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
-      border-right: 1px solid rgba(255,255,255,0.05);
-    }
-    .sidebar-section-label {
-      padding: 14px 14px 6px;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-      color: #475569; text-transform: uppercase;
-    }
-    .sidebar-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 14px; cursor: pointer;
-      color: var(--sidebar-text); font-size: 13px; font-weight: 500;
-      border-radius: 8px; margin: 1px 8px;
-      text-decoration: none; transition: all 0.15s;
-    }
-    .sidebar-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-    .sidebar-item.active { background: var(--accent); color: #fff; box-shadow: inset 3px 0 0 #60a5fa; }
-    .sidebar-item .pipeline-dot {
-      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
-    }
-    .sidebar-item .badge-count {
-      margin-left: auto; background: rgba(255,255,255,0.12);
-      border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 600;
-    }
-    .sidebar-add-btn {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 14px; margin: 2px 8px;
-      color: #475569; font-size: 12px; font-weight: 500; cursor: pointer;
-      border-radius: 8px; transition: all 0.15s;
-    }
-    .sidebar-add-btn:hover { background: rgba(255,255,255,0.06); color: #94a3b8; }
-    .sidebar-footer {
-      margin-top: auto; padding: 12px 8px;
-      border-top: 1px solid rgba(255,255,255,0.05);
-    }
-
-    /* ── BOARD AREA ── */
-    .crm-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .board-header {
-      padding: 12px 20px; background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-    }
-    .board-header h5 { margin: 0; font-weight: 700; font-size: 15px; color: var(--text-primary); }
-    .board-header .btn-sm { font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 600; border-radius: 7px; }
-    .board-actions { margin-left: auto; display: flex; gap: 8px; }
-
-    .board-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; padding: 16px 20px; display: flex; gap: 12px; align-items: flex-start; background: var(--bg-secondary); }
-
-    /* ── KANBAN COLUMN ── */
-    .kanban-col {
-      width: var(--col-width); flex-shrink: 0;
-      background: var(--col-bg); border-radius: 12px; border: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      max-height: calc(100vh - var(--header-height) - 54px - 60px);
-    }
-    .col-header {
-      padding: 12px 14px; display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: var(--text-primary);
-    }
-    .col-header .col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .col-header .col-count {
-      margin-left: auto; background: rgba(0,0,0,0.07); border-radius: 10px;
-      padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--text-secondary);
-    }
-    html.dark .col-header .col-count { background: rgba(255,255,255,0.1); }
-    .col-header .col-menu-btn {
-      background: none; border: none; cursor: pointer; color: var(--text-secondary);
-      padding: 3px 7px; border-radius: 5px; transition: background 0.15s;
-    }
-    .col-header .col-menu-btn:hover { background: rgba(0,0,0,0.07); }
-    html.dark .col-header .col-menu-btn:hover { background: rgba(255,255,255,0.08); }
-    .col-cards { flex: 1; overflow-y: auto; padding: 0 8px 8px; min-height: 60px; }
-    .col-footer { padding: 8px; border-top: 1px solid var(--border); }
-    .add-card-btn {
-      width: 100%; background: none; border: none; color: var(--text-secondary);
-      font-size: 12px; font-family: 'Inter', sans-serif; font-weight: 500;
-      padding: 7px; border-radius: 7px; cursor: pointer;
-      display: flex; align-items: center; gap: 6px; transition: all 0.15s;
-    }
-    .add-card-btn:hover { background: rgba(37,99,235,0.06); color: var(--accent); }
-
-    /* ── DEAL CARD ── */
-    .deal-card {
-      background: var(--bg-card); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
-      box-shadow: var(--shadow); cursor: grab; position: relative;
-      border: 1px solid var(--border); border-left: 3px solid transparent;
-      transition: box-shadow 0.15s, transform 0.15s;
-    }
-    .deal-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-1px); }
-    .deal-card.sortable-ghost { opacity: .4; }
-    .deal-card.sortable-chosen { cursor: grabbing; }
-    .deal-card .deal-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .deal-card .deal-lead { font-size: 11px; color: var(--text-secondary); }
-    .deal-card .deal-phone { font-size: 11px; color: var(--text-secondary); }
-    .deal-card .deal-value { font-size: 12px; font-weight: 700; color: var(--accent-green); margin-top: 6px; }
-    .deal-card .deal-notes { font-size: 11px; color: var(--text-secondary); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
-    .deal-card .deal-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 3px; }
-    .deal-card:hover .deal-actions { display: flex; }
-    .deal-card .deal-actions button {
-      background: var(--bg-secondary); border: 1px solid var(--border);
-      cursor: pointer; font-size: 11px; color: var(--text-secondary);
-      padding: 3px 6px; border-radius: 5px; transition: all 0.15s;
-    }
-    .deal-card .deal-actions button:hover { background: var(--border); color: var(--text-primary); }
-
-    /* ── EMPTY BOARD ── */
-    .empty-board { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); }
-    .empty-board i { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
-    .empty-board p { font-size: 15px; }
-
-    /* ── Bootstrap Modal override ── */
+    /* Bootstrap modal overrides — layout em crm.css */
     .modal-content {
-      background: var(--bg-card) !important; color: var(--text-primary) !important;
-      border: 1px solid var(--border) !important; border-radius: 14px !important;
-      font-family: 'Inter', sans-serif;
+      background: var(--color-surface) !important;
+      color: var(--color-text-primary) !important;
+      border: 1px solid var(--color-border) !important;
+      border-radius: var(--radius-lg) !important;
+      font-family: var(--font-sans);
     }
-    .modal-header { background: var(--bg-secondary) !important; border-bottom: 1px solid var(--border) !important; border-radius: 14px 14px 0 0 !important; padding: 16px 20px !important; }
+    .modal-header {
+      background: var(--color-bg-global) !important;
+      border-bottom: 1px solid var(--color-border) !important;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+      padding: 16px 20px !important;
+    }
     .modal-body { padding: 20px !important; }
-    .modal-footer { border-top: 1px solid var(--border) !important; padding: 14px 20px !important; background: transparent !important; }
-    .modal-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+    .modal-footer {
+      border-top: 1px solid var(--color-border) !important;
+      padding: 14px 20px !important;
+      background: transparent !important;
+    }
+    .modal-title { font-size: 15px; font-weight: 600; color: var(--color-text-primary); }
     html.dark .btn-close { filter: invert(1) brightness(2); }
     .form-control, .form-select {
-      background: var(--bg-primary) !important; border-color: var(--border) !important;
-      color: var(--text-primary) !important; font-family: 'Inter', sans-serif !important;
-      border-radius: 8px !important; font-size: 13px !important;
+      background: var(--color-surface) !important;
+      border-color: var(--color-border) !important;
+      color: var(--color-text-primary) !important;
+      font-family: var(--font-sans) !important;
+      border-radius: var(--radius-md) !important;
+      font-size: 13px !important;
     }
-    .form-control:focus, .form-select:focus {
-      border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+    .form-label {
+      font-size: 11px; font-weight: 700; color: var(--color-text-secondary);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;
     }
-    .form-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
-    .btn { font-family: 'Inter', sans-serif !important; font-weight: 600 !important; border-radius: 8px !important; font-size: 13px !important; }
-    .btn-primary { background: var(--accent) !important; border-color: var(--accent) !important; }
-    .btn-secondary { background: var(--bg-secondary) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
-    .btn-outline-primary { border-color: var(--accent) !important; color: var(--accent) !important; background: transparent !important; }
-    .btn-outline-primary:hover { background: rgba(37,99,235,0.08) !important; }
-    .btn-outline-danger { border-color: rgba(220,38,38,0.3) !important; color: var(--accent-red) !important; background: transparent !important; }
-    .btn-outline-danger:hover { background: rgba(220,38,38,0.08) !important; }
-    .btn-outline-secondary { border-color: var(--border) !important; color: var(--text-secondary) !important; background: transparent !important; }
-    .btn-outline-secondary:hover { background: var(--bg-secondary) !important; color: var(--text-primary) !important; }
-    .btn-success { background: var(--accent-green) !important; border-color: var(--accent-green) !important; }
-    .btn-danger { background: var(--accent-red) !important; border-color: var(--accent-red) !important; }
-    .badge { font-family: 'Inter', sans-serif !important; font-size: 10px !important; font-weight: 700 !important; border-radius: 5px !important; }
-    .nav-tabs .nav-link { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: var(--text-secondary); border: none; border-bottom: 2px solid transparent; }
-    .nav-tabs .nav-link.active { color: var(--accent); border-bottom-color: var(--accent); background: transparent; }
-    .nav-tabs { border-bottom-color: var(--border); }
-    .list-group-item { background: var(--bg-card) !important; border-color: var(--border) !important; color: var(--text-primary) !important; font-family: 'Inter', sans-serif; font-size: 13px; }
-    .list-group-item:hover { background: var(--bg-secondary) !important; }
-    .text-muted { color: var(--text-secondary) !important; }
-    .border { border-color: var(--border) !important; }
-    .bg-light { background: var(--bg-secondary) !important; }
-    hr { border-color: var(--border); }
-
-    /* ── NOTIFICATIONS PANEL ── */
-    .notif-panel {
-      position: fixed; top: var(--header-height); right: 0;
-      width: 340px; background: var(--bg-card); border-left: 1px solid var(--border);
-      height: calc(100vh - var(--header-height)); overflow-y: auto;
-      z-index: 200; transform: translateX(100%); transition: transform .25s;
-      box-shadow: -4px 0 20px rgba(0,0,0,0.12);
-    }
+    .btn { font-family: var(--font-sans) !important; font-weight: 600 !important; border-radius: var(--radius-md) !important; font-size: 13px !important; }
+    .btn-secondary { background: var(--color-bg-global) !important; border-color: var(--color-border) !important; color: var(--color-text-primary) !important; }
+    .btn-outline-secondary { border-color: var(--color-border) !important; color: var(--color-text-secondary) !important; }
+    .btn-outline-danger { border-color: rgba(239,68,68,0.3) !important; color: var(--color-danger) !important; }
+    .nav-tabs .nav-link.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+    .list-group-item { background: var(--color-surface) !important; border-color: var(--color-border) !important; color: var(--color-text-primary) !important; }
     .notif-panel.open { transform: translateX(0); }
     .notif-panel-header {
-      padding: 16px 18px; border-bottom: 1px solid var(--border);
+      padding: 16px 18px; border-bottom: 1px solid var(--color-border);
       display: flex; align-items: center; gap: 8px;
-      font-weight: 700; font-size: 14px; color: var(--text-primary);
+      font-weight: 600; font-size: 14px;
     }
-    .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; color: var(--text-primary); transition: background 0.15s; }
-    .notif-item:hover { background: var(--bg-secondary); }
-    .notif-item.unread { background: rgba(37,99,235,0.06); }
-    .notif-item .notif-time { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
-
-    /* ── RULES PANEL ── */
-    .rule-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .rule-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-
-    /* ── RESPONSIVE — MOBILE ── */
-    @media (max-width: 900px) {
-        .crm-sidebar {
-            position: fixed; left: -240px; top: 0; bottom: 0;
-            width: var(--sidebar-width); z-index: 1000;
-            transition: left 0.25s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.3);
-        }
-        .crm-sidebar.open { left: 0; }
-        #crmMobileMenuBtn { display: flex !important; }
-        #crmMobileOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; }
-        #crmMobileOverlay.open { display: block; }
-        .board-header { padding: 8px 12px; }
-        .kanban-col { --col-width: 250px; }
-    }
-
-    @media (max-width: 600px) {
-        .kanban-col { --col-width: calc(100vw - 24px); }
-        .board-scroll { padding: 10px 12px; gap: 10px; }
-        .deal-card { padding: 10px 12px; }
-        .board-header { flex-wrap: wrap; gap: 8px; }
-        .board-actions { flex-wrap: wrap; gap: 6px; }
-    }
+    .notif-item { padding: 12px 16px; border-bottom: 1px solid var(--color-border); font-size: 13px; cursor: pointer; }
+    .notif-item.unread { background: var(--color-primary-light); }
+    .rule-item { padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
   </style>
 </head>
-<body>
+<body class="crm-app">
     <script>
       (function() {
         const saved = localStorage.getItem('voxflow_theme');
         if (saved === 'dark') document.documentElement.classList.add('dark');
       })();
-      function toggleTheme() {
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('voxflow_theme', isDark ? 'dark' : 'light');
-        const cb = document.getElementById('themeCheckboxCrm');
-        if (cb) cb.checked = isDark;
-      }
-      window.addEventListener('DOMContentLoaded', () => {
-        const cb = document.getElementById('themeCheckboxCrm');
-        if (cb) cb.checked = document.documentElement.classList.contains('dark');
-      });
     </script>
-
-<!-- TOP NAV -->
-<nav class="crm-topnav">
-  <a href="/app" class="brand">
-    <div class="brand-logo">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.03 1.18 2 2 0 012 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
-    </div>
-    <span class="brand-name">VoxFlow</span>
-  </a>
-  <div class="nav-divider"></div>
-  <div class="nav-links">
-    <a href="/app">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-1px"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
-    </a>
-    <a href="/crm" class="active">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-1px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>CRM
-    </a>
-    <a href="/credito">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-1px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Crédito
-    </a>
-  </div>
-  <div class="spacer"></div>
-  <label class="theme-switch" title="Alternar tema">
-    <input type="checkbox" id="themeCheckboxCrm" onchange="toggleTheme()">
-    <span class="theme-slider"></span>
-  </label>
-  <button class="nav-icon-btn" onclick="toggleNotifPanel()" title="Notificações">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-    <span class="notif-badge" id="notifBadge">0</span>
-  </button>
-  <div class="user-avatar" title="Usuário" id="userInitial">U</div>
-  <button onclick="logoutApp()" class="topnav-logout">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    Sair
-  </button>
-</nav>
 
 <!-- BODY -->
 <div class="crm-body">
 
   <div id="crmMobileOverlay" onclick="toggleCRMSidebar()"></div>
 
-  <!-- SIDEBAR -->
+  <!-- Pipeline sidebar -->
   <div class="crm-sidebar" id="crmSidebar">
+    <a href="/app" class="crm-sidebar-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar ao VoxFlow
+    </a>
     <div class="sidebar-section-label">Pipelines</div>
     <div id="pipelineList"></div>
     <div class="sidebar-add-btn" onclick="openCreatePipelineModal()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Novo pipeline
     </div>
     <div class="sidebar-add-btn" onclick="createDefaultPipeline()" id="btnCreateDefault" title="Cria a pipeline 'Comercial' com todas as etapas padrão">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       Pipeline padrão
-    </div>
-    <div class="sidebar-footer">
-      <a href="/app" class="sidebar-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Dashboard
-      </a>
-      <a href="/credito" class="sidebar-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        Meu Crédito
-      </a>
     </div>
   </div>
 
   <!-- MAIN -->
   <div class="crm-main">
     <!-- Board header -->
-    <div class="board-header" id="boardHeader" style="display:none">
-      <button id="crmMobileMenuBtn" onclick="toggleCRMSidebar()" aria-label="Menu" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--text-primary)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <div class="module-header board-header" id="boardHeader" style="display:none">
+      <button id="crmMobileMenuBtn" onclick="toggleCRMSidebar()" aria-label="Menu" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--color-text-primary)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <h5 id="boardTitle">Pipeline</h5>
-      <span class="badge" id="boardDealsCount" style="background:rgba(37,99,235,0.12);color:var(--accent);font-size:11px;padding:4px 10px;border-radius:6px;">0 deals</span>
-      <div class="board-actions">
-        <button class="btn btn-sm btn-outline-danger" onclick="clearAllLeads()" title="Apagar todos os leads">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          Limpar
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="openRulesModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-          Regras
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="openAddStageModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Etapa
-        </button>
-        <button class="btn btn-sm btn-primary" onclick="openCreateDealModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-1px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Deal
-        </button>
+      <div class="board-header-text">
+        <h1 class="module-title" id="boardTitle">Pipeline</h1>
+        <p class="module-subtitle" id="boardSubtitle">Kanban de vendas — arraste deals entre etapas</p>
+      </div>
+      <div class="board-actions" style="display:flex; gap:8px; align-items:center;">
+        <button class="btn-secondary btn btn-sm btn-outline-danger" onclick="clearAllLeads()" title="Apagar todos os leads">Limpar</button>
+        <button class="btn-secondary btn btn-sm btn-outline-secondary" onclick="openRulesModal()">Regras</button>
+        <button class="btn-secondary btn btn-sm btn-outline-secondary" onclick="openAddStageModal()">+ Etapa</button>
+        <button class="btn-primary btn btn-sm btn-primary" onclick="openCreateDealModal()">+ Adicionar deal</button>
       </div>
     </div>
 
@@ -465,7 +134,11 @@
   </div>
 </div>
 
-<!-- NOTIFICATIONS PANEL -->
+<!-- NOTIFICATIONS -->
+<button type="button" class="notif-fab" onclick="toggleNotifPanel()" title="Notificações" aria-label="Notificações">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+  <span class="notif-badge" id="notifBadge">0</span>
+</button>
 <div class="notif-panel" id="notifPanel">
   <div class="notif-panel-header">
     <i class="fas fa-bell"></i> Notificações
@@ -837,7 +510,7 @@ function toast(msg, type = 'success') {
   };
   const c = colors[type] || colors.success;
   const t = document.createElement('div');
-  t.style.cssText = `position:fixed;top:72px;right:16px;z-index:9999;min-width:260px;max-width:360px;
+  t.style.cssText = `position:fixed;top:16px;right:16px;z-index:9999;min-width:260px;max-width:360px;
     padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;
     background:${c.bg};border:1px solid ${c.border};color:${c.color};
     box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -885,21 +558,6 @@ let sortableInstances = [];
 // INIT
 // ============================================================
 window.addEventListener('DOMContentLoaded', async () => {
-  // Theme checkbox state
-  const cb = document.getElementById('themeCheckboxCrm');
-  if (cb) cb.checked = document.documentElement.classList.contains('dark');
-
-  // User avatar initials
-  const token = getToken();
-  if (token) {
-    try {
-      const p = JSON.parse(atob(token.split('.')[1]));
-      const name = p.name || p.sub || 'U';
-      const el = document.getElementById('userInitial');
-      if (el) el.textContent = name.charAt(0).toUpperCase();
-    } catch(e) {}
-  }
-
   await loadPipelines(true);
   await loadNotifications();
   setInterval(loadNotifications, 30000);
@@ -987,9 +645,12 @@ async function selectPipeline(id) {
   renderSidebar();
   if (!currentPipeline) return;
   document.getElementById('emptyBoard').style.display = 'none';
-  document.getElementById('boardHeader').style.display = 'flex';
+  const isEmbed = document.documentElement.classList.contains('embed-mode');
+  document.getElementById('boardHeader').style.display = isEmbed ? 'none' : 'flex';
   document.getElementById('boardScroll').style.display = 'flex';
   document.getElementById('boardTitle').textContent = currentPipeline.name;
+  const sub = document.getElementById('boardSubtitle');
+  if (sub) sub.textContent = currentPipeline.description || 'Kanban de vendas — arraste deals entre etapas';
   await loadBoard(id);
 }
 
@@ -1005,7 +666,7 @@ async function loadBoard(pipelineId) {
     let countLabel = `${openCount} abertos`;
     if (wonCount)  countLabel += ` · ${wonCount} ganho${wonCount > 1 ? 's' : ''}`;
     if (lostCount) countLabel += ` · ${lostCount} perdido${lostCount > 1 ? 's' : ''}`;
-    document.getElementById('boardDealsCount').textContent = countLabel;
+    document.getElementById('boardSubtitle').textContent = (currentPipeline.description || 'Kanban de vendas — arraste deals entre etapas') + ' · ' + countLabel;
     renderBoard();
   } catch(e) { toast('Erro ao carregar board', 'danger'); }
 }
@@ -1037,7 +698,7 @@ function renderBoard() {
       </div>
       <div class="col-footer">
         <button class="add-card-btn" onclick="openCreateDealModalForStage(${col.id})">
-          <i class="fas fa-plus"></i> Adicionar deal
+          + Adicionar deal
         </button>
       </div>
     </div>
@@ -1062,44 +723,32 @@ function renderDealCard(d) {
   const isWon  = d.status === 'won';
   const isLost = d.status === 'lost';
   const value = d.value ? `R$ ${Number(d.value).toLocaleString('pt-BR', {minimumFractionDigits:2})}` : '';
-  const leadName = d.lead ? escH(d.lead.name || '') : '';
-  const rawNotes = d.notes || d.lead?.notes || '';
-  const notesSnippet = rawNotes ? escH(rawNotes.split('\n')[0].trim().slice(0, 80)) : '';
-  const recordingIcon = d.has_recording ? `<span title="Possui gravação" class="ms-1" style="color:#059669"><i class="fas fa-tape"></i></span>` : '';
+  const owner = d.lead?.name || (d.agent_id ? `Agente #${d.agent_id}` : 'Sem responsável');
+  const prob = Math.min(100, Math.max(0, parseInt(d.probability, 10) || 0));
 
-  // Estilo visual por status
-  let cardBorder = '';
-  let statusBadge = '';
+  let cardClass = 'deal-card';
+  if (isWon) cardClass += ' deal-won';
+  else if (isLost) cardClass += ' deal-lost';
+
   let actionBtns = `
     <button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>
-    <button onclick="quickMarkWon(${d.id})" title="Marcar ganho" style="color:#059669"><i class="fas fa-check"></i></button>
-    <button onclick="quickMarkLost(${d.id})" title="Marcar perdido" style="color:#dc2626"><i class="fas fa-times"></i></button>`;
+    <button onclick="quickMarkWon(${d.id})" title="Marcar ganho" style="color:var(--color-success)"><i class="fas fa-check"></i></button>
+    <button onclick="quickMarkLost(${d.id})" title="Marcar perdido" style="color:var(--color-danger)"><i class="fas fa-times"></i></button>`;
 
-  if (isWon) {
-    cardBorder = 'border-left: 3px solid #22c55e;';
-    statusBadge = `<span style="font-size:9px;font-weight:700;background:rgba(34,197,94,.18);color:#22c55e;border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.04em;">GANHO</span>`;
-    actionBtns = `<button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>`;
-  } else if (isLost) {
-    cardBorder = 'border-left: 3px solid #ef4444; opacity: 0.8;';
-    statusBadge = `<span style="font-size:9px;font-weight:700;background:rgba(239,68,68,.18);color:#ef4444;border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.04em;">PERDIDO</span>`;
+  if (isWon || isLost) {
     actionBtns = `<button onclick="openDealDetail(${d.id})" title="Editar"><i class="fas fa-edit"></i></button>`;
   }
 
   return `
-    <div class="deal-card" data-deal-id="${d.id}" ondblclick="openDealDetail(${d.id})" style="${cardBorder}">
-      <div class="deal-actions">
-        ${actionBtns}
+    <div class="${cardClass}" data-deal-id="${d.id}" ondblclick="openDealDetail(${d.id})">
+      <div class="deal-actions">${actionBtns}</div>
+      <div class="deal-title">${escH(d.title)}</div>
+      <div class="deal-owner">${escH(owner)}</div>
+      <div class="deal-progress-wrap">
+        <div class="deal-progress-bar"><div class="deal-progress-fill" style="width:${prob}%"></div></div>
+        <span class="deal-progress-pct">${prob}%</span>
       </div>
-      <div class="deal-title">
-        ${escH(d.title)}${statusBadge}
-        ${recordingIcon}
-      </div>
-      ${leadName ? `<div class="deal-lead text-truncate"><i class="fas fa-user-circle fa-xs me-1"></i>${leadName}</div>` : ''}
-      ${notesSnippet ? `<div class="deal-notes" title="${escH(rawNotes)}"><i class="fas fa-sticky-note fa-xs me-1"></i>${notesSnippet}</div>` : ''}
-      <div class="d-flex justify-content-between align-items-center mt-2">
-        <div class="deal-value" style="${isWon ? 'color:#22c55e;font-weight:700;' : isLost ? 'color:#ef4444;' : ''}">${value || ''}</div>
-        <div style="font-size:10px; color:#999;">${d.probability || 0}%</div>
-      </div>
+      ${value ? `<div class="deal-value">${value}</div>` : ''}
     </div>
   `;
 }
@@ -1780,7 +1429,7 @@ function formatRelTime(iso) {
                 const level = data.level || 'info';
                 const icon  = level === 'error' ? '❌' : level === 'warning' ? '⚠️' : 'ℹ️';
                 const toast = document.createElement('div');
-                toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:#1e293b;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease';
+                toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--color-surface);color:var(--color-text-primary);padding:12px 18px;border-radius:10px;font-size:13px;max-width:320px;box-shadow:var(--shadow-card);border:1px solid var(--color-border);animation:fadeIn 0.3s ease';
                 toast.textContent = `${icon} ${data.message}`;
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 5000);

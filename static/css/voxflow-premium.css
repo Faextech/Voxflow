@@ -1,0 +1,272 @@
+/**
+ * VoxFlow Premium Design System
+ * Tipografia Inter, layout centralizado, forms e cards SaaS premium.
+ */
+
+/* ── Layout centralizado ── */
+.main {
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.content-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Forms ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+  max-width: 680px;
+}
+
+.form-grid .field.span-2,
+.form-grid .field:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  max-width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.panel .panel-body,
+.panel > div[style*="padding:24px"] {
+  padding: 24px 28px !important;
+}
+
+.panel-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* ── Metric cards ── */
+.cards {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+  gap: 16px !important;
+  margin-bottom: 24px;
+}
+
+.card.metric-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 20px 18px !important;
+  border-radius: 14px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+html.dark .card.metric-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.metric-card small {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.metric-card h3 {
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--metric-color, rgba(37, 99, 235, 0.12));
+  color: var(--metric-text, var(--accent));
+  margin-bottom: 12px;
+}
+
+.content-section.active {
+  animation: vfSectionIn 0.18s ease !important;
+}
+
+@keyframes vfSectionIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.an-kpi-click {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.an-kpi-click:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.hub-embed {
+  border: none;
+  width: 100%;
+  min-height: calc(100vh - 140px);
+  border-radius: 12px;
+  transition: opacity 0.18s ease;
+}
+
+.sidebar .brand h1 {
+  letter-spacing: -0.03em;
+}
+
+/* ── Topbar — ver voxflow-header.css ── */
+.topbar {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* ── Panels & grids ── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.panel {
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+
+.panel-header h3 {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
+/* ── Buttons ── */
+.btn {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 18px;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+}
+
+.btn-secondary {
+  border-radius: 10px;
+}
+
+/* ── Alerts / messages ── */
+.message.success,
+.alert-success {
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  color: var(--accent-green);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.message.error,
+.alert-danger {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: var(--accent-red);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.alert-warning {
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+/* ── Settings: telefonia info (cliente não configura) ── */
+.twilio-managed-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 680px;
+}
+
+.twilio-managed-banner strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ── Checklist compacto ── */
+#setupChecklist {
+  max-width: 100%;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .form-grid,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .mini-info {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .cards {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -6,50 +6,60 @@
     <title>VoxFlow - Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-premium.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <!-- Socket.IO: servido pelo Flask-SocketIO (endpoint /socket.io/socket.io.js automático) -->
     <script src="/socket.io/socket.io.js" onerror="console.warn('[WS] socket.io CDN indisponível')"></script>
 
         <style>
+        /* Tokens globais: static/css/voxflow-tokens.css */
         :root {
-            /* Tema Claro (Padrão) */
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-card: #ffffff;
-            --surface: #f1f5f9;
-            --border: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --accent: #2563eb;
-            --accent-green: #16a34a;
-            --accent-red: #dc2626;
-            --accent-yellow: #d97706;
-            --sidebar-bg: #1e293b;
-            --sidebar-text: #f1f5f9;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1);
-            --input-bg: #f8fafc;
-            --input-border: #cbd5e1;
-            /* Legacy aliases */
             --muted: var(--text-secondary);
-            --primary: var(--accent);
-            --radius-lg: 12px;
-            --line: var(--border);
         }
 
-        html.dark {
-            /* Tema Escuro */
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #1e293b;
-            --surface: #1e293b;
-            --border: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --sidebar-bg: #0f172a;
-            --sidebar-text: #f1f5f9;
-            --input-bg: rgba(0,0,0,0.25);
-            --input-border: #334155;
+        /* Setup checklist — premium SaaS */
+        #setupChecklist {
+            border-radius: 16px !important;
+            padding: 22px 24px !important;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%) !important;
         }
+        .checklist-step {
+            display: grid;
+            grid-template-columns: 28px 1fr auto;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .checklist-step:hover { border-color: rgba(37,99,235,.35); box-shadow: 0 2px 8px rgba(15,23,42,.06); }
+        .checklist-step.done { opacity: .72; background: var(--bg-secondary); }
+        .checklist-check {
+            width: 24px; height: 24px; border-radius: 50%;
+            border: 2px solid var(--border); background: transparent;
+            cursor: pointer; color: #fff; font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            transition: all .2s;
+        }
+        .checklist-step.done .checklist-check { border-color: var(--accent-green); background: var(--accent-green); }
+        .checklist-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+        .checklist-step.done .checklist-label { color: var(--text-secondary); text-decoration: line-through; }
+        .checklist-go {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: var(--accent); color: #fff;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: opacity .2s, transform .15s;
+        }
+        .checklist-go:hover { opacity: .9; transform: translateY(-1px); }
+        .checklist-done-badge { font-size: 11px; font-weight: 600; color: var(--accent-green); padding: 4px 10px; background: rgba(22,163,74,.1); border-radius: 999px; }
+        #checklistSteps { gap: 10px !important; }
+
+        /* Dark mode: voxflow-tokens.css (html.dark) */
 
         /* Inputs + selects follow theme */
         input:not([type=checkbox]):not([type=radio]):not([type=range]),
@@ -74,9 +84,9 @@
         /* Base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: var(--font-sans);
+            background: var(--color-bg-global);
+            color: var(--color-text-primary);
             transition: background 0.2s, color 0.2s;
         }
 
@@ -154,7 +164,7 @@
             background: rgba(255,255,255,0.05);
         }
         .menu-link.active {
-            background: var(--accent);
+            background: rgba(37, 99, 235, 0.12);
             color: #ffffff;
             box-shadow: inset 3px 0 0 #60a5fa;
         }
@@ -536,59 +546,7 @@
         }
     </style>
     <style>
-        /* ── SIDEBAR PREMIUM ── */
-        .sidebar-brand {
-            padding: 20px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .sidebar-logo {
-            width: 38px; height: 38px;
-            background: linear-gradient(135deg, #1e3a8a, #16a34a);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff;
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(22,163,74,0.3);
-        }
-        .sidebar-brand-name { font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; }
-        .sidebar-brand-tag { font-size: 10px; color: #64748b; font-weight: 500; margin-top: 1px; }
-        .sidebar-nav { flex: 1; padding: 8px 8px 0; overflow-y: auto; }
-        .sidebar-section-label {
-            padding: 14px 8px 6px;
-            font-size: 10px; font-weight: 700; color: #475569;
-            text-transform: uppercase; letter-spacing: 0.08em;
-        }
-        .sidebar-footer {
-            margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.06);
-            padding: 12px 8px;
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .sidebar-theme-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; }
-        .sidebar-theme-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #64748b; }
-        .sidebar-user-row {
-            display: flex; align-items: center; gap: 8px; padding: 8px;
-            border-radius: 8px; background: rgba(255,255,255,0.04);
-        }
-        .sidebar-user-avatar {
-            width: 28px; height: 28px; border-radius: 50%;
-            background: linear-gradient(135deg, #2563eb, #16a34a);
-            color: #fff; font-size: 11px; font-weight: 700;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .sidebar-user-name { font-size: 12px; font-weight: 600; color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .sidebar-logout-btn {
-            background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.2);
-            color: #ef4444; width: 26px; height: 26px; border-radius: 6px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; flex-shrink: 0;
-        }
-        .sidebar-logout-btn:hover { background: rgba(220,38,38,0.2); }
-
-        /* ── METRIC CARDS PREMIUM ── */
+        /* Métricas e componentes — sidebar em voxflow-sidebar.css */
         .metric-card { position: relative; overflow: hidden; }
         .metric-card::before {
             content: ''; position: absolute; top: 0; right: 0;
@@ -606,13 +564,7 @@
         .metric-card h3 { font-size: 32px; font-weight: 800; color: var(--text-primary); line-height: 1; margin: 6px 0 4px; }
         .metric-trend { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 
-        /* ── TOPBAR CARD ── */
-        .topbar {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-            padding: 14px 20px; margin-bottom: 24px; box-shadow: var(--shadow);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .topbar h2 { font-size: 18px; font-weight: 700; }
+        /* ── TOPBAR CARD — layout em voxflow-header.css ── */
         .topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 
 
@@ -1229,6 +1181,9 @@
     .topbar > div { display: contents; }
     </style>
 
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-empty.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-sidebar.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -1346,11 +1301,43 @@
                     Lista DNC
                 </button>
 
-                <div class="sidebar-section-label">Módulos</div>
-                <a href="/crm" class="menu-link" style="text-decoration:none;">
+                <div class="sidebar-section-label">CRM & Comunicação</div>
+                <button class="menu-link" data-section="crm">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                     CRM Pipeline
-                </a>
+                </button>
+                <button class="menu-link" data-section="inbox">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    Inbox WhatsApp
+                </button>
+                <button class="menu-link" data-section="integrations">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    Integrações
+                </button>
+                <button class="menu-link" data-section="accounts">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+                    Contas
+                </button>
+                <button class="menu-link" data-section="contacts">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    Contatos
+                </button>
+                <button class="menu-link" data-section="tags">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    Tags
+                </button>
+                <button class="menu-link" data-section="custom-fields">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+                    Campos custom.
+                </button>
+                <button class="menu-link" data-section="email">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Emails
+                </button>
+                <button class="menu-link" data-section="support">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Suporte
+                </button>
 
                 <div class="sidebar-section-label">Financeiro</div>
                 <a href="/credito" class="menu-link" style="text-decoration:none;">
@@ -1363,7 +1350,7 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     Usuários
                 </button>
-                <a id="sidebar-admin-link" href="/admin" style="display:none;" class="menu-link" style="color:#f87171;">
+                <a id="sidebar-admin-link" href="/admin" style="display:none;" class="menu-link menu-link-danger">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                     Painel Admin
                 </a>
@@ -1371,22 +1358,33 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07M4.93 4.93a10 10 0 000 14.14M8.46 8.46a5 5 0 000 7.07"/></svg>
                     Configurações
                 </button>
+                <button class="menu-link admin-only" data-section="webhooks" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    Webhooks
+                </button>
+                <button class="menu-link admin-only" data-section="api-key" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    API Key
+                </button>
+                <button class="menu-link admin-only" data-section="invitations" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Convites
+                </button>
             </nav>
 
             <!-- Cmd+K shortcut button -->
-            <button onclick="openCmdPalette()" style="
-                margin:0 8px 6px; display:flex; align-items:center; gap:8px;
-                background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-                border-radius:8px; padding:8px 10px; cursor:pointer; width:calc(100% - 16px);
-                color:#94a3b8; font-size:12px; font-family:'Inter',sans-serif;
-                transition:background .15s;">
+            <button type="button" class="sidebar-cmdk" onclick="openCmdPalette()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <span style="flex:1; text-align:left;">Busca rápida</span>
-                <kbd style="font-size:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:1px 5px;">⌘K</kbd>
+                <kbd>⌘K</kbd>
             </button>
 
             <!-- Footer -->
             <div class="sidebar-footer">
+                <div class="sidebar-system-status" id="sidebarSystemStatus">
+                    <span class="sidebar-status-dot online" id="sidebarStatusDot"></span>
+                    <span id="sidebarStatusText">Sistema online</span>
+                </div>
                 <div class="sidebar-theme-row">
                     <span class="sidebar-theme-label">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -1408,27 +1406,12 @@
         </aside>
 
         <main class="main">
-            <div class="topbar">
+            <div class="topbar module-header">
                 <div class="topbar-page-title">
-                    <div class="topbar-page-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    </div>
-                    <div>
-                        <h2 id="topbar-title">Dashboard</h2>
-                        <p id="topbar-sub">Visão geral da operação e métricas da equipe.</p>
-                    </div>
+                    <h2 class="module-title" id="topbar-title">Dashboard</h2>
+                    <p class="module-subtitle" id="topbar-sub">Visão geral da operação e métricas da equipe.</p>
                 </div>
-                <div class="topbar-right">
-                    <div id="topbar-active-campaign" style="display:flex; align-items:center; gap:8px; padding:6px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; margin-right:16px;">
-                        <span style="font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Campanha:</span>
-                        <span id="topbar-campaign-name" style="font-size:13px; font-weight:700; color:var(--accent);">Nenhuma ativa</span>
-                    </div>
-                    <span class="badge bg-success" id="system-status-badge">● Sistema online</span>
-                    <button class="btn btn-secondary" onclick="loadAllData()" style="font-size:12px;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
-                        Atualizar
-                    </button>
-                </div>
+                <div class="topbar-right" id="topbar-actions"></div>
             </div>
 
             <section id="section-dashboard" class="content-section active">
@@ -1475,10 +1458,10 @@
                 <div id="setupChecklist" style="display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:var(--shadow);">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
                         <div>
-                            <div style="font-size:14px; font-weight:700; color:var(--text-primary);">Configure sua conta</div>
-                            <div style="font-size:12px; color:var(--text-secondary);" id="checklistProgress">0 de 5 etapas concluídas</div>
+                            <div style="font-size:15px; font-weight:700; color:var(--text-primary); letter-spacing:-0.02em;">Configure sua conta</div>
+                            <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;" id="checklistProgress">0 de 5 etapas concluídas</div>
                         </div>
-                        <button onclick="dismissSetupChecklist()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;" title="Fechar">×</button>
+                        <button type="button" onclick="dismissSetupChecklist()" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;color:var(--text-secondary);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" title="Fechar">×</button>
                     </div>
                     <div style="background:var(--bg-secondary);border-radius:6px;height:6px;margin-bottom:16px;">
                         <div id="checklistBar" style="background:var(--accent);height:6px;border-radius:6px;width:0%;transition:width .4s ease;"></div>
@@ -2200,12 +2183,86 @@
                             <input type="date" id="an-date-to" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
                             <button class="btn btn-primary" onclick="loadAnalytics()" style="font-size:12px;padding:8px 14px;">Aplicar</button>
                         </div>
-                        <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                        <div style="margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                             <span style="font-size:12px;color:var(--muted);">Pipeline:</span>
                             <select id="an-pipeline" onchange="loadFunnelOnly()" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
                                 <option value="">Todos</option>
                             </select>
+                            <span style="font-size:12px;color:var(--muted);">Canal:</span>
+                            <select id="an-source" onchange="loadAnalytics()" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
+                                <option value="">Todos</option>
+                                <option value="whatsapp">WhatsApp</option>
+                                <option value="web">Site / Web</option>
+                                <option value="indicacao">Indicação</option>
+                                <option value="anuncio">Anúncio</option>
+                                <option value="import">Importação</option>
+                                <option value="call">Ligação</option>
+                                <option value="nao_informado">Não informado</option>
+                            </select>
+                            <span style="font-size:12px;color:var(--muted);">Responsável:</span>
+                            <select id="an-assigned" onchange="loadAnalytics()" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:8px 12px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;">
+                                <option value="">Todos</option>
+                            </select>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Origem & métricas comerciais -->
+                <div class="panel" style="margin-bottom:18px;">
+                    <div class="panel-header">
+                        <div><h3>Origem dos clientes</h3><p>Canal de aquisição, funil comercial e performance da equipe.</p></div>
+                    </div>
+                    <div style="padding:0 20px 20px;">
+                        <div class="cards an-commercial-kpis" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
+                            <div class="card an-kpi-click" data-metric="active_clients" style="padding:16px 18px; cursor:pointer;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Clientes ativos</div>
+                                <div id="cm-active" style="font-size:28px;font-weight:800;color:#16a34a;">0</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">atividade nos últimos 30 dias</div>
+                            </div>
+                            <div class="card an-kpi-click" data-metric="inactive_clients" style="padding:16px 18px; cursor:pointer;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Clientes inativos</div>
+                                <div id="cm-inactive" style="font-size:28px;font-weight:800;color:#64748b;">0</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">sem atividade há 90+ dias</div>
+                            </div>
+                            <div class="card an-kpi-click" data-metric="new_clients" style="padding:16px 18px; cursor:pointer;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Novos no período</div>
+                                <div id="cm-new" style="font-size:28px;font-weight:800;color:#7c3aed;">0</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">leads criados no filtro</div>
+                            </div>
+                            <div class="card an-kpi-click" data-metric="tickets_open" style="padding:16px 18px; cursor:pointer;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Tickets abertos</div>
+                                <div id="cm-tickets-open" style="font-size:28px;font-weight:800;color:#ea580c;">0</div>
+                            </div>
+                            <div class="card an-kpi-click" data-metric="tickets_resolved" style="padding:16px 18px; cursor:pointer;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Tickets resolvidos</div>
+                                <div id="cm-tickets-resolved" style="font-size:28px;font-weight:800;color:#2563eb;">0</div>
+                            </div>
+                            <div class="card" style="padding:16px 18px;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Tempo médio resposta</div>
+                                <div id="cm-response" style="font-size:28px;font-weight:800;">— min</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px;">primeira resposta suporte</div>
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div style="padding:8px 0;">
+                                <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;">Distribuição por canal</h4>
+                                <div style="position:relative;height:220px;"><canvas id="an-chart-sources"></canvas></div>
+                            </div>
+                            <div style="padding:8px 0;">
+                                <h4 style="font-size:13px;font-weight:600;margin-bottom:12px;">Evolução mensal por origem</h4>
+                                <div style="position:relative;height:220px;"><canvas id="an-chart-sources-ts"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="an-drill-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">
+                        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                            <h3 id="an-drill-title" style="font-size:16px;font-weight:700;margin:0;">Detalhes</h3>
+                            <button type="button" class="btn btn-secondary" onclick="closeDrillDown()" style="padding:6px 12px;">Fechar</button>
+                        </div>
+                        <div id="an-drill-body" style="padding:16px 20px;overflow-y:auto;"></div>
                     </div>
                 </div>
 
@@ -2310,7 +2367,7 @@
                     <div class="panel-header" style="cursor:pointer;" onclick="toggleAMDPanel()">
                         <div>
                             <h3>🤖 Qualidade AMD — Detecção de Secretária Eletrônica</h3>
-                            <p>Taxa de acerto do detector de caixa postal, falsos positivos recuperados e distribuição por campanha.</p>
+                            <p>Taxa de acerto do detector de caixa postal, falsos positivos recuperados, tipos de resultado AMD e distribuição por DDD/campanha.</p>
                         </div>
                         <button class="btn btn-secondary" style="font-size:12px;" onclick="event.stopPropagation();loadAMDMetrics()">↻ Atualizar</button>
                     </div>
@@ -2338,6 +2395,10 @@
                                 <div id="amd-recovered-count" style="font-size:11px;color:#a78bfa;margin-top:2px;">— recuperados</div>
                             </div>
                         </div>
+                        <!-- Breakdown por tipo de resultado AMD -->
+                        <div id="amd-result-breakdown" style="margin-bottom:20px;"></div>
+                        <!-- Breakdown por DDD -->
+                        <div id="amd-ddd-breakdown" style="margin-bottom:20px;"></div>
                         <!-- Tabela por campanha -->
                         <div id="amd-campaign-table" style="overflow-x:auto;">
                             <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Clique em "Atualizar" para carregar as métricas AMD.</p>
@@ -2429,6 +2490,43 @@
             </section>
 
             <!-- ── USUÁRIOS ── -->
+            <section id="section-crm" class="content-section">
+                <iframe class="hub-embed" data-src="/crm?embed=1" title="CRM Pipeline"></iframe>
+            </section>
+            <section id="section-inbox" class="content-section">
+                <div class="ent-mount" id="ent-mount-inbox"></div>
+            </section>
+            <section id="section-integrations" class="content-section">
+                <div class="ent-mount" id="ent-mount-integrations"></div>
+            </section>
+            <section id="section-accounts" class="content-section">
+                <div class="ent-mount" id="ent-mount-accounts"></div>
+            </section>
+            <section id="section-contacts" class="content-section">
+                <div class="ent-mount" id="ent-mount-contacts"></div>
+            </section>
+            <section id="section-tags" class="content-section">
+                <div class="ent-mount" id="ent-mount-tags"></div>
+            </section>
+            <section id="section-custom-fields" class="content-section">
+                <div class="ent-mount" id="ent-mount-custom-fields"></div>
+            </section>
+            <section id="section-email" class="content-section">
+                <iframe class="hub-embed" data-src="/email?embed=1" title="Email Marketing"></iframe>
+            </section>
+            <section id="section-support" class="content-section">
+                <iframe class="hub-embed" data-src="/suporte?embed=1" title="Suporte"></iframe>
+            </section>
+            <section id="section-webhooks" class="content-section">
+                <div class="ent-mount" id="ent-mount-webhooks"></div>
+            </section>
+            <section id="section-api-key" class="content-section">
+                <div class="ent-mount" id="ent-mount-api-key"></div>
+            </section>
+            <section id="section-invitations" class="content-section">
+                <div class="ent-mount" id="ent-mount-invitations"></div>
+            </section>
+
             <section id="section-users" class="content-section">
 
                 <div class="panel">
@@ -2474,21 +2572,21 @@
             <section id="section-settings" class="content-section">
                 <div class="panel">
                     <div class="panel-header">
-                        <div><h3>Configurações da conta</h3><p>Dados da empresa e integrações.</p></div>
+                        <div><h3>Configurações da conta</h3><p>Dados da empresa e perfil operacional.</p></div>
                     </div>
-                    <div style="padding:24px;">
+                    <div class="panel-body" style="padding:24px 28px;">
                         <div class="form-grid">
                             <div class="field">
-                                <label>Nome da empresa</label>
-                                <input type="text" id="settings-company-name" placeholder="Minha Empresa Ltda">
+                                <label for="settings-company-name">Nome da empresa</label>
+                                <input type="text" id="settings-company-name" placeholder="Ex: Faex Tech Ltda" autocomplete="organization">
                             </div>
                             <div class="field">
-                                <label>Segmento</label>
-                                <input type="text" id="settings-segment" placeholder="Ex: Tecnologia, Saúde...">
+                                <label for="settings-segment">Segmento</label>
+                                <input type="text" id="settings-segment" placeholder="Ex: Tecnologia, Saúde..." autocomplete="off">
                             </div>
                         </div>
-                        <div class="actions-row" style="margin-top:16px;">
-                            <button class="btn btn-primary" onclick="saveCompanySettings()">Salvar</button>
+                        <div class="actions-row">
+                            <button type="button" class="btn btn-primary" onclick="saveCompanySettings()">Salvar</button>
                         </div>
                         <div id="settings-message" class="message"></div>
                     </div>
@@ -2496,43 +2594,58 @@
 
                 <div class="panel">
                     <div class="panel-header">
-                        <div><h3>Identidade e Documentação</h3><p>Para habilitação de números brasileiros (Twilio BR).</p></div>
+                        <div><h3>Telefonia</h3><p>Gerenciada automaticamente pela plataforma VoxFlow.</p></div>
                     </div>
-                    <div style="padding:24px;">
-                        <div class="alert alert-warning" style="margin-bottom:16px; font-size:12px; display:flex; align-items:center; gap:8px;">
+                    <div class="panel-body" style="padding:24px 28px;">
+                        <div class="twilio-managed-banner">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px;color:var(--accent)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <div>
+                                <strong>Twilio configurada pela equipe VoxFlow</strong>
+                                Subconta, números e webhooks são provisionados automaticamente. Você não precisa configurar credenciais Twilio — basta manter crédito e usar o discador.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div><h3>Identidade e Documentação</h3><p>Dados para habilitação de números brasileiros (Twilio BR).</p></div>
+                    </div>
+                    <div class="panel-body" style="padding:24px 28px;">
+                        <div class="alert alert-warning" style="margin-bottom:20px; font-size:13px; display:flex; align-items:center; gap:10px; max-width:680px;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                             Números brasileiros exigem verificação de identidade. Preencha os dados abaixo.
                         </div>
                         <div class="form-grid">
                             <div class="field">
-                                <label>Tipo de Entidade</label>
+                                <label for="settings-reg-type">Tipo de entidade</label>
                                 <select id="settings-reg-type">
                                     <option value="business">Pessoa Jurídica (CNPJ)</option>
                                     <option value="individual">Pessoa Física (CPF)</option>
                                 </select>
                             </div>
                             <div class="field">
-                                <label>Nome / Razão Social</label>
-                                <input type="text" id="settings-reg-name">
+                                <label for="settings-reg-name">Nome / Razão social</label>
+                                <input type="text" id="settings-reg-name" placeholder="Razão social ou nome completo" autocomplete="off" name="reg_company_name">
                             </div>
                             <div class="field">
-                                <label>CPF / CNPJ</label>
-                                <input type="text" id="settings-reg-tax-id">
+                                <label for="settings-reg-tax-id">CPF / CNPJ</label>
+                                <input type="text" id="settings-reg-tax-id" placeholder="Somente números" autocomplete="off">
                             </div>
-                            <div class="field">
-                                <label>Endereço Completo</label>
-                                <textarea id="settings-reg-address" rows="1" style="min-height:42px;"></textarea>
+                            <div class="field span-2">
+                                <label for="settings-reg-address">Endereço completo</label>
+                                <textarea id="settings-reg-address" rows="2" placeholder="Rua, número, bairro, cidade — UF, CEP" autocomplete="street-address"></textarea>
                             </div>
-                            <div class="field">
-                                <label>Documento de Identidade (PDF/JPG)</label>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <input type="file" id="settings-reg-doc" style="font-size:12px; padding:6px;">
+                            <div class="field span-2">
+                                <label for="settings-reg-doc">Documento de identidade (PDF/JPG)</label>
+                                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                    <input type="file" id="settings-reg-doc" accept=".pdf,.jpg,.jpeg,.png" style="font-size:13px;">
                                     <div id="reg-doc-status"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="actions-row" style="margin-top:16px;">
-                            <button class="btn btn-primary" onclick="saveRegulatorySettings()">Atualizar Documentação</button>
+                        <div class="actions-row">
+                            <button type="button" class="btn btn-primary" onclick="saveRegulatorySettings()">Atualizar documentação</button>
                         </div>
                         <div id="regulatory-message" class="message"></div>
                     </div>
@@ -3194,10 +3307,28 @@
         });
 
         const SECTION_LABELS = {
-            dashboard:'Painel de operação', analytics:'Analytics CRM', campaigns:'Campanhas', leads:'Leads',
-            calls:'Chamadas', callbacks:'Fila de Callbacks', operation:'Webphone', import:'Importação',
+            dashboard:'Dashboard', analytics:'Analytics', campaigns:'Campanhas', leads:'Leads',
+            calls:'Chamadas', callbacks:'Callbacks', operation:'Webphone', import:'Importação',
             reports:'Relatórios', users:'Usuários', settings:'Configurações',
-            credito:'Meu Crédito'
+            credito:'Meu Crédito',
+            crm:'CRM Pipeline', inbox:'Inbox WhatsApp', integrations:'Integrações',
+            accounts:'Contas', contacts:'Contatos', tags:'Tags', 'custom-fields':'Campos customizados',
+            email:'Email Marketing', support:'Suporte', webhooks:'Webhooks', 'api-key':'API Key', invitations:'Convites'
+        };
+        const TOPBAR_ACTIONS = {
+            campaigns: '<button type="button" class="btn btn-primary" onclick="document.getElementById(\'campaign-name\')?.focus(); document.getElementById(\'section-campaigns\')?.scrollIntoView({behavior:\'smooth\'})">+ Nova campanha</button>',
+            users: '<button type="button" class="btn btn-primary" onclick="openCreateUserModal()">+ Novo usuário</button>',
+            crm: '<a href="/crm" class="btn btn-primary">Abrir kanban</a>',
+            inbox: '<button type="button" class="btn-icon-ghost" title="Atualizar conversas" onclick="window.__entRefreshInbox?.()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>',
+            integrations: '<button type="button" class="btn btn-primary" onclick="window.__entNewConnection?.()">+ Nova conexão</button>',
+            accounts: '<button type="button" class="btn btn-primary" onclick="window.__entCrudCreate?.(\'accounts\')">+ Nova conta</button>',
+            contacts: '<button type="button" class="btn btn-primary" onclick="window.__entCrudCreate?.(\'contacts\')">+ Novo contato</button>',
+            tags: '<button type="button" class="btn btn-primary" onclick="window.__entNewTag?.()">+ Nova tag</button>',
+            'custom-fields': '<button type="button" class="btn btn-primary" onclick="window.__entNewField?.()">+ Novo campo</button>',
+            webhooks: '<button type="button" class="btn btn-primary" onclick="window.__entNewWebhook?.()">+ Novo webhook</button>',
+            invitations: '<button type="button" class="btn btn-primary" onclick="window.__entNewInvite?.()">+ Convidar</button>',
+            email: '<a href="/email" class="btn btn-primary">+ Nova campanha</a>',
+            support: '<button type="button" class="btn btn-primary" onclick="document.querySelector(\'#section-support iframe\')?.contentWindow?.document.getElementById(\'btnNewTicket\')?.click()">+ Novo ticket</button>',
         };
         const SECTION_DESCS = {
             dashboard:'Visão geral da operação em tempo real.',
@@ -3211,8 +3342,29 @@
             reports:'Métricas e relatórios de produtividade.',
             users:'Gerencie operadores e administradores.',
             settings:'Integrações, Twilio e suporte.',
-            credito:'Gerencie seu saldo e recarregue quando precisar.'
+            credito:'Gerencie seu saldo e recarregue quando precisar.',
+            crm:'Kanban de vendas, pipelines e deals.',
+            inbox:'Conversas WhatsApp via Meta Cloud API.',
+            integrations:'OAuth e conexões com canais externos.',
+            accounts:'Empresas e organizações B2B.',
+            contacts:'Pessoas vinculadas às contas.',
+            tags:'Etiquetas para leads e deals.',
+            'custom-fields':'Atributos extras por entidade.',
+            email:'Campanhas, templates e automações de email.',
+            support:'Tickets e atendimento ao cliente.',
+            webhooks:'Notificações HTTP com assinatura HMAC.',
+            'api-key':'Chave de API para integrações.',
+            invitations:'Convide usuários para sua empresa.'
         };
+
+        const HUB_EMBED_SECTIONS = ['crm', 'email', 'support'];
+
+        function loadHubEmbed(sectionName) {
+            const sec = document.getElementById('section-' + sectionName);
+            if (!sec) return;
+            const iframe = sec.querySelector('iframe.hub-embed');
+            if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+        }
 
         function showSection(sectionName) {
             menuLinks.forEach(btn => btn.classList.remove('active'));
@@ -3224,10 +3376,12 @@
             if (button) button.classList.add('active');
             if (section) section.classList.add('active');
 
-            const h2 = document.querySelector('.topbar h2');
-            const sub = document.querySelector('.topbar p');
+            const h2 = document.getElementById('topbar-title');
+            const sub = document.getElementById('topbar-sub');
+            const actions = document.getElementById('topbar-actions');
             if (h2) h2.textContent = SECTION_LABELS[sectionName] || sectionName;
             if (sub) sub.textContent = SECTION_DESCS[sectionName] || '';
+            if (actions) actions.innerHTML = TOPBAR_ACTIONS[sectionName] || '';
 
             if (sectionName === 'settings') {
                 if (window.loadCompanySettings)    window.loadCompanySettings();
@@ -3239,7 +3393,20 @@
             if (sectionName === 'callbacks') {
                 loadCallbacks();
             }
+            if (HUB_EMBED_SECTIONS.includes(sectionName)) {
+                loadHubEmbed(sectionName);
+            }
+            if (window.VoxEnterprise && window.VoxEnterprise.SECTIONS && window.VoxEnterprise.SECTIONS.has(sectionName)) {
+                window.VoxEnterprise.render(sectionName);
+            } else if (window.VoxEnterprise && window.VoxEnterprise.stopInboxPoll) {
+                window.VoxEnterprise.stopInboxPoll();
+            }
         }
+
+        window.addEventListener('load', () => {
+            const h = (location.hash || '').replace('#', '');
+            if (h && document.getElementById('section-' + h)) showSection(h);
+        });
 
         // ── Callback Queue (MÉDIO-06) ──────────────────────────────────────────
         async function loadCallbacks() {
@@ -3427,11 +3594,11 @@
         // ── Setup Checklist (UX-05) ───────────────────────────────────────────
         const CHECKLIST_KEY = `voxflow_setup_${COMPANY_ID}`;
         const CHECKLIST_STEPS = [
-            { id: 'twilio',   label: 'Configurar Twilio',     action: "showSection('settings')",    check: () => false },
-            { id: 'campaign', label: 'Criar primeira campanha', action: "showSection('campaigns')", check: () => false },
-            { id: 'leads',    label: 'Importar leads',         action: "showSection('import')",     check: () => false },
-            { id: 'call',     label: 'Realizar primeira chamada', action: "showSection('calls')",   check: () => false },
-            { id: 'crm',      label: 'Configurar pipeline CRM', action: "showSection('analytics')", check: () => false },
+            { id: 'credit',   label: 'Adicionar crédito',       action: "window.location.href='/credito'", check: () => false },
+            { id: 'campaign', label: 'Criar primeira campanha', action: "showSection('campaigns')",       check: () => false },
+            { id: 'leads',    label: 'Importar leads',          action: "showSection('import')",          check: () => false },
+            { id: 'call',     label: 'Realizar primeira chamada', action: "showSection('calls')",       check: () => false },
+            { id: 'crm',      label: 'Configurar pipeline CRM', action: "showSection('crm')",       check: () => false },
         ];
 
         function _loadChecklistState() {
@@ -3462,10 +3629,10 @@
 
             stepsEl.innerHTML = CHECKLIST_STEPS.map(s => {
                 const checked = !!state[s.id];
-                return `<div style="display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border);">
-                    <button onclick="completeChecklistStep('${s.id}')" style="width:20px;height:20px;flex-shrink:0;border-radius:50%;border:2px solid ${checked ? 'var(--accent-green)' : 'var(--border)'};background:${checked ? 'var(--accent-green)' : 'transparent'};cursor:pointer;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;" title="${checked ? 'Concluído' : 'Marcar como feito'}">${checked ? '✓' : ''}</button>
-                    <span style="flex:1; font-size:13px; color:${checked ? 'var(--text-secondary)' : 'var(--text-primary)'}; text-decoration:${checked ? 'line-through' : 'none'};">${s.label}</span>
-                    ${!checked ? `<button onclick="${s.action}" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;font-weight:600;">Ir →</button>` : ''}
+                return `<div class="checklist-step ${checked ? 'done' : ''}">
+                    <button type="button" class="checklist-check" onclick="completeChecklistStep('${s.id}')" title="${checked ? 'Concluído' : 'Marcar como feito'}">${checked ? '✓' : ''}</button>
+                    <span class="checklist-label">${s.label}</span>
+                    ${!checked ? `<button type="button" class="checklist-go" onclick="${s.action}">Ir →</button>` : '<span class="checklist-done-badge">Feito</span>'}
                 </div>`;
             }).join('');
         }
@@ -3484,9 +3651,10 @@
         }
 
         // Auto-detect completed steps from live data
-        function updateChecklistFromMetrics(metrics, campaigns, calls) {
+        function updateChecklistFromMetrics(metrics, campaigns, calls, billing) {
             const state = _loadChecklistState();
             let changed = false;
+            if (!state.credit   && billing?.balance > 0)      { state.credit   = true; changed = true; }
             if (!state.campaign && (campaigns?.campaigns?.length || campaigns?.length)) { state.campaign = true; changed = true; }
             if (!state.leads    && metrics?.total_leads > 0)  { state.leads    = true; changed = true; }
             if (!state.call     && metrics?.total_calls > 0)  { state.call     = true; changed = true; }
@@ -3764,7 +3932,6 @@
             function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
             function setWidth(id, v) { const el = document.getElementById(id); if (el) el.style.width = v; }
             setText('monitor-campaign-name', 'Nenhuma campanha em execução');
-            setText('topbar-campaign-name', 'Nenhuma ativa');
             setText('monitor-campaign-description', 'Inicie ou monitore uma campanha para ver o andamento aqui.');
             setWidth('campaign-progress-fill', '0%');
             setText('campaign-progress-label', '0% concluído');
@@ -3792,7 +3959,6 @@
             const percent = Number(summary.progress_percent || 0);
 
             document.getElementById('monitor-campaign-name').textContent = campaign.name || 'Campanha sem nome';
-            document.getElementById('topbar-campaign-name').textContent = campaign.name || 'Campanha sem nome';
             document.getElementById('monitor-campaign-description').textContent =
                 `${campaign.description || 'Sem descrição'} | Status: ${campaign.status || '—'} | Modo: ${campaign.dial_mode || '—'}`;
 
@@ -4249,7 +4415,12 @@
                 populateCampaignSelects(campaigns);
                 populatePipelineSelects(pipelines);
                 await autoSelectRunningCampaign(campaigns);
-                updateChecklistFromMetrics(metrics, campaigns, calls);
+                let billing = null;
+                try {
+                    const br = await authFetch('/api/billing/balance');
+                    if (br.ok) billing = await br.json();
+                } catch (_) {}
+                updateChecklistFromMetrics(metrics, campaigns, calls, billing);
 
                 // Update credit balance in dashboard
                 if (typeof _crAtualizarNavBadge === 'function') {
@@ -5631,9 +5802,9 @@ async function deleteLead(leadId) {
         /* Base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: var(--font-sans);
+            background: var(--color-bg-global);
+            color: var(--color-text-primary);
             transition: background 0.2s, color 0.2s;
         }
 
@@ -5711,7 +5882,7 @@ async function deleteLead(leadId) {
             background: rgba(255,255,255,0.05);
         }
         .menu-link.active {
-            background: var(--accent);
+            background: rgba(37, 99, 235, 0.12);
             color: #ffffff;
             box-shadow: inset 3px 0 0 #60a5fa;
         }
@@ -6834,6 +7005,7 @@ async function deleteLead(leadId) {
                 });
                 const adminLink = document.getElementById('sidebar-admin-link');
                 if (adminLink) adminLink.style.display = me.role === 'superadmin' ? 'flex' : 'none';
+                if (window.VoxEnterprise) window.VoxEnterprise.setUser(me);
             }
         } catch(e) { /* silencioso */ }
 
@@ -7053,7 +7225,9 @@ async function deleteLead(leadId) {
             const data = await r.json();
             if (document.getElementById('settings-reg-type')) {
                 document.getElementById('settings-reg-type').value = data.reg_type || 'business';
-                document.getElementById('settings-reg-name').value = data.reg_name || '';
+                const regNameEl = document.getElementById('settings-reg-name');
+                regNameEl.value = data.reg_name || '';
+                if (!data.reg_name) regNameEl.placeholder = 'Razão social ou nome completo';
                 document.getElementById('settings-reg-tax-id').value = data.reg_tax_id || '';
                 document.getElementById('settings-reg-address').value = data.reg_address || '';
                 if (data.has_document) {
@@ -7427,25 +7601,151 @@ async function deleteLead(leadId) {
             if (df) p.set('date_from', df);
             if (dt) p.set('date_to', dt);
         }
+        const src = document.getElementById('an-source')?.value;
+        const asg = document.getElementById('an-assigned')?.value;
+        if (src) p.set('source', src);
+        if (asg) p.set('assigned_to', asg);
         return p.toString();
+    }
+
+    let _anChartSources = null;
+    let _anChartSourcesTs = null;
+
+    async function loadAnalyticsUsers() {
+        const sel = document.getElementById('an-assigned');
+        if (!sel || sel.options.length > 1) return;
+        try {
+            const r = await authFetch('/api/users');
+            if (!r.ok) return;
+            const users = await r.json();
+            (Array.isArray(users) ? users : users.users || []).forEach(u => {
+                const o = document.createElement('option');
+                o.value = u.id;
+                o.textContent = u.name || u.email;
+                sel.appendChild(o);
+            });
+        } catch (_) {}
+    }
+
+    function openDrillDown(metric, title) {
+        const modal = document.getElementById('an-drill-modal');
+        const body = document.getElementById('an-drill-body');
+        const ttl = document.getElementById('an-drill-title');
+        if (!modal || !body) return;
+        ttl.textContent = title || 'Detalhes';
+        body.innerHTML = '<p class="empty">Carregando...</p>';
+        modal.style.display = 'flex';
+        authFetch(`/api/analytics/drill-down?${_anParams()}&metric=${encodeURIComponent(metric)}`)
+            .then(r => r.json())
+            .then(d => {
+                if (!d.items?.length) {
+                    body.innerHTML = '<div class="vf-empty vf-empty-inline"><p>Nenhum registro encontrado.</p></div>';
+                    return;
+                }
+                if (d.entity === 'ticket') {
+                    body.innerHTML = `<table class="data-table"><thead><tr><th>ID</th><th>Título</th><th>Status</th><th>Prioridade</th></tr></thead><tbody>${
+                        d.items.map(i => `<tr><td>#${i.id}</td><td>${i.title}</td><td>${i.status}</td><td>${i.priority}</td></tr>`).join('')
+                    }</tbody></table>`;
+                } else {
+                    body.innerHTML = `<table class="data-table"><thead><tr><th>Nome</th><th>Contato</th><th>Origem</th><th>Status</th></tr></thead><tbody>${
+                        d.items.map(i => `<tr><td>${i.name || '—'}</td><td>${i.phone || i.email || '—'}</td><td>${i.source || '—'}</td><td>${i.status || '—'}</td></tr>`).join('')
+                    }</tbody></table>`;
+                }
+            })
+            .catch(() => { body.innerHTML = '<p class="empty">Erro ao carregar lista.</p>'; });
+    }
+
+    function closeDrillDown() {
+        const modal = document.getElementById('an-drill-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function _anRenderCommercial(cm) {
+        document.getElementById('cm-active').textContent = cm.active_clients ?? 0;
+        document.getElementById('cm-inactive').textContent = cm.inactive_clients ?? 0;
+        document.getElementById('cm-new').textContent = cm.new_clients ?? 0;
+        document.getElementById('cm-tickets-open').textContent = cm.tickets_open ?? 0;
+        document.getElementById('cm-tickets-resolved').textContent = cm.tickets_resolved ?? 0;
+        document.getElementById('cm-response').textContent = cm.avg_response_minutes > 0
+            ? cm.avg_response_minutes + ' min' : '— min';
+    }
+
+    function _anRenderSourceChart(sources) {
+        const ctx = document.getElementById('an-chart-sources')?.getContext('2d');
+        if (!ctx) return;
+        if (_anChartSources) _anChartSources.destroy();
+        const colors = ['#7c3aed','#6366f1','#2563eb','#16a34a','#ea580c','#dc2626','#64748b'];
+        _anChartSources = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: sources.map(s => s.name),
+                datasets: [{ data: sources.map(s => s.value), backgroundColor: sources.map((_, i) => colors[i % colors.length]), borderWidth: 0 }],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                onClick: (_, elems) => {
+                    if (!elems.length) return;
+                    const s = sources[elems[0].index];
+                    openDrillDown('source_' + s.key, s.name);
+                },
+                plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } } },
+            },
+        });
+    }
+
+    function _anRenderSourceTimeline(ts) {
+        const ctx = document.getElementById('an-chart-sources-ts')?.getContext('2d');
+        if (!ctx || !ts.months?.length) return;
+        if (_anChartSourcesTs) _anChartSourcesTs.destroy();
+        const colors = ['#7c3aed','#6366f1','#2563eb','#16a34a','#ea580c','#dc2626'];
+        _anChartSourcesTs = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ts.months,
+                datasets: (ts.series || []).slice(0, 6).map((s, i) => ({
+                    label: s.name,
+                    data: s.data.map(d => d.count),
+                    borderColor: colors[i % colors.length],
+                    tension: 0.35,
+                    fill: false,
+                    pointRadius: 2,
+                })),
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
     }
 
     async function loadAnalytics() {
         try {
             const qs = _anParams();
             const pid = document.getElementById('an-pipeline').value || '';
-            const [rMetrics, rFunnel, rTs] = await Promise.all([
+            const [rMetrics, rFunnel, rTs, rCommercial, rSources, rSrcTs] = await Promise.all([
                 authFetch(`/api/analytics/dashboard?${qs}`),
                 authFetch(`/api/analytics/funnel?${qs}&pipeline_id=${pid}`),
                 authFetch(`/api/analytics/time-series?${qs}`),
+                authFetch(`/api/analytics/commercial?${qs}`),
+                authFetch(`/api/analytics/lead-sources?${qs}`),
+                authFetch(`/api/analytics/lead-sources/timeline?${qs}`),
             ]);
             if (!rMetrics.ok || !rFunnel.ok || !rTs.ok) throw new Error('analytics api error');
-            const [metrics, funnel, ts] = await Promise.all([rMetrics.json(), rFunnel.json(), rTs.json()]);
+            const [metrics, funnel, ts, commercial, sources, srcTs] = await Promise.all([
+                rMetrics.json(), rFunnel.json(), rTs.json(),
+                rCommercial.ok ? rCommercial.json() : {},
+                rSources.ok ? rSources.json() : { sources: [] },
+                rSrcTs.ok ? rSrcTs.json() : { months: [], series: [] },
+            ]);
             _anRenderKPIs(metrics);
             _anRenderFunnel(funnel.stages);
             _anRenderTimeline(ts);
             _anRenderStagesBar(funnel.stages);
             _anRenderOutcomes(metrics.calls);
+            if (commercial.active_clients !== undefined) _anRenderCommercial(commercial);
+            if (sources.sources) _anRenderSourceChart(sources.sources);
+            _anRenderSourceTimeline(srcTs);
         } catch (e) {
             console.error('[Analytics]', e);
         }
@@ -7477,6 +7777,87 @@ async function deleteLead(leadId) {
             document.getElementById('amd-recovered-pct').textContent  = fmt(d.false_positives_recovered?.pct);
             document.getElementById('amd-recovered-count').textContent = `${d.false_positives_recovered?.count ?? '—'} recuperados`;
 
+            const amdTableStyle = 'width:100%;border-collapse:collapse;font-size:13px;';
+            const amdThStyle = 'padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;';
+            const amdThLeft = amdThStyle.replace('text-align:center', 'text-align:left');
+
+            const resultDiv = document.getElementById('amd-result-breakdown');
+            if (resultDiv) {
+                if (d.result_breakdown && d.result_breakdown.length > 0) {
+                    const rows = d.result_breakdown.map(row => `
+                        <tr>
+                            <td style="padding:10px 12px;color:var(--text-primary);font-weight:600;">${row.label}</td>
+                            <td style="padding:10px 12px;text-align:center;font-family:monospace;font-size:12px;color:var(--muted);">${row.result}</td>
+                            <td style="padding:10px 12px;text-align:center;font-weight:700;">${row.count}</td>
+                            <td style="padding:10px 12px;text-align:center;font-weight:700;">${row.pct}%</td>
+                            <td style="padding:10px 12px;">
+                                <div style="background:var(--bg-secondary);border-radius:99px;height:8px;overflow:hidden;">
+                                    <div style="width:${Math.min(row.pct, 100)}%;height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:99px;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    resultDiv.innerHTML = `
+                        <h4 style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 10px;">Detalhamento por resultado AMD</h4>
+                        <table style="${amdTableStyle}">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border);">
+                                    <th style="${amdThLeft}">Resultado</th>
+                                    <th style="${amdThStyle}">Código Twilio</th>
+                                    <th style="${amdThStyle}">Qtd</th>
+                                    <th style="${amdThStyle}">%</th>
+                                    <th style="${amdThStyle}width:140px;">Distribuição</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '';
+                }
+            }
+
+            const dddDiv = document.getElementById('amd-ddd-breakdown');
+            if (dddDiv) {
+                if (d.ddd_breakdown && d.ddd_breakdown.length > 0) {
+                    const rows = d.ddd_breakdown.map(row => `
+                        <tr>
+                            <td style="padding:10px 12px;font-weight:700;color:var(--text-primary);">${row.ddd}</td>
+                            <td style="padding:10px 12px;text-align:center;">${row.total}</td>
+                            <td style="padding:10px 12px;text-align:center;color:#22c55e;">${row.human_pct}%</td>
+                            <td style="padding:10px 12px;text-align:center;color:#ef4444;">${row.machine_pct}%</td>
+                            <td style="padding:10px 12px;text-align:center;color:#f59e0b;">${row.unknown_pct}%</td>
+                            <td style="padding:10px 12px;text-align:center;">${row.machine_start || 0}</td>
+                            <td style="padding:10px 12px;text-align:center;">${row.machine_end_beep || 0}</td>
+                            <td style="padding:10px 12px;text-align:center;">${row.machine_end_other || 0}</td>
+                            <td style="padding:10px 12px;text-align:center;font-size:12px;color:var(--muted);">${row.beep_pct_of_machine}% / ${row.other_pct_of_machine}%</td>
+                        </tr>
+                    `).join('');
+                    dddDiv.innerHTML = `
+                        <h4 style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 4px;">Por DDD (top 20)</h4>
+                        <p style="font-size:11px;color:var(--muted);margin:0 0 10px;">Última coluna: % beep vs % end_other entre detecções de máquina — útil para calibrar por operadora.</p>
+                        <table style="${amdTableStyle}">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border);">
+                                    <th style="${amdThLeft}">DDD</th>
+                                    <th style="${amdThStyle}">Total</th>
+                                    <th style="${amdThStyle}">Humano</th>
+                                    <th style="${amdThStyle}">Máquina</th>
+                                    <th style="${amdThStyle}">Unknown</th>
+                                    <th style="${amdThStyle}">M.Start</th>
+                                    <th style="${amdThStyle}">Beep</th>
+                                    <th style="${amdThStyle}">End Other</th>
+                                    <th style="${amdThStyle}">Beep/Other</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
+                } else {
+                    dddDiv.innerHTML = '';
+                }
+            }
+
             const tableDiv = document.getElementById('amd-campaign-table');
             if (d.campaign_breakdown && d.campaign_breakdown.length > 0) {
                 const rows = d.campaign_breakdown.map(c => `
@@ -7486,19 +7867,26 @@ async function deleteLead(leadId) {
                         <td style="padding:10px 12px;text-align:center;color:#22c55e;font-weight:700;">${c.human_pct}%</td>
                         <td style="padding:10px 12px;text-align:center;color:#ef4444;font-weight:700;">${c.machine_pct}%</td>
                         <td style="padding:10px 12px;text-align:center;color:#f59e0b;font-weight:700;">${c.unknown_pct}%</td>
+                        <td style="padding:10px 12px;text-align:center;">${c.machine_start ?? 0}</td>
+                        <td style="padding:10px 12px;text-align:center;">${c.machine_end_beep ?? 0}</td>
+                        <td style="padding:10px 12px;text-align:center;">${c.machine_end_other ?? 0}</td>
                         <td style="padding:10px 12px;text-align:center;color:#8b5cf6;">${c.recovered}</td>
                     </tr>
                 `).join('');
                 tableDiv.innerHTML = `
-                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <h4 style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0 0 10px;">Por campanha</h4>
+                    <table style="${amdTableStyle}">
                         <thead>
                             <tr style="border-bottom:1px solid var(--border);">
-                                <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Campanha</th>
-                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Total</th>
-                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Humano</th>
-                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Máquina</th>
-                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Unknown</th>
-                                <th style="padding:8px 12px;text-align:center;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;">Recuperados</th>
+                                <th style="${amdThLeft}">Campanha</th>
+                                <th style="${amdThStyle}">Total</th>
+                                <th style="${amdThStyle}">Humano</th>
+                                <th style="${amdThStyle}">Máquina</th>
+                                <th style="${amdThStyle}">Unknown</th>
+                                <th style="${amdThStyle}">M.Start</th>
+                                <th style="${amdThStyle}">Beep</th>
+                                <th style="${amdThStyle}">End Other</th>
+                                <th style="${amdThStyle}">Recup.</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -7506,6 +7894,8 @@ async function deleteLead(leadId) {
                 `;
             } else if (d.total_with_amd === 0) {
                 tableDiv.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px 0;font-size:13px;">Nenhuma chamada com dados AMD no período selecionado.</p>';
+            } else {
+                tableDiv.innerHTML = '';
             }
         } catch(e) {
             console.error('[AMD Metrics]', e);
@@ -7563,20 +7953,25 @@ async function deleteLead(leadId) {
             return;
         }
         const max = Math.max(...stages.map(s => s.deal_count), 1);
-        el.innerHTML = stages.map(s => {
+        el.innerHTML = stages.map((s, idx) => {
             const pct  = Math.max(Math.round(s.deal_count / max * 100), 3);
-            const color = s.is_won ? '#22c55e' : s.is_lost ? '#ef4444' : (s.color || '#6366f1');
+            const color = s.is_won ? '#22c55e' : s.is_lost ? '#ef4444' : (s.color || '#7c3aed');
             const val   = s.total_value > 0
                 ? '<span style="font-size:11px;color:var(--muted);margin-left:6px;">' + fmtBRL(s.total_value) + '</span>'
                 : '';
+            let conv = '';
+            if (idx > 0 && stages[idx - 1].deal_count > 0) {
+                const rate = Math.round(s.deal_count / stages[idx - 1].deal_count * 100);
+                conv = `<span style="font-size:10px;color:var(--muted);margin-left:8px;">↓ ${rate}% conv.</span>`;
+            }
             return `
             <div style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                <span style="font-size:12px;font-weight:600;color:#e2e8f4;">${s.name}${val}</span>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);">${s.name}${val}${conv}</span>
                 <span style="font-size:13px;color:var(--muted);font-weight:700;">${s.deal_count}</span>
               </div>
-              <div style="background:rgba(255,255,255,.07);border-radius:5px;height:18px;overflow:hidden;">
-                <div style="width:${pct}%;height:100%;background:${color};border-radius:5px;transition:width .5s ease;opacity:.85;"></div>
+              <div style="background:var(--bg-secondary);border-radius:5px;height:18px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${color};border-radius:5px;transition:width .18s ease;opacity:.9;"></div>
               </div>
             </div>`;
         }).join('');
@@ -7681,6 +8076,20 @@ async function deleteLead(leadId) {
                 if (!_anBootDone) {
                     _anBootDone = true;
                     await _anLoadPipelines();
+                    await loadAnalyticsUsers();
+                    document.querySelectorAll('.an-kpi-click').forEach(card => {
+                        card.addEventListener('click', () => {
+                            const m = card.dataset.metric;
+                            const labels = {
+                                active_clients: 'Clientes ativos',
+                                inactive_clients: 'Clientes inativos',
+                                new_clients: 'Novos clientes',
+                                tickets_open: 'Tickets abertos',
+                                tickets_resolved: 'Tickets resolvidos',
+                            };
+                            openDrillDown(m, labels[m] || m);
+                        });
+                    });
                 }
                 loadAnalytics();
             }, 80);
@@ -7743,9 +8152,9 @@ async function deleteLead(leadId) {
         /* Base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: var(--font-sans);
+            background: var(--color-bg-global);
+            color: var(--color-text-primary);
             transition: background 0.2s, color 0.2s;
         }
 
@@ -7823,7 +8232,7 @@ async function deleteLead(leadId) {
             background: rgba(255,255,255,0.05);
         }
         .menu-link.active {
-            background: var(--accent);
+            background: rgba(37, 99, 235, 0.12);
             color: #ffffff;
             box-shadow: inset 3px 0 0 #60a5fa;
         }
@@ -8797,6 +9206,31 @@ async function deleteLead(leadId) {
           </div>
         </div>
 
+        <!-- AMD -->
+        <div style="margin-bottom:20px; padding:14px; border-radius:12px; border:1px solid rgba(99,102,241,0.25); background:rgba(99,102,241,0.06);">
+          <label style="font-size:13px; font-weight:700; color:#a5b4fc; display:block; margin-bottom:10px;">🤖 Detecção AMD (secretária eletrônica)</label>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;">
+              Threshold alô curto (ms) <span style="color:#64748b;">— ab abaixo disso = envia ao operador</span>
+            </label>
+            <input type="number" id="cs-amd-threshold" min="2000" max="12000" step="100" value="4500"
+              style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+          </div>
+          <div>
+            <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;">Quando AMD retorna "desconhecido"</label>
+            <select id="cs-amd-unknown" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:#f1f5f9; font-size:13px;">
+              <option value="send_to_agent">Enviar ao operador (recomendado)</option>
+              <option value="hangup">Encerrar como caixa postal</option>
+              <option value="retry_later">Marcar sem resposta e retentar</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:#94a3b8;cursor:pointer;">
+            <input type="checkbox" id="cs-local-presence" checked style="width:auto;">
+            Local presence — ligar com o DDD do lead (pool master)
+          </label>
+          <p style="font-size:11px; color:#64748b; margin:10px 0 0;">Parâmetros Twilio calibrados para BR (celular). Campanhas só-fixo usam perfil comercial automaticamente.</p>
+        </div>
+
         <div id="cs-message" style="font-size:13px; min-height:20px; margin-bottom:14px;"></div>
 
         <div style="display:flex; gap:10px; justify-content:flex-end;">
@@ -8918,7 +9352,11 @@ async function deleteLead(leadId) {
     // ── Command Palette ──────────────────────────────────────────────────────
     (function(){
         const ACTIONS = [
-            { icon:'📊', label:'Dashboard',        sub:'Painel de operação',        action:()=>showSection('dashboard') },
+            { icon:'🏠', label:'Dashboard',        sub:'Painel de operação',        action:()=>showSection('dashboard') },
+            { icon:'💬', label:'Inbox WhatsApp',   sub:'Conversas Meta',           action:()=>showSection('inbox') },
+            { icon:'🔌', label:'Integrações',      sub:'OAuth e conexões',         action:()=>showSection('integrations') },
+            { icon:'📊', label:'CRM Pipeline',     sub:'Kanban de vendas',         action:()=>showSection('crm') },
+            { icon:'📧', label:'Emails',           sub:'Campanhas de email',       action:()=>showSection('email') },
             { icon:'📋', label:'Campanhas',         sub:'Gerenciar campanhas',       action:()=>showSection('campaigns') },
             { icon:'👥', label:'Leads',             sub:'Lista de leads',            action:()=>showSection('leads') },
             { icon:'📞', label:'Chamadas',          sub:'Histórico de chamadas',     action:()=>showSection('calls') },
@@ -9623,6 +10061,13 @@ async function deleteLead(leadId) {
                 }
                 window._csUpdateWeekdays();
 
+                const amdTh = document.getElementById('cs-amd-threshold');
+                if (amdTh) amdTh.value = c.amd_duration_threshold_ms || 4500;
+                const amdUnk = document.getElementById('cs-amd-unknown');
+                if (amdUnk) amdUnk.value = c.unknown_amd_action || 'send_to_agent';
+                const lp = document.getElementById('cs-local-presence');
+                if (lp) lp.checked = c.local_presence !== false;
+
             } catch(e) { _csMsg('Erro de rede', 'error'); }
         };
 
@@ -9654,6 +10099,9 @@ async function deleteLead(leadId) {
                 allowed_hours_end:    parseInt(document.getElementById('cs-hours-end')?.value) ?? 20,
                 allowed_timezone:     document.getElementById('cs-timezone')?.value,
                 allowed_weekdays:     weekdays.join(','),
+                amd_duration_threshold_ms: parseInt(document.getElementById('cs-amd-threshold')?.value) || 4500,
+                unknown_amd_action:   document.getElementById('cs-amd-unknown')?.value || 'send_to_agent',
+                local_presence:       document.getElementById('cs-local-presence')?.checked !== false,
             };
 
             try {
@@ -9686,5 +10134,6 @@ async function deleteLead(leadId) {
         });
     })();
     </script>
+    <script src="{{ url_for('static', filename='js/enterprise-sections.js') }}"></script>
 </body>
 </html>

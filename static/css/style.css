@@ -1,19 +1,20 @@
 /* ==========================================
    NEXDIAL - ESTILOS CUSTOMIZADOS
+   Tokens globais: voxflow-tokens.css
    ========================================== */
 
-/* ========== VARIÁVEIS CSS ========== */
+/* ========== VARIÁVEIS CSS (aliases legados) ========== */
 :root {
-    --primary-color: #2563eb;
-    --primary-dark: #1e40af;
-    --secondary-color: #64748b;
-    --success-color: #059669;
-    --warning-color: #d97706;
-    --danger-color: #dc2626;
-    --info-color: #0891b2;
-    --light-bg: #f8fafc;
-    --border-radius: 0.5rem;
-    --box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --primary-color: var(--color-primary);
+    --primary-dark: var(--color-primary-dark);
+    --secondary-color: var(--color-text-secondary);
+    --success-color: var(--color-success);
+    --warning-color: var(--color-warning);
+    --danger-color: var(--color-danger);
+    --info-color: var(--color-secondary);
+    --light-bg: var(--color-bg-global);
+    --border-radius: var(--radius-md);
+    --box-shadow: var(--shadow-card);
     --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 

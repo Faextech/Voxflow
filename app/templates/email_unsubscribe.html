@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancelar inscrição — VoxFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voxflow-tokens.css') }}">
+    <style>
+        body { font-family: var(--font-sans); background: var(--color-bg-global); color: var(--color-text-primary); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .box { background: var(--color-surface); border:1px solid var(--color-border); border-radius:16px; padding:32px; max-width:420px; width:100%; text-align:center; box-shadow: var(--shadow-card); }
+        h1 { font-size:20px; margin-bottom:12px; }
+        p { color: var(--color-text-secondary); font-size:14px; line-height:1.6; margin-bottom:20px; }
+        button { padding:12px 24px; border:none; border-radius:10px; background: var(--color-primary); color:#fff; font-weight:600; cursor:pointer; width:100%; font-family: var(--font-sans); }
+        button:hover { background: var(--color-primary-dark); }
+        .ok { color: var(--color-success); display:none; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <div id="form">
+        <h1>Cancelar inscrição</h1>
+        <p>Você não receberá mais emails de marketing desta empresa.</p>
+        <button onclick="unsub()">Confirmar cancelamento</button>
+    </div>
+    <div id="done" class="ok">
+        <h1>Inscrição cancelada</h1>
+        <p>Você foi removido da nossa lista de emails.</p>
+    </div>
+</div>
+<script>
+const token = {{ token|tojson }};
+async function unsub() {
+    if (!token) { alert('Link inválido'); return; }
+    const r = await fetch('/api/email/unsubscribe?token=' + encodeURIComponent(token), { method:'POST' });
+    if (r.ok) {
+        document.getElementById('form').style.display = 'none';
+        document.getElementById('done').style.display = 'block';
+    } else {
+        alert('Erro ao cancelar. Tente novamente.');
+    }
+}
+</script>
+</body>
+</html>
