@@ -65,9 +65,9 @@ export default function ReportsPage() {
       setLoading(true);
       try {
         const [statsRes, amdRes, timeRes] = await Promise.all([
-          fetch("/api/analytics/dashboard"),
-          fetch("/api/analytics/amd"),
-          fetch("/api/analytics/time-series"),
+          fetch(`/api/analytics/dashboard?period=${dateRange}`, { credentials: "include" }),
+          fetch(`/api/analytics/amd?period=${dateRange}`, { credentials: "include" }),
+          fetch(`/api/analytics/time-series?period=${dateRange}`, { credentials: "include" }),
         ]);
 
         if (statsRes.ok) {

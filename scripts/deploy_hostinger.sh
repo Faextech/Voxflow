@@ -12,6 +12,12 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PATH="$HOME/.local/bin:$PATH"
 
+echo "==> Building Next.js frontend..."
+cd "$ROOT/frontend"
+npm ci --silent 2>/dev/null || npm install --silent
+npm run build
+cd "$ROOT"
+
 echo "==> Gerando .env para IP ${IP}..."
 python3 "$ROOT/scripts/generate_hostinger_env.py" --ip "$IP"
 
@@ -44,8 +50,7 @@ ssh "root@${IP}" bash -s <<'REMOTE'
 set -euo pipefail
 cd /opt/voxflow/deploy/hostinger
 chmod +x entrypoint.sh setup.sh 2>/dev/null || true
-docker compose build --no-cache web
-docker compose up -d
+docker compose up -d --build nginx web
 docker compose ps
 REMOTE
 

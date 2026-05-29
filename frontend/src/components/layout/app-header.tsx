@@ -16,29 +16,11 @@ import Link from "next/link";
 import { getInitials } from "@/lib/utils";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/providers/auth-provider";
 
 export function AppHeader() {
-  const router = useRouter();
-  const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const { user, loading, logout } = useAuth();
   const [cmdOpen, setCmdOpen] = useState(false);
-
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const res = await fetch("/api/me");
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        } else {
-          router.push("/login");
-        }
-      } catch {
-        router.push("/login");
-      }
-    }
-    loadUser();
-  }, [router]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -51,25 +33,11 @@ export function AppHeader() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/auth/logout", { method: "POST" });
-      if (res.ok || res.redirected) {
-        router.push("/login");
-      } else {
-        window.location.href = "/auth/logout";
-      }
-    } catch {
-      window.location.href = "/auth/logout";
-    }
-  };
-
   const initials = getInitials(user?.name ?? user?.email ?? "U");
 
   return (
     <>
       <header className="h-16 border-b bg-background flex items-center justify-between px-6 gap-4">
-        {/* Search */}
         <div className="flex-1 max-w-md">
           <button
             className="flex items-center gap-2 w-full text-sm text-muted-foreground border border-input bg-muted/50 rounded-lg px-3 py-2 hover:bg-muted transition-colors cursor-pointer"
@@ -84,18 +52,13 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Quick add */}
           <Button size="sm" className="gap-2" asChild>
             <Link href="/leads">
               <Plus className="h-4 w-4" />
               Novo Lead
             </Link>
           </Button>
-
-          {/* Notifications */}
           <NotificationBell />
-
-          {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-lg p-1 hover:bg-accent transition-colors cursor-pointer">
@@ -108,13 +71,15 @@ export function AppHeader() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
-                {user ? (
+                {loading ? (
+                  <p className="text-sm">Carregando...</p>
+                ) : user ? (
                   <div>
                     <p className="font-medium text-sm truncate">{user.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                 ) : (
-                  <p className="text-sm">Carregando...</p>
+                  <p className="text-sm text-muted-foreground">Sessão expirada</p>
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -132,7 +97,7 @@ export function AppHeader() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={handleLogout}
+                onClick={logout}
                 className="text-destructive focus:text-destructive cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -142,9 +107,7 @@ export function AppHeader() {
           </DropdownMenu>
         </div>
       </header>
-
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
     </>
   );
 }
-

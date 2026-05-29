@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy VoxFlow na VPS Hostinger — roda NO SERVIDOR (terminal web, cron ou SSH).
-# Baixa main do GitHub, sincroniza paths seguros e rebuild do container web.
+# Baixa main do GitHub, sincroniza paths seguros e rebuild do container web + nginx.
 set -euo pipefail
 
 DEPLOY_DIR="${VOXFLOW_DEPLOY_DIR:-/opt/voxflow}"
@@ -18,7 +18,6 @@ log "==> Iniciando deploy (branch=${BRANCH}, mode=${MODE})"
 rm -rf "$WORK"
 git clone --depth 1 --branch "$BRANCH" "$REPO" "$WORK"
 
-# Paths que podem ser atualizados sem sobrescrever secrets locais
 RSYNC_EXCLUDES=(
   --exclude 'deploy/hostinger/.env'
   --exclude 'deploy/hostinger/twilio.env'
@@ -37,8 +36,10 @@ log "==> Sincronizando arquivos..."
 sync_path "static/" "${DEPLOY_DIR}/static/"
 sync_path "app/templates/" "${DEPLOY_DIR}/app/templates/"
 sync_path "app/__init__.py" "${DEPLOY_DIR}/app/"
+sync_path "frontend/out/" "${DEPLOY_DIR}/frontend/out/"
 sync_path "deploy/hostinger/Dockerfile" "${DEPLOY_DIR}/deploy/hostinger/"
 sync_path "deploy/hostinger/docker-compose.yml" "${DEPLOY_DIR}/deploy/hostinger/"
+sync_path "deploy/hostinger/nginx/" "${DEPLOY_DIR}/deploy/hostinger/nginx/"
 
 if [ "$MODE" = "full" ]; then
   sync_path "app/api/" "${DEPLOY_DIR}/app/api/"
@@ -69,10 +70,10 @@ if [ "$MODE" = "full" ]; then
   log "==> Rebuild stack completo..."
   docker compose up -d --build
 else
-  log "==> Rebuild container web (frontend)..."
+  log "==> Rebuild containers web + nginx (frontend Next.js)..."
   docker compose build web
-  docker compose up -d web
+  docker compose up -d web nginx
 fi
 
-docker compose ps web 2>/dev/null || docker compose ps
+docker compose ps web nginx 2>/dev/null || docker compose ps
 log "==> Deploy concluído — https://voxflow.tech"

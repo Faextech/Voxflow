@@ -41,30 +41,25 @@ export default function LoginPage() {
     try {
       const res = await fetch("/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: data.email.toLowerCase(),
-          password: data.password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: data.email, password: data.password }),
       });
-
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error(result.error || "Email ou senha incorretos");
+        toast.error(result.error || "Credenciais inválidas");
         return;
       }
 
       if (result.requires_2fa) {
+        setChallengeToken(result.challenge_token || "");
         setRequires2fa(true);
-        setChallengeToken(result.challenge_token);
-        toast.info("Código de autenticação 2FA necessário");
+        toast.info("Digite o código do autenticador");
         return;
       }
 
-      toast.success("Login realizado com sucesso!");
+      toast.success("Bem-vindo!");
       router.push("/dashboard");
     } catch {
       toast.error("Erro ao fazer login. Tente novamente.");
@@ -84,9 +79,8 @@ export default function LoginPage() {
     try {
       const res = await fetch("/auth/login/2fa", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           challenge_token: challengeToken,
           code: totpCode,
