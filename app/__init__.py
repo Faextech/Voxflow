@@ -351,8 +351,7 @@ def create_app():
             logger.warning("[STARTUP] Bootstrap api_key falhou: %s", _key_err)
 
     # ── Jobs inline (desligados em prod com workers dedicados) ─────────────
-    from app.config import settings as _settings
-    if not _settings.DISABLE_INLINE_WORKERS:
+    if os.getenv("DISABLE_INLINE_WORKERS", "").strip().lower() not in ("1", "true", "yes"):
         _start_periodic_cleanup(app)
         _start_email_worker(app)
     else:

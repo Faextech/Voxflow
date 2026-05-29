@@ -33,7 +33,12 @@ services:
       context: ../..
       dockerfile: deploy/hostinger/Dockerfile
     restart: unless-stopped
-    env_file: .env
+    command: ["gunicorn", "run:create_app()", "-c", "gunicorn.conf.py"]
+    env_file:
+      - .env
+      - twilio.env
+    environment:
+      DISABLE_INLINE_WORKERS: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +46,56 @@ services:
         condition: service_healthy
     expose:
       - "5000"
+
+  worker_events:
+    build:
+      context: ../..
+      dockerfile: deploy/hostinger/Dockerfile
+    restart: unless-stopped
+    command: python -m app.workers --queue=events
+    env_file:
+      - .env
+      - twilio.env
+    environment:
+      DISABLE_INLINE_WORKERS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker_email:
+    build:
+      context: ../..
+      dockerfile: deploy/hostinger/Dockerfile
+    restart: unless-stopped
+    command: python -m app.workers --queue=email
+    env_file:
+      - .env
+      - twilio.env
+    environment:
+      DISABLE_INLINE_WORKERS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: deploy/hostinger/Dockerfile
+    restart: unless-stopped
+    command: python -m app.scheduler
+    env_file:
+      - .env
+    environment:
+      DISABLE_INLINE_WORKERS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   evolution-api:
     image: atendai/evolution-api:v2.1.1
@@ -87,8 +142,11 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - web
 

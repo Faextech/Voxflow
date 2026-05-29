@@ -9,11 +9,11 @@ BRANCH="${VOXFLOW_BRANCH:-main}"
 COMPOSE_DIR="${DEPLOY_DIR}/deploy/hostinger"
 WORK="${DEPLOY_DIR}/.deploy-work"
 LOG="${DEPLOY_DIR}/.deploy.log"
-FULL="${1:-}"
+MODE="${1:-frontend}"
 
 log() { echo "[$(date -Iseconds)] $*" | tee -a "$LOG"; }
 
-log "==> Iniciando deploy (branch=${BRANCH})"
+log "==> Iniciando deploy (branch=${BRANCH}, mode=${MODE})"
 
 rm -rf "$WORK"
 git clone --depth 1 --branch "$BRANCH" "$REPO" "$WORK"
@@ -37,15 +37,20 @@ log "==> Sincronizando arquivos..."
 sync_path "static/" "${DEPLOY_DIR}/static/"
 sync_path "app/templates/" "${DEPLOY_DIR}/app/templates/"
 sync_path "app/__init__.py" "${DEPLOY_DIR}/app/"
-sync_path "app/api/" "${DEPLOY_DIR}/app/api/"
-sync_path "app/routes/" "${DEPLOY_DIR}/app/routes/"
-sync_path "app/services/" "${DEPLOY_DIR}/app/services/"
-sync_path "app/models/" "${DEPLOY_DIR}/app/models/"
-sync_path "migrations/" "${DEPLOY_DIR}/migrations/"
-sync_path "requirements.txt" "${DEPLOY_DIR}/"
-sync_path "config.py" "${DEPLOY_DIR}/"
-sync_path "run.py" "${DEPLOY_DIR}/"
-sync_path "Procfile" "${DEPLOY_DIR}/"
+sync_path "deploy/hostinger/Dockerfile" "${DEPLOY_DIR}/deploy/hostinger/"
+sync_path "deploy/hostinger/docker-compose.yml" "${DEPLOY_DIR}/deploy/hostinger/"
+
+if [ "$MODE" = "full" ]; then
+  sync_path "app/api/" "${DEPLOY_DIR}/app/api/"
+  sync_path "app/routes/" "${DEPLOY_DIR}/app/routes/"
+  sync_path "app/services/" "${DEPLOY_DIR}/app/services/"
+  sync_path "app/models/" "${DEPLOY_DIR}/app/models/"
+  sync_path "migrations/" "${DEPLOY_DIR}/migrations/"
+  sync_path "requirements.txt" "${DEPLOY_DIR}/"
+  sync_path "config.py" "${DEPLOY_DIR}/"
+  sync_path "run.py" "${DEPLOY_DIR}/"
+  sync_path "Procfile" "${DEPLOY_DIR}/"
+fi
 
 REMOTE_SHA="$(git -C "$WORK" rev-parse HEAD)"
 echo "$REMOTE_SHA" > "${DEPLOY_DIR}/.deploy-sha"
@@ -60,11 +65,11 @@ fi
 
 cd "$COMPOSE_DIR"
 
-if [ "$FULL" = "--full" ]; then
+if [ "$MODE" = "full" ]; then
   log "==> Rebuild stack completo..."
   docker compose up -d --build
 else
-  log "==> Rebuild container web..."
+  log "==> Rebuild container web (frontend)..."
   docker compose build web
   docker compose up -d web
 fi
