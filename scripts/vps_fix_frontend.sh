@@ -33,11 +33,11 @@ docker compose up -d --force-recreate nginx
 
 echo "==> Verificando..."
 sleep 2
-docker compose exec nginx ls -la /usr/share/nginx/html/login.html
-echo "--- nginx config (location /) ---"
-docker compose exec nginx grep -A3 'location / {' /etc/nginx/conf.d/default.conf || true
-echo "--- teste local ---"
+docker compose exec -T nginx ls -la /usr/share/nginx/html/login.html
+echo "--- teste local HTTP ---"
 curl -sI http://127.0.0.1/login | head -5
+echo "--- teste local HTTPS ---"
+curl -skI https://127.0.0.1/login | head -5 || echo "(HTTPS: verifique certificados em /etc/letsencrypt/live/)"
 
 echo ""
 echo "✓ Pronto! Abra https://voxflow.tech/login (Ctrl+Shift+R para limpar cache)"
