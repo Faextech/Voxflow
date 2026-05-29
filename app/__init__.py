@@ -276,28 +276,31 @@ def create_app():
         from app.models.audit_log import AuditLog
         from app.models.dnc import DNCEntry
         from app.models.followup import FollowUpSequence, FollowUpTask
-        from app.models.account import Account
-        from app.models.contact import Contact
-        from app.models.deal_stage_history import DealStageHistory
-        from app.models.deal_contact import DealContact
-        from app.models.tag import Tag, LeadTag, DealTag
-        from app.models.custom_field import CustomField, CustomFieldValue
-        from app.models.webhook_outbound import WebhookOutbound
-        from app.models.integration import IntegrationProvider, IntegrationConnection, IntegrationCredential, IntegrationEvent
-        from app.models.whatsapp import WhatsAppConversation, WhatsAppMessage, WhatsAppTemplate
-        from app.models.system_models import Invitation, LoginHistory, IdempotencyKey
-        from app.models.email import (
-            EmailTemplate, EmailCampaign, EmailSend, EmailUnsubscribe,
-            EmailAccount, EmailDomain, EmailSignature, EmailAutomation,
-            EmailQueue, EmailEvent, EmailAuditLog,
-        )
+        try:
+            from app.models.account import Account
+            from app.models.contact import Contact
+            from app.models.deal_stage_history import DealStageHistory
+            from app.models.deal_contact import DealContact
+            from app.models.tag import Tag, LeadTag, DealTag
+            from app.models.custom_field import CustomField, CustomFieldValue
+            from app.models.webhook_outbound import WebhookOutbound
+            from app.models.integration import IntegrationProvider, IntegrationConnection, IntegrationCredential, IntegrationEvent
+            from app.models.whatsapp import WhatsAppConversation, WhatsAppMessage, WhatsAppTemplate
+            from app.models.system_models import Invitation, LoginHistory, IdempotencyKey
+            from app.models.email import (
+                EmailTemplate, EmailCampaign, EmailSend, EmailUnsubscribe,
+                EmailAccount, EmailDomain, EmailSignature, EmailAutomation,
+                EmailQueue, EmailEvent, EmailAuditLog,
+            )
+        except ImportError as _opt_err:
+            logger.warning("[STARTUP] Modelos enterprise opcionais não disponíveis: %s", _opt_err)
         # ── Migrações Automáticas ─────────────────────────────────────────────
         try:
             from flask_migrate import upgrade as _upgrade
             _upgrade()
             logger.info("[STARTUP] Banco de dados atualizado com sucesso.")
-        except Exception as _mig_err:
-            logger.error("[STARTUP] Falha ao rodar migrações: %s", _mig_err)
+        except BaseException as _mig_err:
+            logger.warning("[STARTUP] Migrações ignoradas (dev/local): %s", _mig_err)
             db.session.rollback()
 
         # ── Startup cleanup ───────────────────────────────────────────────────

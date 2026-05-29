@@ -19,7 +19,15 @@ npm run build
 cd "$ROOT"
 
 echo "==> Gerando .env para IP ${IP}..."
-python3 "$ROOT/scripts/generate_hostinger_env.py" --ip "$IP"
+PYTHON="${ROOT}/.venv/bin/python3"
+if [ ! -x "$PYTHON" ]; then
+  PYTHON="python3"
+fi
+if [ -f "$ROOT/deploy/hostinger/.env" ]; then
+  echo "    .env já existe — mantendo configuração atual (não regenera senhas de produção)"
+else
+  "$PYTHON" "$ROOT/scripts/generate_hostinger_env.py" --ip "$IP"
+fi
 
 echo "==> Instalando Docker na VPS (se necessário)..."
 ssh -o StrictHostKeyChecking=accept-new "root@${IP}" bash -s <<'REMOTE'

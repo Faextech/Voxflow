@@ -4,6 +4,9 @@ const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   ...(isProd ? { output: "export" as const } : {}),
+  turbopack: {
+    root: __dirname,
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000"],
